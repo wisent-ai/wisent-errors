@@ -53,7 +53,7 @@ function rust() {
 use std::fmt;
 
 /// How loud this failure is. Derived from the code, never chosen at a call site.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
     Warning,
     Error,
@@ -77,7 +77,7 @@ impl fmt::Display for Severity {
 }
 
 /// The fleet's whole failure vocabulary.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Code {
 ${variants}
 }
@@ -100,6 +100,17 @@ ${asStr}
         match text {
 ${parse}
             _ => None,
+        }
+    }
+
+    /// The code when the catalogue knows this text, otherwise the fallback.
+    ///
+    /// Never fails. Three products wrote this coercion by hand during their
+    /// migration, which is the duplication this package exists to remove.
+    pub fn or_fallback(text: &str) -> Self {
+        match Self::parse(text) {
+            Some(code) => code,
+            None => Self::${rustName(fallback)},
         }
     }
 
@@ -236,6 +247,15 @@ def severity(code: str) -> str:
     return MEANINGS[code].severity
 
 
+def code_or_fallback(text: str) -> str:
+    """The code when the catalogue knows this text, otherwise the fallback.
+
+    Never raises. Three products wrote this coercion by hand during their
+    migration, which is the duplication this package exists to remove.
+    """
+    return text if text in MEANINGS else FALLBACK
+
+
 def http_status(code: str) -> int:
     """The HTTP status a service answers with when this failure reaches its edge."""
     return MEANINGS[code].http_status
@@ -300,6 +320,14 @@ export const operatorSummary = (code) => MEANINGS[code].operatorSummary;
 export const retryable = (code) => MEANINGS[code].retryable;
 export const outage = (code) => MEANINGS[code].outage;
 export const severity = (code) => MEANINGS[code].severity;
+
+/**
+ * The code when the catalogue knows this text, otherwise the fallback.
+ *
+ * Never throws. Three products wrote this coercion by hand during their
+ * migration, which is the duplication this package exists to remove.
+ */
+export const codeOrFallback = (code) => (code in MEANINGS ? code : FALLBACK);
 
 /** The HTTP status a service answers with when this failure reaches its edge. */
 export const httpStatus = (code) => MEANINGS[code].httpStatus;

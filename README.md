@@ -6,28 +6,39 @@ look a code up.
 ## Why this exists
 
 The envelope already existed. It was implemented **six times**, once per product,
-in three languages:
+in three languages — and the interesting part is not the duplication, it is which
+half of it drifted.
 
-| implementation | state before this package |
-| --- | --- |
-| `wisent-compute/stado-rs/src/failure.rs` | the reference; all seven codes |
-| `probierz/agent/failure.mjs` | 412 lines, all seven codes |
-| `growth-tactics/api/failure.py` | 679 lines, all seven codes |
-| `wisent-backend-images/app/failure.py` | 707 lines, all seven codes |
-| `wisent-tools/wisent/failure.py` | 328 lines, all seven codes |
-| `wisent-customer-support/src/failure.js` | 438 lines, **none of the seven** |
-| `brama` | no envelope at all |
+| implementation | vocabulary | the derived status ladder |
+| --- | --- | --- |
+| `wisent-compute/stado-rs/src/failure.rs` | seven codes, the reference | correct: 407 present, 5xx bounded |
+| `probierz/agent/failure.mjs` | seven codes, agreeing | **no 407 branch, unbounded `>= 500`** |
+| `growth-tactics/api/failure.py` | seven codes, agreeing | **no 407 branch, unbounded `>= 500`** |
+| `wisent-backend-images/app/failure.py` | seven codes, agreeing | **no 407 branch, unbounded `>= 500`** |
+| `wisent-tools/wisent/failure.py` | seven codes, agreeing | **no 407 branch, unbounded `>= 500`** |
+| `wisent-customer-support/src/failure.js` | seven codes, agreeing | **no 407 branch, unbounded `>= 500`** |
+| `brama` | no envelope at all | — |
 
-Five copies agreed, one had drifted out of the vocabulary entirely, and the
-component every model request passes through had none. That last gap cost a full
-day: `all bounded 'codex' credentials unavailable for agent` carries no code, no
-`failure_point`, and no indication that it is transient — so the only way to
-follow it was to walk the layers by hand and read each one's source.
+Five of five copies had drifted, in the same two lines, away from the one
+reference that had them right. A proxy authentication refusal had no code
+anywhere but in `stado`, and every copy called a status of 600 a dependency
+outage. Nobody noticed, because the vocabulary was the part people compared and
+the derived table was the part nobody compared across products.
+
+An earlier version of this file said `wisent-customer-support` held "none of the
+seven" codes. That was wrong. It held all seven, spelled identically, with a
+matching severity map, retryable set, outage set and status map. The claim came
+from a search of mine that found nothing, and I published the absence as a fact
+— a negative search result is a claim, not a fact, and the migration that read
+the file disproved it in its first ten minutes.
+
+The gap that actually cost a day is the last row. `all bounded 'codex'
+credentials unavailable for agent` carries no code, no `failure_point`, and no
+indication that it is transient, so the only way to follow it was to walk the
+layers by hand and read each one's source.
 
 Nothing here is new behaviour. The catalogue is copied verbatim from the
 reference implementation so the first migration cannot change what anything does.
-
-## The one rule
 
 **Everything derivable from the code is derived.** A call site chooses where it
 broke, what the layer below said, and which subject it concerns. It never chooses
@@ -67,8 +78,48 @@ without the error. `cause` makes the nesting explicit, so the sentence that
 actually explains the outage — here, Anthropic's `invalid_grant` — travels with
 the failure instead of being reconstructed by hand.
 
-`detail` is required. A failure reported without the reason the layer below gave
-is the defect this package exists to prevent.
+`detail` and `impact` are optional, and serialize as `null` rather than
+disappearing: a stable key set is what makes these lines queryable in a log
+store, and `probierz` already indexes `detail` that way. Both were mandatory
+until the migrations reached real call sites. Three products have no impact axis
+at all — `stado`'s failure points come from its subcommand path and it has never
+had one — and two legitimately report a failure with nothing further to say,
+because they already know their code exactly and there was no layer below to
+quote. Requiring either buys `impact: "unknown"` and `detail: "unknown"`, which
+is a worse lie than an absent value. When there **is** a reason from below,
+dropping it is the defect this package exists to prevent.
+
+`failure_point` is a dotted lowercase path of one segment or more. This demanded
+exactly three until the migrations read the registries: `probierz` and
+`growth-tactics` are two-segment, and `stado` runs from `cli` to
+`cli.host.user.create`. The depth carries no meaning and the rule stopped
+pretending it does.
+
+## Reporting a failure must never fail
+
+An error path that throws takes the diagnosis with it, which is how hours of an
+outage end up with no record of why. Two products hold that invariant explicitly,
+so the package does too:
+
+```js
+import { failureOrFallback } from '@wisent/errors';
+
+// Never throws. An unknown code becomes `unknown`, a malformed failure point is
+// kept verbatim because an operator still needs it, and each violation is
+// recorded in `context` under a `wisent_errors.` key -- so the defect travels in
+// the data instead of becoming an exception raised inside a `catch`.
+const envelope = failureOrFallback({ failurePoint: whatever, code: maybe, service });
+```
+
+`failure()` and `Failure::new` stay strict, for call sites that want to fail loud.
+`codeOrFallback` / `code_or_fallback` / `Code::or_fallback` coerce one code
+without throwing; three products wrote that coercion by hand during their
+migration, which is the duplication this package exists to remove.
+
+`trimDetail(text, limit)` / `trim_detail` exposes the trim rule with the width as
+an argument, because the width is a product's own decision — `stado` and
+`probierz` keep 300, `wisent-customer-support` 400, `wisent-tools` 500 — while the
+rule for how to cut is the thing that was written six times.
 
 ## Use it
 
@@ -101,14 +152,10 @@ raise_failure(
 ```rust
 use wisent_errors::{Code, Failure};
 
-let refused = Failure::new(
-    "brama.gateway.oauth-refresh",
-    Code::Auth,
-    "brama",
-    "one credential refresh",
-    provider_text,
-)?
-.with_context("subscription", id);
+let refused = Failure::new("brama.gateway.oauth-refresh", Code::Auth, "brama")?
+    .impact("one credential refresh")
+    .detail(provider_text)
+    .with_context("subscription", id);
 ```
 
 `Code::from_upstream_status` / `from_upstream_status` / `fromUpstreamStatus`

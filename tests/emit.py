@@ -16,7 +16,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "python"))
 
-from wisent_errors import failure  # noqa: E402  (path set above on purpose)
+from wisent_errors import failure, failure_or_fallback  # noqa: E402  (path set above)
 from wisent_errors.codes import (  # noqa: E402
     CODES,
     exit_code,
@@ -87,8 +87,8 @@ for line in CASES.read_text(encoding="utf-8").splitlines():
             failure_point=fields["cause_failure_point"],
             code=fields["cause_code"],
             service=fields["cause_service"],
-            impact=fields["cause_impact"],
-            detail=fields["cause_detail"],
+            impact=fields.get("cause_impact"),
+            detail=fields.get("cause_detail"),
         )
 
     context = None
@@ -96,12 +96,13 @@ for line in CASES.read_text(encoding="utf-8").splitlines():
         key, _, value = fields["context"].partition("=")
         context = {key: value}
 
-    envelope = failure(
+    build = failure_or_fallback if fields.get("builder") == "or_fallback" else failure
+    envelope = build(
         failure_point=fields["failure_point"],
         code=fields["code"],
         service=fields["service"],
-        impact=fields["impact"],
-        detail=fields["detail"],
+        impact=fields.get("impact"),
+        detail=fields.get("detail"),
         cause=cause,
         context=context,
     )

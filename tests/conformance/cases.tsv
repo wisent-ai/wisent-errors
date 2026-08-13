@@ -18,3 +18,22 @@ name=store-unreachable	failure_point=stado.cli.registry-pull	code=infra_down	ser
 name=nested-refusal	failure_point=brama.dispatch.bounded-rotation	code=rate_limit	service=brama	impact=one model request	detail=all bounded 'claude-code' credentials unavailable for agent	cause_failure_point=brama.gateway.oauth-refresh	cause_code=auth	cause_service=brama	cause_impact=one credential refresh	cause_detail=invalid_grant -- Refresh token not found or invalid	expected={"failure_point":"brama.dispatch.bounded-rotation","error_code":"rate_limit","service":"brama","impact":"one model request","severity":"warning","retryable":true,"outage":false,"detail":"all bounded 'claude-code' credentials unavailable for agent","cause":{"failure_point":"brama.gateway.oauth-refresh","error_code":"auth","service":"brama","impact":"one credential refresh","severity":"warning","retryable":false,"outage":false,"detail":"invalid_grant -- Refresh token not found or invalid"}}
 name=silent-skip	failure_point=brama.launcher.subscription-load	code=config	service=brama	impact=every subscription the policy does not name	detail=no capability route maps this resource to a vault item and field	context=subscription=brama-sub-wisent-app-claude-1	expected={"failure_point":"brama.launcher.subscription-load","error_code":"config","service":"brama","impact":"every subscription the policy does not name","severity":"critical","retryable":false,"outage":true,"detail":"no capability route maps this resource to a vault item and field","context":{"subscription":"brama-sub-wisent-app-claude-1"}}
 name=unattributed	failure_point=probierz.figure.evaluate	code=unknown	service=probierz	impact=one figure verdict	detail=probierz exited 1 without writing a report	expected={"failure_point":"probierz.figure.evaluate","error_code":"unknown","service":"probierz","impact":"one figure verdict","severity":"error","retryable":false,"outage":false,"detail":"probierz exited 1 without writing a report"}
+
+# A call site that knows its code exactly and has no layer below to quote.
+# growth-tactics reaches this: classify_failure("accounts.job", code=NOT_FOUND).
+name=quiet-refusal	failure_point=accounts.create	code=not_found	service=growth-tactics	expected={"failure_point":"accounts.create","error_code":"not_found","service":"growth-tactics","impact":null,"severity":"warning","retryable":false,"outage":false,"detail":null}
+
+# One segment. stado's failure points come from the clap subcommand path and
+# `cli` is one of them; a rule that refused it was the package being wrong.
+name=single-segment	failure_point=cli	code=config	service=stado	impact=this command	detail=BRAMA_BIN is not executable	expected={"failure_point":"cli","error_code":"config","service":"stado","impact":"this command","severity":"critical","retryable":false,"outage":true,"detail":"BRAMA_BIN is not executable"}
+
+# Four segments, from a nested subcommand: the depth carries no meaning.
+name=deep-segment	failure_point=cli.host.user.create	code=auth	service=stado	impact=one host user	detail=host refused the operator identity	expected={"failure_point":"cli.host.user.create","error_code":"auth","service":"stado","impact":"one host user","severity":"warning","retryable":false,"outage":false,"detail":"host refused the operator identity"}
+
+# The builder that must never throw, on the two violations all three runtimes can
+# express. An off-catalogue code is deliberately absent from this case: in Rust it
+# cannot be handed one, because Code is an enum and the type system refuses it
+# before a note could be recorded. JS and Python agree byte for byte on that path
+# too; it just has no Rust side to compare against.
+name=salvaged-malformed	builder=or_fallback	failure_point=Not A Point	code=unknown	service=probierz	expected={"failure_point":"Not A Point","error_code":"unknown","service":"probierz","impact":null,"severity":"error","retryable":false,"outage":false,"detail":null,"context":{"wisent_errors.failure_point":"malformed"}}
+name=salvaged-absent	builder=or_fallback	failure_point=	code=infra_down	service=	expected={"failure_point":"unknown","error_code":"infra_down","service":"unknown","impact":null,"severity":"critical","retryable":true,"outage":true,"detail":null,"context":{"wisent_errors.failure_point":"absent","wisent_errors.service":"absent"}}

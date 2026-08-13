@@ -77,8 +77,18 @@ function validate(envelope, path) {
   for (const field of Object.keys(envelope)) {
     if (!(field in schema.properties)) found.push(`${path}.${field} is not in the schema`);
   }
+  // A malformed failure point is allowed in exactly one circumstance: the
+  // envelope came from the builder that must never throw, and it says so. An
+  // operator needs the bad string kept verbatim, and the note is what stops that
+  // from becoming a silently accepted format.
   if (typeof envelope.failure_point === 'string' && !failurePoint.test(envelope.failure_point)) {
-    found.push(`${path}.failure_point ${envelope.failure_point} is not <service>.<surface>.<operation>`);
+    const reported = envelope.context?.['wisent_errors.failure_point'];
+    if (reported !== 'malformed') {
+      found.push(
+        `${path}.failure_point ${JSON.stringify(envelope.failure_point)} is not a dotted lowercase path,` +
+          ` and context does not record it as malformed`,
+      );
+    }
   }
   const entry = meaning.get(envelope.error_code);
   if (!entry) {

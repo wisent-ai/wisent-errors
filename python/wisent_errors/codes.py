@@ -91,7 +91,7 @@ _STATUS_RANGES: tuple[tuple[int, int, str], ...] = (
     (500, 599, "infra_down"),
 )
 
-FAILURE_POINT_PATTERN: str = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*){2}$"
+FAILURE_POINT_PATTERN: str = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$"
 
 
 def operator_summary(code: str) -> str:
@@ -108,6 +108,15 @@ def outage(code: str) -> bool:
 
 def severity(code: str) -> str:
     return MEANINGS[code].severity
+
+
+def code_or_fallback(text: str) -> str:
+    """The code when the catalogue knows this text, otherwise the fallback.
+
+    Never raises. Three products wrote this coercion by hand during their
+    migration, which is the duplication this package exists to remove.
+    """
+    return text if text in MEANINGS else FALLBACK
 
 
 def http_status(code: str) -> int:

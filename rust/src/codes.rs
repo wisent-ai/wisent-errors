@@ -5,7 +5,7 @@
 use std::fmt;
 
 /// How loud this failure is. Derived from the code, never chosen at a call site.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
     Warning,
     Error,
@@ -29,7 +29,7 @@ impl fmt::Display for Severity {
 }
 
 /// The fleet's whole failure vocabulary.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Code {
     Config,
     Auth,
@@ -70,6 +70,17 @@ impl Code {
             "infra_down" => Some(Self::InfraDown),
             "unknown" => Some(Self::Unknown),
             _ => None,
+        }
+    }
+
+    /// The code when the catalogue knows this text, otherwise the fallback.
+    ///
+    /// Never fails. Three products wrote this coercion by hand during their
+    /// migration, which is the duplication this package exists to remove.
+    pub fn or_fallback(text: &str) -> Self {
+        match Self::parse(text) {
+            Some(code) => code,
+            None => Self::Unknown,
         }
     }
 

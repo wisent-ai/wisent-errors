@@ -104,27 +104,37 @@ fn main() {
         let fields = parse_case(line);
         let name = required(&fields, "name", "case");
 
-        let mut envelope = match Failure::new(
-            required(&fields, "failure_point", name),
-            code_or_exit(required(&fields, "code", name), name),
-            required(&fields, "service", name),
-            required(&fields, "impact", name),
-            required(&fields, "detail", name),
-        ) {
-            Ok(envelope) => envelope,
-            Err(error) => {
-                eprintln!("{name}: {error}");
-                std::process::exit(1);
+        let mut envelope = if fields.get("builder") == Some(&"or_fallback") {
+            Failure::or_fallback(
+                *fields.get("failure_point").unwrap_or(&""),
+                code_or_exit(required(&fields, "code", name), name),
+                *fields.get("service").unwrap_or(&""),
+            )
+        } else {
+            match Failure::new(
+                required(&fields, "failure_point", name),
+                code_or_exit(required(&fields, "code", name), name),
+                required(&fields, "service", name),
+            ) {
+                Ok(envelope) => envelope,
+                Err(error) => {
+                    eprintln!("{name}: {error}");
+                    std::process::exit(1);
+                }
             }
         };
+        if let Some(impact) = fields.get("impact") {
+            envelope = envelope.impact(*impact);
+        }
+        if let Some(detail) = fields.get("detail") {
+            envelope = envelope.detail(*detail);
+        }
 
         if let Some(point) = fields.get("cause_failure_point") {
-            let cause = match Failure::new(
+            let mut cause = match Failure::new(
                 *point,
                 code_or_exit(required(&fields, "cause_code", name), name),
                 required(&fields, "cause_service", name),
-                required(&fields, "cause_impact", name),
-                required(&fields, "cause_detail", name),
             ) {
                 Ok(cause) => cause,
                 Err(error) => {
@@ -132,6 +142,12 @@ fn main() {
                     std::process::exit(1);
                 }
             };
+            if let Some(impact) = fields.get("cause_impact") {
+                cause = cause.impact(*impact);
+            }
+            if let Some(detail) = fields.get("cause_detail") {
+                cause = cause.detail(*detail);
+            }
             envelope = envelope.caused_by(cause);
         }
 

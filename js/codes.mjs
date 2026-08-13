@@ -57,7 +57,7 @@ export const MEANINGS = Object.freeze({
 export const CODES = Object.freeze(Object.keys(MEANINGS));
 export const SEVERITIES = Object.freeze(["warning","error","critical"]);
 export const FALLBACK = "unknown";
-export const FAILURE_POINT_PATTERN = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*){2}$";
+export const FAILURE_POINT_PATTERN = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$";
 
 /** EX_UNAVAILABLE. retryable codes exit with `retry`; every other code keeps the exit code the caller already chose. */
 export const RETRY_EXIT = 69;
@@ -81,6 +81,14 @@ export const operatorSummary = (code) => MEANINGS[code].operatorSummary;
 export const retryable = (code) => MEANINGS[code].retryable;
 export const outage = (code) => MEANINGS[code].outage;
 export const severity = (code) => MEANINGS[code].severity;
+
+/**
+ * The code when the catalogue knows this text, otherwise the fallback.
+ *
+ * Never throws. Three products wrote this coercion by hand during their
+ * migration, which is the duplication this package exists to remove.
+ */
+export const codeOrFallback = (code) => (code in MEANINGS ? code : FALLBACK);
 
 /** The HTTP status a service answers with when this failure reaches its edge. */
 export const httpStatus = (code) => MEANINGS[code].httpStatus;

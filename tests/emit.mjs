@@ -11,7 +11,7 @@
 // proves the table, which is where three copies of an HTTP status map and three
 // copies of an exit rule used to live.
 
-import { failure } from '../js/index.mjs';
+import { failure, failureOrFallback } from '../js/index.mjs';
 import { CODES, exitCode, fromUpstreamStatus, httpStatus, operatorSummary, outage, retryable, severity } from '../js/codes.mjs';
 import { readCases, TABLE_STATUSES, TABLE_CHOSEN_EXIT } from './cases.mjs';
 
@@ -52,7 +52,8 @@ for (const fields of readCases()) {
     context = { [fields.context.slice(0, at)]: fields.context.slice(at + 1) };
   }
 
-  const envelope = failure({
+  const build = fields.builder === 'or_fallback' ? failureOrFallback : failure;
+  const envelope = build({
     failurePoint: fields.failure_point,
     code: fields.code,
     service: fields.service,

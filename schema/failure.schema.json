@@ -5,17 +5,34 @@
   "description": "One shape for every failure any Wisent component reports. The fields answer, in order, the questions an operator asks: where did it break, what kind of failure is it, whose fault, is it worth retrying, and what exactly did the layer below say.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["failure_point", "error_code", "service", "impact", "severity", "retryable", "outage", "detail"],
+  "required": [
+    "failure_point",
+    "error_code",
+    "service",
+    "impact",
+    "severity",
+    "retryable",
+    "outage",
+    "detail"
+  ],
   "properties": {
     "failure_point": {
       "type": "string",
-      "description": "Three dotted segments: <service>.<surface>.<operation>. The one field that makes a failure findable in source.",
-      "pattern": "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*){2}$"
+      "description": "Where it broke: a dotted lowercase path, one segment or more. The depth carries no meaning; what is validated is the shape, because that is all a shared rule can honestly check.",
+      "pattern": "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$"
     },
     "error_code": {
       "type": "string",
       "description": "One of the catalogue's codes. Never a free-form string: a code nobody can look up is a sentence, not a classification.",
-      "enum": ["config", "auth", "not_found", "rate_limit", "timeout", "infra_down", "unknown"]
+      "enum": [
+        "config",
+        "auth",
+        "not_found",
+        "rate_limit",
+        "timeout",
+        "infra_down",
+        "unknown"
+      ]
     },
     "service": {
       "type": "string",
@@ -23,13 +40,20 @@
       "minLength": 1
     },
     "impact": {
-      "type": "string",
-      "description": "What the caller lost. Free text, because the blast radius of a failure is not a taxonomy.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "What the caller lost. Free text, because the blast radius of a failure is not a taxonomy. Null where a product has no impact axis: stado, wisent-tools and probierz have none, and three of five products cannot fill a field is the field's problem.",
       "minLength": 1
     },
     "severity": {
       "type": "string",
-      "enum": ["warning", "error", "critical"],
+      "enum": [
+        "warning",
+        "error",
+        "critical"
+      ],
       "description": "Derived from the code, never chosen at the call site."
     },
     "retryable": {
@@ -41,8 +65,11 @@
       "description": "Derived from the code. Our side is broken, as opposed to the request being wrong."
     },
     "detail": {
-      "type": "string",
-      "description": "What the layer below actually said, verbatim and truncated, never paraphrased. Required: a failure reported without its reason is the defect this schema exists to prevent.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "What the layer below actually said, verbatim and truncated, never paraphrased. Null where there was no layer below to quote: a call site that already knows its code exactly has nothing to add, and making it invent a sentence produces `detail: unknown`, which is a worse lie than an absent value. The key is always present, because a stable key set is what makes these lines queryable in a log store.",
       "minLength": 1
     },
     "cause": {
@@ -52,7 +79,14 @@
     "context": {
       "type": "object",
       "description": "Identifiers a reader needs to find the subject: a host, a subscription id, a job. Values are scalars so a log shipper can index them.",
-      "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean",
+          "null"
+        ]
+      }
     }
   }
 }

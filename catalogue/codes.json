@@ -96,14 +96,17 @@
     "rule": "retryable codes exit with `retry`; every other code keeps the exit code the caller already chose"
   },
   "failure_point": {
-    "grammar": "<service>.<surface>.<operation>",
-    "pattern": "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*){2}$",
+    "grammar": "a dotted lowercase path, one segment or more",
+    "pattern": "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$",
     "examples": [
+      "cli",
+      "cli.unknown",
+      "accounts.create",
+      "comfyui.enqueue",
       "stado.cli.host-run-helper",
-      "brama.dispatch.bounded-rotation",
-      "brama.gateway.oauth-refresh",
-      "probierz.figure.evaluate"
+      "cli.host.user.create",
+      "brama.dispatch.bounded-rotation"
     ],
-    "note": "Three segments, always. The first names the product, the second the surface a caller reached, the third the operation that failed. It is validated rather than enumerated: a closed list would be stale the day after it was written."
+    "note": "The depth carries no meaning and this rule stopped pretending it does. It was <service>.<surface>.<operation>, exactly three segments, which was invented from examples rather than read out of the registries -- and it moved twice in one hour when the migrations reached them: probierz and growth-tactics are two-segment, stado's ids come from the clap subcommand path and run from one segment (`cli`) to four (`cli.host.user.create`). A grammar that refuses what five products already emit is the package being wrong. What is validated is the shape, because that is all a shared rule can honestly check: lowercase, dot-separated, no empty segment. The product is not required as a segment because `service` is already a field of every envelope."
   }
 }
