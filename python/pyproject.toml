@@ -1,0 +1,15 @@
+[project]
+name = "wisent-errors"
+version = "1.0.0"
+description = "The Wisent failure envelope: one vocabulary, one shape, one place to look it up."
+requires-python = ">=3.9"
+# Deliberately no dependencies. A package every product has to adopt must be
+# cheap to adopt, and a validator requirement is a reason to keep the local copy.
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["wisent_errors"]

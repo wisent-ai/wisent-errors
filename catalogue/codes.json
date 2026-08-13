@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "provenance": {
+    "extracted_from": "wisent-compute/stado-rs/src/failure.rs",
+    "note": "Semantics are copied verbatim from the reference implementation so the first migration cannot change behaviour. No code was added, renamed, or re-classified."
+  },
+  "severities": ["warning", "error", "critical"],
+  "codes": [
+    {
+      "code": "config",
+      "operator_summary": "our deployment configuration is incomplete or wrong",
+      "meaning": "A value the process needs was absent or malformed. Ours to fix, and no amount of retrying changes it.",
+      "retryable": false,
+      "outage": true,
+      "severity": "critical"
+    },
+    {
+      "code": "auth",
+      "operator_summary": "the credentials this command used were rejected",
+      "meaning": "An upstream refused the identity we presented. Retrying with the same credential repeats the refusal.",
+      "retryable": false,
+      "outage": false,
+      "severity": "warning"
+    },
+    {
+      "code": "not_found",
+      "operator_summary": "what the command asked for is not there",
+      "meaning": "The request named something absent. A server error is never classified here: collapsing 5xx into 'nothing there' is what let a storage outage read as an empty queue.",
+      "retryable": false,
+      "outage": false,
+      "severity": "warning"
+    },
+    {
+      "code": "rate_limit",
+      "operator_summary": "an upstream is throttling us",
+      "meaning": "The request was well formed and refused for pace. Worth repeating later, unchanged.",
+      "retryable": true,
+      "outage": false,
+      "severity": "warning"
+    },
+    {
+      "code": "timeout",
+      "operator_summary": "an upstream did not answer in time",
+      "meaning": "No verdict arrived. The operation may or may not have happened, which is why it counts as our outage.",
+      "retryable": true,
+      "outage": true,
+      "severity": "error"
+    },
+    {
+      "code": "infra_down",
+      "operator_summary": "infrastructure we depend on is unreachable",
+      "meaning": "A dependency did not answer at all. Nothing about the request was wrong.",
+      "retryable": true,
+      "outage": true,
+      "severity": "critical"
+    },
+    {
+      "code": "unknown",
+      "operator_summary": "the command failed and we could not attribute the failure",
+      "meaning": "The last resort. A failure that stays unknown is a gap in classification, not a kind of failure, and it is worth reading as a defect in whoever emitted it.",
+      "retryable": false,
+      "outage": false,
+      "severity": "error"
+    }
+  ],
+  "upstream_status": {
+    "note": "Classification of a status an upstream answered one of our calls with. Ranges are inclusive.",
+    "exact": {
+      "401": "auth",
+      "403": "auth",
+      "407": "auth",
+      "404": "not_found",
+      "410": "not_found",
+      "408": "timeout",
+      "504": "timeout",
+      "429": "rate_limit"
+    },
+    "ranges": [
+      { "from": 500, "to": 599, "code": "infra_down" }
+    ],
+    "default": "unknown"
+  },
+  "failure_point": {
+    "grammar": "<service>.<surface>.<operation>",
+    "pattern": "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*){2}$",
+    "examples": [
+      "stado.cli.host-run-helper",
+      "brama.dispatch.bounded-rotation",
+      "brama.gateway.oauth-refresh",
+      "probierz.figure.evaluate"
+    ],
+    "note": "Three segments, always. The first names the product, the second the surface a caller reached, the third the operation that failed. It is validated rather than enumerated: a closed list would be stale the day after it was written."
+  }
+}

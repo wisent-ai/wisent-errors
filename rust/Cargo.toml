@@ -1,0 +1,11 @@
+[package]
+name = "wisent-errors"
+version = "1.0.0"
+edition = "2021"
+description = "The Wisent failure envelope: one vocabulary, one shape, one place to look it up."
+license = "UNLICENSED"
+publish = false
+
+# Deliberately no dependencies. A package every product has to adopt must be
+# cheap to adopt, and a serde requirement is a reason to keep the local copy.
+[dependencies]

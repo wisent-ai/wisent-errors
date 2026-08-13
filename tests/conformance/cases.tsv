@@ -1,0 +1,20 @@
+# Golden envelopes every runtime must reproduce byte for byte.
+#
+# One case per line. Fields are tab separated `key=value` pairs, so all three
+# languages can read them without a JSON parser -- the Rust crate stays
+# dependency-free -- and an optional field is simply absent rather than an empty
+# column somebody has to count. Only the first `=` separates; values may contain
+# more, which is why `expected` can be JSON.
+#
+# Keys: name, failure_point, code, service, impact, detail,
+#       cause_failure_point, cause_code, cause_service, cause_impact,
+#       cause_detail, context, expected
+#
+# The cases are real: every one is a failure this fleet produced while the
+# vocabulary lived in six copies and the gateway had none.
+name=credential-refused	failure_point=brama.dispatch.bounded-rotation	code=auth	service=brama	impact=one model request	detail=provider_authentication: OAuth access token has been revoked.	expected={"failure_point":"brama.dispatch.bounded-rotation","error_code":"auth","service":"brama","impact":"one model request","severity":"warning","retryable":false,"outage":false,"detail":"provider_authentication: OAuth access token has been revoked."}
+name=throttled	failure_point=brama.dispatch.bounded-rotation	code=rate_limit	service=brama	impact=one model request	detail=all bounded 'codex' credentials unavailable for agent	expected={"failure_point":"brama.dispatch.bounded-rotation","error_code":"rate_limit","service":"brama","impact":"one model request","severity":"warning","retryable":true,"outage":false,"detail":"all bounded 'codex' credentials unavailable for agent"}
+name=store-unreachable	failure_point=stado.cli.registry-pull	code=infra_down	service=stado	impact=the registry read this command needed	detail=error sending request for url (http://127.0.0.1:8765/api/object)	expected={"failure_point":"stado.cli.registry-pull","error_code":"infra_down","service":"stado","impact":"the registry read this command needed","severity":"critical","retryable":true,"outage":true,"detail":"error sending request for url (http://127.0.0.1:8765/api/object)"}
+name=nested-refusal	failure_point=brama.dispatch.bounded-rotation	code=rate_limit	service=brama	impact=one model request	detail=all bounded 'claude-code' credentials unavailable for agent	cause_failure_point=brama.gateway.oauth-refresh	cause_code=auth	cause_service=brama	cause_impact=one credential refresh	cause_detail=invalid_grant -- Refresh token not found or invalid	expected={"failure_point":"brama.dispatch.bounded-rotation","error_code":"rate_limit","service":"brama","impact":"one model request","severity":"warning","retryable":true,"outage":false,"detail":"all bounded 'claude-code' credentials unavailable for agent","cause":{"failure_point":"brama.gateway.oauth-refresh","error_code":"auth","service":"brama","impact":"one credential refresh","severity":"warning","retryable":false,"outage":false,"detail":"invalid_grant -- Refresh token not found or invalid"}}
+name=silent-skip	failure_point=brama.launcher.subscription-load	code=config	service=brama	impact=every subscription the policy does not name	detail=no capability route maps this resource to a vault item and field	context=subscription=brama-sub-wisent-app-claude-1	expected={"failure_point":"brama.launcher.subscription-load","error_code":"config","service":"brama","impact":"every subscription the policy does not name","severity":"critical","retryable":false,"outage":true,"detail":"no capability route maps this resource to a vault item and field","context":{"subscription":"brama-sub-wisent-app-claude-1"}}
+name=unattributed	failure_point=probierz.figure.evaluate	code=unknown	service=probierz	impact=one figure verdict	detail=probierz exited 1 without writing a report	expected={"failure_point":"probierz.figure.evaluate","error_code":"unknown","service":"probierz","impact":"one figure verdict","severity":"error","retryable":false,"outage":false,"detail":"probierz exited 1 without writing a report"}
