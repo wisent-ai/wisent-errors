@@ -240,18 +240,66 @@ hand-built failure envelope in 2 place(s):
   .../probierz/agent/failure.mjs:259  error_code: classified.code,
 ```
 
-## Adopting it
+## Adopted
 
-Order by what the absence costs, not alphabetically.
+All seven consumers were migrated on 2026-08-13, the day the package was written.
 
-1. **`brama`** — has no envelope and carries every model request. Four message
-   sites in `subscription_dispatch/dispatch.rs` (413, 434, 599, 724) and
-   `ModelErrorContract` in `core/server.rs`. This is where the day went.
-2. **`wisent-customer-support`** — the copy that drifted out of the vocabulary.
-3. **`stado-rs`, `probierz`, `growth-tactics`, `wisent-tools`,
-   `wisent-backend-images`** — delete the local copy, depend on the package, and
-   let the conformance cases prove nothing changed. Roughly 2,500 lines go.
+| product | what it took | what its own diff showed |
+| --- | --- | --- |
+| `brama` | the whole envelope; it had none | client bytes unchanged; the dispatcher's refusal now carries the provider's `invalid_grant` as its `cause` |
+| `wisent-compute/stado-rs` | the vocabulary it was extracted from | **empty diff**, across all 65,536 `u16` statuses |
+| `probierz` | vocabulary, envelope, trim, coercion | 16 lines of 930, all the status ladder |
+| `growth-tactics` | vocabulary, derived tables, trim, coercion | 6 lines, all the status ladder |
+| `wisent-tools` | vocabulary, derived tables, retry exit, trim, coercion | 2 lines, all the status ladder |
+| `wisent-backend-images` | vocabulary, four tables, trim, coercion | 12 lines: the ladder, plus a dangling space |
+| `wisent-customer-support` | vocabulary, derived tables, trim, coercion | 5 lines: the ladder, plus stripped padding |
 
-`stado-rs` is the reference: the Rust runtime was extracted from it rather than
-rewritten, so its exit-code remap and operator sentences survive the move
-unchanged.
+Roughly 500 lines of duplicated derivation deleted across six products, and every
+behavioural line of every diff is one of the two drifts named at the top of this
+file. `stado-rs` is the reference: the Rust runtime was extracted from it rather
+than rewritten, and its diff being empty is what makes the other six diffs
+readable as corrections rather than changes.
+
+`wisent-backend-images` deserves a footnote. Its 707-line copy was the largest in
+the fleet, in a repository that is archived, never released, with zero tags and
+zero workflow runs — and `app/failure.py` had never been committed at all. It
+entered version control for the first time in its own migration.
+
+## Pin the commit
+
+Every consumer names the exact revision in its own dependency spec, not just in a
+lockfile:
+
+```
+npm    "@wisent/errors": "github:wisent-ai/wisent-errors#<sha>"
+cargo  wisent-errors = { git = "https://github.com/wisent-ai/wisent-errors", rev = "<sha>" }
+pip    wisent-errors @ git+https://github.com/wisent-ai/wisent-errors@<sha>#subdirectory=python
+```
+
+Upgrading therefore costs seven deliberate one-line bumps, which is the price of
+the guarantee. An unpinned spec was the original instruction, and within one hour
+it let one product pick up a rule change and drop it again with no commit anywhere
+recording either move. A lockfile stops a checkout from drifting; it does not stop
+the command a person types.
+
+## What actually caught the defects
+
+Not this package's own checks. The conformance harness proves three runtimes agree
+with each other; it cannot tell you they agree with what the fleet was already
+emitting. Only a consumer's own before-and-after diff does that, which is why each
+migration was asked to produce one rather than to trust a suite.
+
+That is how four defects in already-pushed code were found within an hour: the
+word-edge trim moving operator-visible bytes, a byte offset compared against a
+character limit, `-1` used as a position, and a missing `Hash` derive that would
+have broken any product keying a map by code. Three of the rules in this package's
+first day — three-segment failure points, a mandatory `detail`, a word-edge cut —
+were mine from taste rather than read out of the registries, and the migrations
+overturned all three.
+
+The strongest single piece of evidence was produced by accident. `probierz` wrote
+an equivalence harness to prove the package matched its local module, and that
+harness forced a code onto an already-classified object without recomputing: the
+package re-derived `severity`, `retryable` and `outage` correctly while the local
+side carried stale values. A test written to show the package was unnecessary
+demonstrated the exact defect it exists to prevent.
