@@ -26,6 +26,20 @@ for (const fields of readCases()) {
   order.push(fields.name);
 }
 
+// Build the Rust emitter rather than requiring the reader to have done it.
+//
+// A harness that reports RUNTIME MISSING on a fresh clone teaches the person who
+// ran it that a missing runtime is normal, and the next time one really is
+// missing they will read past the line. If cargo itself is absent, say that
+// exactly, because it is a different fact about the machine.
+const EMIT = join(ROOT, 'target', 'debug', 'emit');
+try {
+  execFileSync('cargo', ['build', '--quiet', '--bin', 'emit'], { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' });
+} catch (error) {
+  const why = String(error.stderr || error.message).trim().split('\n').slice(0, 4).join('\n  ');
+  console.log(`could not build the Rust emitter -- the Rust runtime will be reported missing:\n  ${why}`);
+}
+
 function emitted(label, run) {
   let output;
   try {
@@ -55,7 +69,7 @@ const runtimes = [
   {
     label: 'rust',
     rows: emitted('rust', () =>
-      execFileSync(join(ROOT, 'target', 'debug', 'emit'), [], {
+      execFileSync(EMIT, [], {
         encoding: 'utf8',
         input: readFileSync(CASES_PATH, "utf8"),
       }),
@@ -100,7 +114,7 @@ const tables = [
   [
     'rust',
     () =>
-      execFileSync(join(ROOT, 'target', 'debug', 'emit'), ['--table'], {
+      execFileSync(EMIT, ['--table'], {
         encoding: 'utf8',
         input: readFileSync(TABLE_PATH, 'utf8'),
       }),
