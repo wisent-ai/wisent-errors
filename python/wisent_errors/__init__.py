@@ -18,6 +18,9 @@ import re
 from typing import Any, Mapping, Optional
 
 from .codes import (
+    RETRY_EXIT,
+    exit_code,
+    http_status,
     CODES,
     FAILURE_POINT_PATTERN,
     FALLBACK,
@@ -33,6 +36,9 @@ from .codes import (
 __all__ = [
     "CODES",
     "FALLBACK",
+    "RETRY_EXIT",
+    "exit_code",
+    "http_status",
     "MEANINGS",
     "SEVERITIES",
     "FailureError",

@@ -15,6 +15,9 @@ import {
   FALLBACK,
   FAILURE_POINT_PATTERN,
   MEANINGS,
+  RETRY_EXIT,
+  exitCode,
+  httpStatus,
   fromUpstreamStatus,
   operatorSummary,
   outage,
@@ -103,4 +106,16 @@ export function chain(envelope) {
   return rows;
 }
 
-export { CODES, FALLBACK, MEANINGS, fromUpstreamStatus, operatorSummary, outage, retryable, severity };
+export {
+  CODES,
+  FALLBACK,
+  MEANINGS,
+  RETRY_EXIT,
+  exitCode,
+  fromUpstreamStatus,
+  httpStatus,
+  operatorSummary,
+  outage,
+  retryable,
+  severity,
+};
