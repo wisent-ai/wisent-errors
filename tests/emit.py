@@ -16,7 +16,12 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "python"))
 
-from wisent_errors import failure, failure_or_fallback  # noqa: E402  (path set above)
+from wisent_errors import (  # noqa: E402
+    failure,
+    failure_or_fallback,
+    trim_detail,
+    trim_detail_at_word_edge,
+)
 from wisent_errors.codes import (  # noqa: E402
     CODES,
     exit_code,
@@ -44,7 +49,7 @@ def parse_case(line: str) -> dict[str, str]:
     return fields
 
 
-def table_probes() -> tuple[list[int], int]:
+def table_probes() -> tuple[list[int], int, list]:
     """The statuses to classify and the exit code a caller brings, read as data."""
     rows: dict[str, list[str]] = {}
     for line in TABLE.read_text(encoding="utf-8").splitlines():
@@ -52,11 +57,16 @@ def table_probes() -> tuple[list[int], int]:
             continue
         fields = line.split("\t")
         rows[fields[0]] = fields[1:]
-    return [int(status) for status in rows["statuses"]], int(rows["chosen_exit"][0])
+    trims = [
+        (line.split("\t")[0], int(line.split("\t")[1]), line.split("\t")[2])
+        for line in TABLE.read_text(encoding="utf-8").splitlines()
+        if line.startswith("trim\t") or line.startswith("word\t")
+    ]
+    return [int(status) for status in rows["statuses"]], int(rows["chosen_exit"][0]), trims
 
 
 if "--table" in sys.argv:
-    statuses, chosen = table_probes()
+    statuses, chosen, trims = table_probes()
     for code in CODES:
         print(
             "\t".join(
@@ -73,6 +83,9 @@ if "--table" in sys.argv:
         )
     for status in statuses:
         print(f"status={status}\tcode={from_upstream_status(status)}")
+    for rule, limit, text in trims:
+        cut = trim_detail_at_word_edge(text, limit) if rule == "word" else trim_detail(text, limit)
+        print(f"{rule}={limit}\tresult={cut}")
     raise SystemExit(0)
 
 

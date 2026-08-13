@@ -54,6 +54,7 @@ fn code_or_exit(text: &str, name: &str) -> Code {
 fn table(input: &str) {
     let mut statuses: Vec<u16> = Vec::new();
     let mut chosen: i32 = 0;
+    let mut trims: Vec<(String, usize, String)> = Vec::new();
     for line in input.lines() {
         if line.trim().is_empty() || line.starts_with('#') {
             continue;
@@ -63,6 +64,11 @@ fn table(input: &str) {
             Some("statuses") => statuses = fields.filter_map(|value| value.parse().ok()).collect(),
             Some("chosen_exit") => {
                 chosen = fields.next().and_then(|value| value.parse().ok()).unwrap_or(0)
+            }
+            Some(rule @ ("trim" | "word")) => {
+                let limit = fields.next().and_then(|value| value.parse().ok()).unwrap_or(0);
+                let text = fields.next().unwrap_or("").to_owned();
+                trims.push((rule.to_owned(), limit, text));
             }
             _ => continue,
         }
@@ -82,6 +88,14 @@ fn table(input: &str) {
     }
     for status in statuses {
         println!("status={status}\tcode={}", Code::from_upstream_status(status));
+    }
+    for (rule, limit, text) in trims {
+        let cut = if rule == "word" {
+            wisent_errors::trim_detail_at_word_edge(&text, limit, 24)
+        } else {
+            wisent_errors::trim_detail(&text, limit)
+        };
+        println!("{rule}={limit}\tresult={cut}");
     }
 }
 

@@ -11,9 +11,9 @@
 // proves the table, which is where three copies of an HTTP status map and three
 // copies of an exit rule used to live.
 
-import { failure, failureOrFallback } from '../js/index.mjs';
+import { failure, failureOrFallback, trimDetail, trimDetailAtWordEdge } from '../js/index.mjs';
 import { CODES, exitCode, fromUpstreamStatus, httpStatus, operatorSummary, outage, retryable, severity } from '../js/codes.mjs';
-import { readCases, TABLE_STATUSES, TABLE_CHOSEN_EXIT } from './cases.mjs';
+import { readCases, TABLE_STATUSES, TABLE_CHOSEN_EXIT, TABLE_TRIMS } from './cases.mjs';
 
 if (process.argv.includes('--table')) {
   for (const code of CODES) {
@@ -31,6 +31,10 @@ if (process.argv.includes('--table')) {
   }
   for (const status of TABLE_STATUSES) {
     console.log(`status=${status}\tcode=${fromUpstreamStatus(status)}`);
+  }
+  for (const probe of TABLE_TRIMS) {
+    const cut = probe.rule === 'word' ? trimDetailAtWordEdge(probe.text, probe.limit) : trimDetail(probe.text, probe.limit);
+    console.log(`${probe.rule}=${probe.limit}\tresult=${cut}`);
   }
   process.exit(0);
 }

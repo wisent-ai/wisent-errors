@@ -9,6 +9,7 @@ import {
   CODES,
   FAILURE_POINT_PATTERN,
   FALLBACK,
+  SEVERITIES,
   MEANINGS,
   RETRY_EXIT,
   exitCode,
@@ -26,18 +27,41 @@ const FAILURE_POINT = new RegExp(FAILURE_POINT_PATTERN);
 export const DETAIL_LIMIT = 2000;
 
 /**
- * Trim a detail to a bound, on a word edge when one is near the cut.
+ * Trim a detail to a bound. A hard cut, which is what the fleet emits.
  *
  * The limit is an argument because the width is a product's own decision --
  * stado and probierz keep 300, wisent-customer-support 400, wisent-tools 500 --
  * while the rule for how to cut is the thing that was written six times.
+ *
+ * An earlier version of this backed up to the last word edge within 24
+ * characters of the bound. Nothing in the fleet did that: four products cut
+ * hard, and adopting the nicer rule silently moved the bytes of an
+ * operator-visible line for every detail longer than the bound that contains a
+ * space, which is nearly all of them. Ends are still stripped, because
+ * whitespace around a detail is never information.
  */
 export function trimDetail(text, limit = DETAIL_LIMIT) {
   const value = String(text ?? '').trim();
-  if (value.length <= limit) return value;
-  const cut = value.slice(0, limit);
+  return value.length <= limit ? value : value.slice(0, limit);
+}
+
+/**
+ * The same, cut back to a word edge when one falls within `slack` of the bound.
+ *
+ * Separate and opt-in, because it changes emitted bytes. Worth having where a
+ * detail is read by a person rather than parsed, and worth never being a default.
+ */
+export function trimDetailAtWordEdge(text, limit = DETAIL_LIMIT, slack = 24) {
+  const cut = trimDetail(text, limit);
+  const value = String(text ?? '').trim();
+  if (cut.length < limit) return cut;
+  if (/\s/.test(value.charAt(limit))) return cut.trimEnd();
+  // `edge > 0` matters: lastIndexOf returns -1 when there is no space at all, and
+  // for any limit under `slack` that -1 passes a bare `edge > limit - slack`, which
+  // silently dropped the last character. No fleet width is that small; the guard
+  // was still wrong rather than benignly unreachable.
   const edge = cut.lastIndexOf(' ');
-  return (edge > limit - 24 ? cut.slice(0, edge) : cut).trimEnd();
+  return (edge > 0 && edge > limit - slack ? cut.slice(0, edge) : cut).trimEnd();
 }
 
 export class FailureError extends Error {
@@ -185,9 +209,11 @@ export function chain(envelope) {
 
 export {
   CODES,
+  FAILURE_POINT_PATTERN,
   FALLBACK,
   MEANINGS,
   RETRY_EXIT,
+  SEVERITIES,
   exitCode,
   fromUpstreamStatus,
   httpStatus,

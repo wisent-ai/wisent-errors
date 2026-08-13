@@ -50,6 +50,7 @@ __all__ = [
     "retryable",
     "severity",
     "trim_detail",
+    "trim_detail_at_word_edge",
 ]
 
 _FAILURE_POINT = re.compile(FAILURE_POINT_PATTERN)
@@ -59,18 +60,40 @@ DETAIL_LIMIT = 2000
 
 
 def trim_detail(text: Any, limit: int = DETAIL_LIMIT) -> str:
-    """Trim a detail to a bound, on a word edge when one is near the cut.
+    """Trim a detail to a bound. A hard cut, which is what the fleet emits.
 
     The limit is an argument because the width is a product's own decision --
     stado and probierz keep 300, wisent-customer-support 400, wisent-tools 500 --
     while the rule for how to cut is the thing that was written six times.
+
+    An earlier version of this backed up to the last word edge within 24
+    characters of the bound. Nothing in the fleet did that: four products cut
+    hard, and adopting the nicer rule silently moved the bytes of an
+    operator-visible line for every detail longer than the bound that contains a
+    space. Ends are still stripped, because whitespace around a detail is never
+    information.
     """
     value = ("" if text is None else str(text)).strip()
-    if len(value) <= limit:
-        return value
-    cut = value[:limit]
+    return value if len(value) <= limit else value[:limit]
+
+
+def trim_detail_at_word_edge(text: Any, limit: int = DETAIL_LIMIT, slack: int = 24) -> str:
+    """The same, cut back to a word edge when one falls within ``slack`` of the bound.
+
+    Separate and opt-in, because it changes emitted bytes.
+    """
+    value = ("" if text is None else str(text)).strip()
+    cut = trim_detail(value, limit)
+    if len(cut) < limit:
+        return cut
+    if value[limit].isspace():
+        return cut.rstrip()
+    # ``edge > 0`` matters: rfind returns -1 when there is no space at all, and for
+    # any limit under ``slack`` that -1 passes a bare ``edge > limit - slack``, which
+    # silently dropped the last character. No fleet width is that small; the guard
+    # was still wrong rather than benignly unreachable.
     edge = cut.rfind(" ")
-    return (cut[:edge] if edge > limit - 24 else cut).rstrip()
+    return (cut[:edge] if edge > 0 and edge > limit - slack else cut).rstrip()
 
 
 class FailureError(Exception):

@@ -121,6 +121,30 @@ an argument, because the width is a product's own decision — `stado` and
 `probierz` keep 300, `wisent-customer-support` 400, `wisent-tools` 500 — while the
 rule for how to cut is the thing that was written six times.
 
+It is a **hard cut**, because that is what all four of those products emit.
+`trimDetailAtWordEdge` / `trim_detail_at_word_edge` backs up to a word edge and is
+opt-in, and that split exists because the first version had it the other way
+round. I made the nicer rule the default without checking what the fleet did, and
+five migrations reported the same consequence: it moved the bytes of an
+operator-visible log line for every detail longer than the bound that contains a
+space, which is nearly all of them. `probierz` measured 60 changed lines out of
+930 from that alone.
+
+That is the third time in this package's first day that I wrote a rule from my
+own taste instead of reading the registries — after three-segment failure points
+and a mandatory `detail`. The migrations were what caught all three, which is an
+argument for migrating consumers early rather than for designing more carefully in
+private.
+
+Two defects in the word-edge helper came out of the same reviews and are fixed:
+the edge was found with `rfind`, comparing a **byte** offset against a character
+limit, so 100 CJK characters followed by a space returned 100 characters where the
+bound was 300 — two thirds of the allowed detail discarded on any non-ASCII
+provider text. And `-1` from "no space at all" was treated as a position, so for
+any limit under 24 the last character was silently dropped. Neither was reachable
+at the fleet's widths; both were wrong rather than harmless, and the trim rule is
+now compared across all three runtimes on eleven probes including both cases.
+
 ## Use it
 
 ```js

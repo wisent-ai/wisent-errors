@@ -29,6 +29,15 @@ const table = new Map(
 export const TABLE_STATUSES = table.get('statuses').map(Number);
 export const TABLE_CHOSEN_EXIT = Number(table.get('chosen_exit')[0]);
 
+/** Every `trim` and `word` row: which rule, a width, and the text to cut. */
+export const TABLE_TRIMS = readFileSync(TABLE_PATH, 'utf8')
+  .split('\n')
+  .filter((line) => line.startsWith('trim\t') || line.startsWith('word\t'))
+  .map((line) => {
+    const fields = line.split('\t');
+    return { rule: fields[0], limit: Number(fields[1]), text: fields[2] };
+  });
+
 /** Tab separated `key=value`; the first `=` separates, so values may contain more. */
 export function parseCase(line) {
   const fields = {};

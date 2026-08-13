@@ -23,20 +23,58 @@ pub type Context = BTreeMap<String, String>;
 /// This crate's own bound. A product's bound is the product's to choose.
 pub const DETAIL_LIMIT: usize = 2000;
 
-/// Trim a detail to a bound, on a word edge when one is near the cut.
+/// Trim a detail to a bound. A hard cut, which is what the fleet emits.
 ///
 /// The limit is an argument because the width is a product's own decision --
 /// stado and probierz keep 300, wisent-customer-support 400, wisent-tools 500 --
 /// while the rule for how to cut is the thing that was written six times.
+///
+/// An earlier version backed up to the last word edge within 24 characters of the
+/// bound. Nothing in the fleet did that: four products cut hard, and the nicer
+/// rule silently moved the bytes of an operator-visible line for every detail
+/// longer than the bound that contains a space. Ends are still stripped, because
+/// whitespace around a detail is never information.
 pub fn trim_detail(text: &str, limit: usize) -> String {
     let value = text.trim();
     if value.chars().count() <= limit {
         return value.to_owned();
     }
-    let cut: String = value.chars().take(limit).collect();
-    match cut.rfind(' ') {
-        Some(edge) if edge > limit.saturating_sub(24) => cut[..edge].trim_end().to_owned(),
-        _ => cut.trim_end().to_owned(),
+    value.chars().take(limit).collect()
+}
+
+/// The same, cut back to a word edge when one falls within `slack` of the bound.
+///
+/// Separate and opt-in, because it changes emitted bytes.
+///
+/// The edge is found in characters, not bytes. The first version compared a byte
+/// offset from `rfind` against a character limit, so on multibyte text the guard
+/// passed for a space nowhere near the cut: 100 CJK characters followed by a space
+/// returned 100 characters where the bound was 300. Provider text in this fleet is
+/// not ASCII.
+pub fn trim_detail_at_word_edge(text: &str, limit: usize, slack: usize) -> String {
+    let value = text.trim();
+    let cut = trim_detail(value, limit);
+    if cut.chars().count() < limit {
+        return cut;
+    }
+    if value.chars().nth(limit).is_some_and(char::is_whitespace) {
+        return cut.trim_end().to_owned();
+    }
+    let edge = cut
+        .char_indices()
+        .filter(|(_, character)| *character == ' ')
+        .map(|(index, _)| index)
+        .next_back();
+    match edge {
+        Some(byte_index) => {
+            let chars_before = cut[..byte_index].chars().count();
+            if chars_before > limit.saturating_sub(slack) {
+                cut[..byte_index].trim_end().to_owned()
+            } else {
+                cut.trim_end().to_owned()
+            }
+        }
+        None => cut.trim_end().to_owned(),
     }
 }
 
@@ -395,6 +433,21 @@ mod tests {
         let long = "x".repeat(600);
         assert_eq!(trim_detail(&long, 500).chars().count(), 500);
         assert_eq!(trim_detail("short", 500), "short");
+    }
+
+    #[test]
+    fn the_default_cut_is_hard_because_that_is_what_the_fleet_emits() {
+        let spaced = format!("{} tail", "x".repeat(298));
+        assert_eq!(trim_detail(&spaced, 300).chars().count(), 300);
+    }
+
+    #[test]
+    fn the_word_edge_is_measured_in_characters_not_bytes() {
+        // 100 CJK characters, a space, then more: the byte offset of that space is
+        // 300, which passed a character guard of 300-24 and discarded two thirds of
+        // the allowed detail.
+        let text = format!("{} {}", "\u{8a00}".repeat(100), "\u{8a00}".repeat(400));
+        assert_eq!(trim_detail_at_word_edge(&text, 300, 24).chars().count(), 300);
     }
 
     #[test]

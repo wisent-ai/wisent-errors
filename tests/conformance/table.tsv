@@ -11,3 +11,19 @@
 #             retryable code must replace it, everything else must keep it
 statuses	200	400	401	403	404	407	408	410	429	500	502	503	504	599	600
 chosen_exit	2
+# Trims, so the rule that six products used to write for themselves is compared
+# across runtimes too. Each row is a width and a text; wisent-tools found the
+# first version discarding a whole word when the cut already fell on a word edge,
+# and nothing here would have caught it.
+trim	20	the quick brown fox jumps over it
+trim	20	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa nospace
+trim	20	exactly twenty chars
+trim	12	edge right here
+trim	500	short enough
+trim	4	xxxxxxxxxx
+trim	300	   padded at both ends   
+word	20	the quick brown fox jumps over it
+word	20	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa nospace
+word	4	xxxxxxxxxx
+word	12	edge right here
+
