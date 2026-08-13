@@ -1,0 +1,9 @@
+# A workspace at the root so a git dependency resolves.
+#
+# Cargo looks for packages at a repository's root or in the members a root
+# workspace names. Without this, `wisent-errors = { git = "..." }` fails to find
+# the crate that sits in rust/, and the only way to consume it would be a
+# vendored copy -- which is the thing this package exists to end.
+[workspace]
+members = ["rust"]
+resolver = "2"

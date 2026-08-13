@@ -1,0 +1,15 @@
+{
+  "name": "@wisent/errors",
+  "version": "1.0.0",
+  "description": "The Wisent failure envelope: one vocabulary, one shape, one place to look it up.",
+  "type": "module",
+  "main": "js/index.mjs",
+  "exports": {
+    ".": "./js/index.mjs",
+    "./codes": "./js/codes.mjs"
+  },
+  "files": ["js/", "catalogue/", "schema/"],
+  "//": "At the root so `npm install github:wisent-ai/wisent-errors` works: npm has no way to install from a subdirectory of a git repository, and a vendored copy is the thing this package exists to end.",
+  "private": true,
+  "license": "UNLICENSED"
+}
