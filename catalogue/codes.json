@@ -2,7 +2,9 @@
   "version": 1,
   "provenance": {
     "extracted_from": "wisent-compute/stado-rs/src/failure.rs",
-    "note": "Semantics are copied verbatim from the reference implementation so the first migration cannot change behaviour. No code was added, renamed, or re-classified."
+    "note": "Semantics are copied verbatim from the reference implementation so the first migration cannot change behaviour. No code was added, renamed, or re-classified.",
+    "http_status_from": "growth-tactics/api/failure.py, wisent-backend-images/app/failure.py and wisent-customer-support/src/failure.js, which held three identical copies of this mapping. Verbatim: every entry agreed before it moved here.",
+    "exit_code_from": "wisent-compute/stado-rs/src/failure.rs, probierz/agent/failure.mjs and wisent-tools/wisent/failure.py, which held the same rule three times."
   },
   "severities": ["warning", "error", "critical"],
   "codes": [
@@ -12,7 +14,8 @@
       "meaning": "A value the process needs was absent or malformed. Ours to fix, and no amount of retrying changes it.",
       "retryable": false,
       "outage": true,
-      "severity": "critical"
+      "severity": "critical",
+      "http_status": 503
     },
     {
       "code": "auth",
@@ -20,7 +23,8 @@
       "meaning": "An upstream refused the identity we presented. Retrying with the same credential repeats the refusal.",
       "retryable": false,
       "outage": false,
-      "severity": "warning"
+      "severity": "warning",
+      "http_status": 401
     },
     {
       "code": "not_found",
@@ -28,7 +32,8 @@
       "meaning": "The request named something absent. A server error is never classified here: collapsing 5xx into 'nothing there' is what let a storage outage read as an empty queue.",
       "retryable": false,
       "outage": false,
-      "severity": "warning"
+      "severity": "warning",
+      "http_status": 404
     },
     {
       "code": "rate_limit",
@@ -36,7 +41,8 @@
       "meaning": "The request was well formed and refused for pace. Worth repeating later, unchanged.",
       "retryable": true,
       "outage": false,
-      "severity": "warning"
+      "severity": "warning",
+      "http_status": 429
     },
     {
       "code": "timeout",
@@ -44,7 +50,8 @@
       "meaning": "No verdict arrived. The operation may or may not have happened, which is why it counts as our outage.",
       "retryable": true,
       "outage": true,
-      "severity": "error"
+      "severity": "error",
+      "http_status": 504
     },
     {
       "code": "infra_down",
@@ -52,7 +59,8 @@
       "meaning": "A dependency did not answer at all. Nothing about the request was wrong.",
       "retryable": true,
       "outage": true,
-      "severity": "critical"
+      "severity": "critical",
+      "http_status": 503
     },
     {
       "code": "unknown",
@@ -60,7 +68,8 @@
       "meaning": "The last resort. A failure that stays unknown is a gap in classification, not a kind of failure, and it is worth reading as a defect in whoever emitted it.",
       "retryable": false,
       "outage": false,
-      "severity": "error"
+      "severity": "error",
+      "http_status": 500
     }
   ],
   "upstream_status": {
@@ -79,6 +88,12 @@
       { "from": 500, "to": 599, "code": "infra_down" }
     ],
     "default": "unknown"
+  },
+  "exit_code": {
+    "note": "What a command exits with. Only the retryable path is remapped: a caller that already chose an exit code keeps it, so a CLI's own conventions survive adoption.",
+    "retry": 69,
+    "retry_name": "EX_UNAVAILABLE",
+    "rule": "retryable codes exit with `retry`; every other code keeps the exit code the caller already chose"
   },
   "failure_point": {
     "grammar": "<service>.<surface>.<operation>",

@@ -14,6 +14,7 @@ class _Meaning:
     retryable: bool
     outage: bool
     severity: str
+    http_status: int
 
 
 MEANINGS: dict[str, _Meaning] = {
@@ -22,48 +23,58 @@ MEANINGS: dict[str, _Meaning] = {
         retryable=False,
         outage=True,
         severity="critical",
+        http_status=503,
     ),
     "auth": _Meaning(
         operator_summary="the credentials this command used were rejected",
         retryable=False,
         outage=False,
         severity="warning",
+        http_status=401,
     ),
     "not_found": _Meaning(
         operator_summary="what the command asked for is not there",
         retryable=False,
         outage=False,
         severity="warning",
+        http_status=404,
     ),
     "rate_limit": _Meaning(
         operator_summary="an upstream is throttling us",
         retryable=True,
         outage=False,
         severity="warning",
+        http_status=429,
     ),
     "timeout": _Meaning(
         operator_summary="an upstream did not answer in time",
         retryable=True,
         outage=True,
         severity="error",
+        http_status=504,
     ),
     "infra_down": _Meaning(
         operator_summary="infrastructure we depend on is unreachable",
         retryable=True,
         outage=True,
         severity="critical",
+        http_status=503,
     ),
     "unknown": _Meaning(
         operator_summary="the command failed and we could not attribute the failure",
         retryable=False,
         outage=False,
         severity="error",
+        http_status=500,
     ),
 }
 
 CODES: tuple[str, ...] = tuple(MEANINGS)
 SEVERITIES: tuple[str, ...] = ["warning","error","critical"]
 FALLBACK: str = "unknown"
+
+# EX_UNAVAILABLE. retryable codes exit with `retry`; every other code keeps the exit code the caller already chose.
+RETRY_EXIT: int = 69
 
 _EXACT_STATUS: dict[int, str] = {
     401: "auth",
@@ -97,6 +108,16 @@ def outage(code: str) -> bool:
 
 def severity(code: str) -> str:
     return MEANINGS[code].severity
+
+
+def http_status(code: str) -> int:
+    """The HTTP status a service answers with when this failure reaches its edge."""
+    return MEANINGS[code].http_status
+
+
+def exit_code(code: str, chosen: int) -> int:
+    """The exit code this failure leaves the process with, given the chosen one."""
+    return RETRY_EXIT if MEANINGS[code].retryable else chosen
 
 
 def from_upstream_status(status: int) -> str:

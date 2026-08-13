@@ -1,0 +1,13 @@
+# What the table dump probes, asked identically of all three runtimes.
+#
+# The questions live in a data file rather than in each emitter, because three
+# emitters carrying their own copy of the question is the same defect as three
+# products carrying their own copy of the answer.
+#
+# statuses    the upstream statuses to classify, including 200 and 600 -- neither
+#             is a failure status, and a runtime that classifies them differently
+#             from the others is still a disagreement
+# chosen_exit the exit code a caller brings, so the remap rule is visible: a
+#             retryable code must replace it, everything else must keep it
+statuses	200	400	401	403	404	407	408	410	429	500	502	503	504	599	600
+chosen_exit	2

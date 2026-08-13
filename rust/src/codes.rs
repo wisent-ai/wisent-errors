@@ -41,6 +41,11 @@ pub enum Code {
 }
 
 impl Code {
+    /// The exit code a retryable failure leaves the process with.
+    ///
+    /// EX_UNAVAILABLE on every platform this fleet runs on.
+    pub const RETRY_EXIT: i32 = 69;
+
     pub const ALL: &'static [Self] = &[Self::Config, Self::Auth, Self::NotFound, Self::RateLimit, Self::Timeout, Self::InfraDown, Self::Unknown];
 
     pub fn as_str(self) -> &'static str {
@@ -120,6 +125,29 @@ impl Code {
         }
                 Self::Unknown
             }
+        }
+    }
+
+    /// The HTTP status a service answers with when this failure reaches its edge.
+    pub fn http_status(self) -> u16 {
+        match self {
+            Self::Config => 503,
+            Self::Auth => 401,
+            Self::NotFound => 404,
+            Self::RateLimit => 429,
+            Self::Timeout => 504,
+            Self::InfraDown => 503,
+            Self::Unknown => 500,
+        }
+    }
+
+    /// The exit code this failure leaves the process with, given the one the
+    /// caller already chose. retryable codes exit with `retry`; every other code keeps the exit code the caller already chose.
+    pub fn exit_code(self, chosen: i32) -> i32 {
+        if self.retryable() {
+            Self::RETRY_EXIT
+        } else {
+            chosen
         }
     }
 }

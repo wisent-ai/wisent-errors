@@ -12,6 +12,23 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 
 export const CASES_PATH = join(HERE, 'conformance', 'cases.tsv');
 
+export const TABLE_PATH = join(HERE, 'conformance', 'table.tsv');
+
+// What the table dump probes. Read from a data file all three emitters read, so
+// they agree on the question before their answers are compared.
+const table = new Map(
+  readFileSync(TABLE_PATH, 'utf8')
+    .split('\n')
+    .filter((line) => line.trim() && !line.startsWith('#'))
+    .map((line) => {
+      const fields = line.split('\t');
+      return [fields[0], fields.slice(1)];
+    }),
+);
+
+export const TABLE_STATUSES = table.get('statuses').map(Number);
+export const TABLE_CHOSEN_EXIT = Number(table.get('chosen_exit')[0]);
+
 /** Tab separated `key=value`; the first `=` separates, so values may contain more. */
 export function parseCase(line) {
   const fields = {};

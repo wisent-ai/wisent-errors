@@ -4,9 +4,36 @@
 // The three emitters exist so the conformance harness can compare languages
 // against each other and against the golden field, rather than each runtime
 // asserting its own behaviour and agreeing with nobody.
+//
+// With --table it dumps the whole derived vocabulary instead: every code's
+// severity, retryability, outage, HTTP status and exit code, plus how each
+// interesting upstream status classifies. Six envelopes prove the shape; this
+// proves the table, which is where three copies of an HTTP status map and three
+// copies of an exit rule used to live.
 
 import { failure } from '../js/index.mjs';
-import { readCases } from './cases.mjs';
+import { CODES, exitCode, fromUpstreamStatus, httpStatus, operatorSummary, outage, retryable, severity } from '../js/codes.mjs';
+import { readCases, TABLE_STATUSES, TABLE_CHOSEN_EXIT } from './cases.mjs';
+
+if (process.argv.includes('--table')) {
+  for (const code of CODES) {
+    console.log(
+      [
+        `code=${code}`,
+        `severity=${severity(code)}`,
+        `retryable=${retryable(code)}`,
+        `outage=${outage(code)}`,
+        `http_status=${httpStatus(code)}`,
+        `exit_code=${exitCode(code, TABLE_CHOSEN_EXIT)}`,
+        `operator_summary=${operatorSummary(code)}`,
+      ].join('\t'),
+    );
+  }
+  for (const status of TABLE_STATUSES) {
+    console.log(`status=${status}\tcode=${fromUpstreamStatus(status)}`);
+  }
+  process.exit(0);
+}
 
 for (const fields of readCases()) {
   const cause = fields.cause_failure_point

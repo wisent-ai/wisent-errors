@@ -43,6 +43,7 @@ function rust() {
   const outage = codes.filter((entry) => entry.outage).map((entry) => `Self::${rustName(entry.code)}`).join(' | ');
   const severity = codes.map((entry) => `            Self::${rustName(entry.code)} => Severity::${entry.severity[0].toUpperCase() + entry.severity.slice(1)},`).join('\n');
   const statusArms = exact.map(([status, code]) => `            ${status} => Self::${rustName(code)},`).join('\n');
+  const httpStatus = codes.map((entry) => `            Self::${rustName(entry.code)} => ${entry.http_status},`).join('\n');
   const rangeArms = ranges
     .map((range) => `        if (${range.from}..=${range.to}).contains(&status) {\n            return Self::${rustName(range.code)};\n        }`)
     .join('\n');
@@ -82,6 +83,11 @@ ${variants}
 }
 
 impl Code {
+    /// The exit code a retryable failure leaves the process with.
+    ///
+    /// ${catalogue.exit_code.retry_name} on every platform this fleet runs on.
+    pub const RETRY_EXIT: i32 = ${catalogue.exit_code.retry};
+
     pub const ALL: &'static [Self] = &[${codes.map((entry) => `Self::${rustName(entry.code)}`).join(', ')}];
 
     pub fn as_str(self) -> &'static str {
@@ -130,6 +136,23 @@ ${rangeArms}
             }
         }
     }
+
+    /// The HTTP status a service answers with when this failure reaches its edge.
+    pub fn http_status(self) -> u16 {
+        match self {
+${httpStatus}
+        }
+    }
+
+    /// The exit code this failure leaves the process with, given the one the
+    /// caller already chose. ${catalogue.exit_code.rule}.
+    pub fn exit_code(self, chosen: i32) -> i32 {
+        if self.retryable() {
+            Self::RETRY_EXIT
+        } else {
+            chosen
+        }
+    }
 }
 
 impl fmt::Display for Code {
@@ -149,6 +172,7 @@ function python() {
         `        retryable=${entry.retryable ? 'True' : 'False'},\n` +
         `        outage=${entry.outage ? 'True' : 'False'},\n` +
         `        severity=${JSON.stringify(entry.severity)},\n` +
+        `        http_status=${entry.http_status},\n` +
         `    ),`,
     )
     .join('\n');
@@ -171,6 +195,7 @@ class _Meaning:
     retryable: bool
     outage: bool
     severity: str
+    http_status: int
 
 
 MEANINGS: dict[str, _Meaning] = {
@@ -180,6 +205,9 @@ ${rows}
 CODES: tuple[str, ...] = tuple(MEANINGS)
 SEVERITIES: tuple[str, ...] = ${JSON.stringify(catalogue.severities)}
 FALLBACK: str = ${JSON.stringify(fallback)}
+
+# ${catalogue.exit_code.retry_name}. ${catalogue.exit_code.rule}.
+RETRY_EXIT: int = ${catalogue.exit_code.retry}
 
 _EXACT_STATUS: dict[int, str] = {
 ${exactRows}
@@ -208,6 +236,16 @@ def severity(code: str) -> str:
     return MEANINGS[code].severity
 
 
+def http_status(code: str) -> int:
+    """The HTTP status a service answers with when this failure reaches its edge."""
+    return MEANINGS[code].http_status
+
+
+def exit_code(code: str, chosen: int) -> int:
+    """The exit code this failure leaves the process with, given the chosen one."""
+    return RETRY_EXIT if MEANINGS[code].retryable else chosen
+
+
 def from_upstream_status(status: int) -> str:
     """Classify a status an upstream answered one of our calls with."""
     exact: Optional[str] = _EXACT_STATUS.get(status)
@@ -229,6 +267,7 @@ function javascript() {
         `    retryable: ${entry.retryable},\n` +
         `    outage: ${entry.outage},\n` +
         `    severity: ${JSON.stringify(entry.severity)},\n` +
+        `    httpStatus: ${entry.http_status},\n` +
         `  },`,
     )
     .join('\n');
@@ -246,6 +285,9 @@ export const SEVERITIES = Object.freeze(${JSON.stringify(catalogue.severities)})
 export const FALLBACK = ${JSON.stringify(fallback)};
 export const FAILURE_POINT_PATTERN = ${JSON.stringify(catalogue.failure_point.pattern)};
 
+/** ${catalogue.exit_code.retry_name}. ${catalogue.exit_code.rule}. */
+export const RETRY_EXIT = ${catalogue.exit_code.retry};
+
 const EXACT_STATUS = Object.freeze({
 ${exactRows}
 });
@@ -258,6 +300,12 @@ export const operatorSummary = (code) => MEANINGS[code].operatorSummary;
 export const retryable = (code) => MEANINGS[code].retryable;
 export const outage = (code) => MEANINGS[code].outage;
 export const severity = (code) => MEANINGS[code].severity;
+
+/** The HTTP status a service answers with when this failure reaches its edge. */
+export const httpStatus = (code) => MEANINGS[code].httpStatus;
+
+/** The exit code this failure leaves the process with, given the chosen one. */
+export const exitCode = (code, chosen) => (MEANINGS[code].retryable ? RETRY_EXIT : chosen);
 
 /** Classify a status an upstream answered one of our calls with. */
 export function fromUpstreamStatus(status) {

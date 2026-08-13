@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Emit every golden case through the Python runtime, one JSON per line."""
+"""Emit every golden case through the Python runtime, one JSON per line.
+
+With ``--table`` it dumps the whole derived vocabulary instead: every code's
+severity, retryability, outage, HTTP status and exit code, plus how each
+interesting upstream status classifies. Six envelopes prove the shape; this
+proves the table, which is where three copies of an HTTP status map and three
+copies of an exit rule used to live.
+"""
 
 from __future__ import annotations
 
@@ -10,8 +17,20 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "python"))
 
 from wisent_errors import failure  # noqa: E402  (path set above on purpose)
+from wisent_errors.codes import (  # noqa: E402
+    CODES,
+    exit_code,
+    from_upstream_status,
+    http_status,
+    operator_summary,
+    outage,
+    retryable,
+    severity,
+)
 
-CASES = pathlib.Path(__file__).resolve().parent / "conformance" / "cases.tsv"
+HERE = pathlib.Path(__file__).resolve().parent
+CASES = HERE / "conformance" / "cases.tsv"
+TABLE = HERE / "conformance" / "table.tsv"
 
 
 def parse_case(line: str) -> dict[str, str]:
@@ -23,6 +42,38 @@ def parse_case(line: str) -> dict[str, str]:
         key, _, value = pair.partition("=")
         fields[key] = value
     return fields
+
+
+def table_probes() -> tuple[list[int], int]:
+    """The statuses to classify and the exit code a caller brings, read as data."""
+    rows: dict[str, list[str]] = {}
+    for line in TABLE.read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        fields = line.split("\t")
+        rows[fields[0]] = fields[1:]
+    return [int(status) for status in rows["statuses"]], int(rows["chosen_exit"][0])
+
+
+if "--table" in sys.argv:
+    statuses, chosen = table_probes()
+    for code in CODES:
+        print(
+            "\t".join(
+                (
+                    f"code={code}",
+                    f"severity={severity(code)}",
+                    f"retryable={str(retryable(code)).lower()}",
+                    f"outage={str(outage(code)).lower()}",
+                    f"http_status={http_status(code)}",
+                    f"exit_code={exit_code(code, chosen)}",
+                    f"operator_summary={operator_summary(code)}",
+                )
+            )
+        )
+    for status in statuses:
+        print(f"status={status}\tcode={from_upstream_status(status)}")
+    raise SystemExit(0)
 
 
 for line in CASES.read_text(encoding="utf-8").splitlines():
