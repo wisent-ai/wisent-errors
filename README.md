@@ -370,8 +370,18 @@ pip    wisent-errors @ git+https://github.com/wisent-ai/wisent-errors@<sha>#subd
 spm    .package(url: "https://github.com/wisent-ai/wisent-errors", revision: "<sha>")
 ```
 
-Upgrading therefore costs seven deliberate one-line bumps, which is the price of
-the guarantee. An unpinned spec was the original instruction, and within one hour
+Upgrading therefore costs thirteen deliberate one-line bumps, which is the price
+of the guarantee.
+
+The fleet is on three revisions, not one, and that is stated rather than tidied:
+seven consumers on `e3014d2`, `oko-desktop` on `75df476`, and six on `2c8a355`.
+The spread is provably inert. `e3014d2..2c8a355` is 29 added lines in
+`js/` and `python/` only — `codeOrNull` and `isCode` — and touches
+`catalogue/`, `schema/` and `rust/` not at all, so every consumer derives from the
+identical catalogue whatever it pins. `75df476` differs from `e3014d2` only in the
+Swift package's platform floor. Each agent that bumped proved that diff itself
+before moving, and the ones that did not bump were right not to churn a repository
+for two functions they never call. An unpinned spec was the original instruction, and within one hour
 it let one product pick up a rule change and drop it again with no commit anywhere
 recording either move. A lockfile stops a checkout from drifting; it does not stop
 the command a person types.
