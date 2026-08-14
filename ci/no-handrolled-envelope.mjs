@@ -8,6 +8,11 @@
 //
 // This is the guard consumers run, not this package: point it at a source tree.
 //
+// It reports sites, not verdicts. A line that merely declares a field or reads
+// another vendor's `error_code` is a false positive, and the guard says so rather
+// than asserting a defect it has not established -- an earlier version accused
+// stado's Azure role-assignment parser of hand-building our envelope.
+//
 // Usage: node ci/no-handrolled-envelope.mjs <path> [<path>...]
 //
 // It reports the exact lines, because a guard that says only "something is
@@ -63,7 +68,13 @@ if (findings.length === 0) {
   process.exit(0);
 }
 
-console.log(`hand-built failure envelope in ${findings.length} place(s):`);
+console.log(`${findings.length} site(s) name an envelope key outside the package:`);
 for (const finding of findings) console.log(`  ${finding}`);
-console.log('\nBuild it with wisent-errors instead: the derived fields cannot be wrong there.');
+console.log(
+  '\nEach needs a reason. Building an envelope here means the derived fields can be' +
+    '\nwrong, so build it with wisent-errors instead. Three answers are legitimate and' +
+    '\ncommon: an operator-visible log line whose format is already parsed, a field' +
+    "\ndeclaration, and another API's own `error_code` -- Azure has one, and this guard" +
+    '\ncannot tell it from ours. Read the line before believing the count.',
+);
 process.exit(1);
