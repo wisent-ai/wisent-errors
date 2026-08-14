@@ -300,19 +300,30 @@ explanation for how five products drifted the same two lines. It also explains h
 
 ### The error path itself was throwing
 
-In `wisent-app`, `wisent-trade` and `wisent-landing-blog`, `classifyFailure` read
-a thrown value outside every `try`, so reporting a failure threw whenever the
-value would not let itself be read — a getter that raises, a `Proxy` whose traps
-raise. All three are reachable from React error boundaries, and `wisent-trade`
-also from a route wrapper whose whole purpose is that a route never escapes.
-`wisent-app`'s was the worst: its `guard` rethrew the *reporter's* error in place
-of the value its caller threw, destroying the original error. An error boundary
-that loses the error it was handed is worse than one that reports nothing.
+In `wisent-app`, `wisent-trade`, `wisent-landing-blog` and `echo-web`,
+`classifyFailure` read a thrown value outside every `try`, so reporting a failure
+threw whenever the value would not let itself be read — a getter that raises, a
+`Proxy` whose traps raise, a revoked proxy. All four are reachable from React error
+boundaries, and `wisent-trade` and `echo-web` also from a route wrapper whose whole
+purpose is that nothing escapes a route handler. `wisent-app`'s was the worst: its
+`guard` rethrew the *reporter's* error in place of the value its caller threw,
+destroying the original error. An error boundary that loses the error it was handed
+is worse than one that reports nothing.
 
-This is the invariant `probierz` and `wisent-backend-images` argued for in the
-first round, on principle, before anyone had found it happening. It was happening
-in three products. `echo-web` was the one already safe, because it guards every
-field read.
+Hostile-value counts, before and after: `wisent-app` 20 → 0, `wisent-trade` 18 → 0,
+`echo-web` 37 → 0, `wisent-landing-blog` its boundary case → salvaged. All four fixed
+in the classifier rather than in each boundary, so every call site is covered.
+
+This is the invariant `probierz` and `wisent-backend-images` argued for in the first
+round, on principle, before anyone had found it happening. It was happening in four
+of the five web products.
+
+An earlier version of this section said `echo-web` was the one already safe,
+because it guards field reads with a `readField` helper. That was mine and it was
+wrong: the helper covers the reads inside it, not the ones outside, and `echo-web`'s
+own hostile probe found 37 throws. I published the claim from reading one function
+instead of running the probe — which is the same mistake as the search result I
+published as a fact, in a section about not doing that.
 
 ### Two limits on the evidence, stated rather than buried
 
