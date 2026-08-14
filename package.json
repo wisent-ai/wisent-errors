@@ -5,11 +5,22 @@
   "type": "module",
   "main": "js/index.mjs",
   "exports": {
-    ".": "./js/index.mjs",
-    "./codes": "./js/codes.mjs"
+    ".": {
+      "types": "./js/index.d.ts",
+      "default": "./js/index.mjs"
+    },
+    "./codes": {
+      "types": "./js/codes.d.ts",
+      "default": "./js/codes.mjs"
+    }
   },
-  "files": ["js/", "catalogue/", "schema/"],
+  "files": [
+    "js/",
+    "catalogue/",
+    "schema/"
+  ],
   "//": "At the root so `npm install github:wisent-ai/wisent-errors` works: npm has no way to install from a subdirectory of a git repository, and a vendored copy is the thing this package exists to end.",
   "private": true,
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "types": "js/index.d.ts"
 }
