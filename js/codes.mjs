@@ -90,6 +90,18 @@ export const severity = (code) => MEANINGS[code].severity;
  */
 export const codeOrFallback = (code) => (code in MEANINGS ? code : FALLBACK);
 
+/**
+ * Whether the catalogue knows this text at all.
+ *
+ * Declared as a type guard for TypeScript. A wire boundary has to keep "nothing
+ * was declared" apart from "something unknown was declared", because only the
+ * first may fall through to the status, and codeOrFallback collapses both.
+ */
+export const isCode = (code) => typeof code === 'string' && code in MEANINGS;
+
+/** The code when the catalogue knows this text, otherwise null. */
+export const codeOrNull = (code) => (isCode(code) ? code : null);
+
 /** The HTTP status a service answers with when this failure reaches its edge. */
 export const httpStatus = (code) => MEANINGS[code].httpStatus;
 

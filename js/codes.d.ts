@@ -26,6 +26,12 @@ export declare function retryable(code: Code): boolean;
 export declare function outage(code: Code): boolean;
 export declare function severity(code: Code): Severity;
 export declare function codeOrFallback(code: unknown): Code;
+
+/** Whether the catalogue knows this text. A wire boundary needs the question, not a coercion. */
+export declare function isCode(code: unknown): code is Code;
+
+/** The code when the catalogue knows this text, otherwise null. */
+export declare function codeOrNull(code: unknown): Code | null;
 export declare function httpStatus(code: Code): number;
 export declare function exitCode(code: Code, chosen: number): number;
 export declare function fromUpstreamStatus(status: number): Code;

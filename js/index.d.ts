@@ -83,6 +83,12 @@ export declare function trimDetailAtWordEdge(text: unknown, limit?: number, slac
 /** The code when the catalogue knows it, otherwise the fallback. Never throws. */
 export declare function codeOrFallback(text: unknown): Code;
 
+/** Whether the catalogue knows this text. A wire boundary needs the question, not a coercion. */
+export declare function isCode(text: unknown): text is Code;
+
+/** The code when the catalogue knows this text, otherwise null. */
+export declare function codeOrNull(text: unknown): Code | null;
+
 export declare function operatorSummary(code: Code): string;
 export declare function severity(code: Code): Severity;
 export declare function retryable(code: Code): boolean;

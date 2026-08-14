@@ -110,6 +110,17 @@ def severity(code: str) -> str:
     return MEANINGS[code].severity
 
 
+def code_or_none(text: str) -> Optional[str]:
+    """The code when the catalogue knows this text, otherwise None.
+
+    The honest primitive at a wire boundary, where "nothing was declared" and
+    "something unknown was declared" must stay apart: only the first may fall
+    through to a status. Four TypeScript consumers hit that boundary and two asked
+    for this within an hour of each other.
+    """
+    return text if text in MEANINGS else None
+
+
 def code_or_fallback(text: str) -> str:
     """The code when the catalogue knows this text, otherwise the fallback.
 
