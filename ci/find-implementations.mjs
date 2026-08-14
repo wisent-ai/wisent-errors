@@ -13,10 +13,18 @@
 // only question left is whether its repository depends on the package or restates
 // it.
 //
-// What it cannot find, stated so nobody trusts it further than it goes: a module
-// that generates or interpolates the code strings instead of writing them. Every
-// implementation in this fleet spelled them out verbatim -- which is also where the
-// copies did not drift -- but a future one need not.
+// Two passes, because they answer two different questions and one cannot answer the
+// other. The literal scan finds files that restate the vocabulary; a fully migrated
+// consumer quotes no codes at all, so it produces no row and is invisible to that
+// pass -- which is correct for the gate and useless for counting adopters. The
+// manifest sweep answers "who depends on this" by reading the dependency files.
+// weles-web-blog is the proof case: perfectly migrated, zero rows, and the earlier
+// version of this tool would have counted it as neither.
+//
+// What neither pass can find, stated so nobody trusts the tool further than it
+// goes: a module that generates or interpolates the code strings instead of writing
+// them. Every implementation in this fleet spelled them out verbatim -- which is
+// also where the copies did not drift -- but a future one need not.
 //
 // Usage: node ci/find-implementations.mjs [<root>...]     default: the parent of
 //                                                         this repository
@@ -83,6 +91,17 @@ const SKIP = new Set([
 const ADOPTED = /wisent-errors|wisent_errors|WisentErrors|@wisent\/errors/;
 
 const repos = new Map();
+const adopters = new Map();
+
+// The dependency files each ecosystem declares in.
+const MANIFESTS = new Set([
+  'package.json',
+  'Cargo.toml',
+  'Package.swift',
+  'pyproject.toml',
+  'setup.py',
+  'requirements.txt',
+]);
 
 function repoOf(path) {
   // The nearest ancestor holding a .git, else the first path segment under a root.
@@ -111,6 +130,39 @@ function walk(path) {
       walk(join(path, child));
     }
     return;
+  }
+  const name = path.slice(path.lastIndexOf('/') + 1);
+  if (MANIFESTS.has(name) && !resolve(path).startsWith(PACKAGE_ROOT)) {
+    let manifest;
+    try {
+      manifest = readFileSync(path, 'utf8');
+    } catch {
+      manifest = '';
+    }
+    if (ADOPTED.test(manifest)) {
+      const repo = repoOf(path);
+      // Read the sha out of the entry that names this package, not out of the
+      // file: a manifest holds other git dependencies, and taking the first
+      // 40-hex reported one product as pinned to its onboarding client and
+      // another as pinned to a sha this package never had.
+      // A window of characters after the name, not a line: SwiftPM puts `url:` and
+      // `revision:` on separate lines and a Python requirement is split across two
+      // implicitly concatenated strings, so line matching reported five pinned
+      // consumers as unpinned. Third iteration of this one extraction bug -- each
+      // earlier version looked right against the manifests that happened to be on
+      // one line.
+      const pins = new Set();
+      const spelling = /wisent-errors|wisent_errors|WisentErrors|@wisent\/errors/g;
+      for (let hit = spelling.exec(manifest); hit; hit = spelling.exec(manifest)) {
+        const sha = manifest.slice(hit.index, hit.index + 240).match(/[0-9a-f]{40}/);
+        if (sha) pins.add(sha[0].slice(0, 8));
+      }
+      // A workspace inheritance -- `{ workspace = true }` -- carries no sha and is
+      // pinned by the workspace manifest, which this sweep reads separately.
+      if (pins.size === 0 && !/workspace\s*=\s*true/.test(manifest)) pins.add('unpinned');
+      if (!adopters.has(repo)) adopters.set(repo, new Set());
+      for (const pin of pins) adopters.get(repo).add(pin);
+    }
   }
   if (!SOURCE.has(extname(path))) return;
   if (resolve(path).startsWith(PACKAGE_ROOT)) return;
@@ -230,9 +282,19 @@ for (const [repo, record] of rows) {
 // products restating the taxonomy. Only a live one counts against the census.
 const live = unadopted.filter(([, record]) => !record.stale && !record.detached);
 const stale = unadopted.length - live.length;
+const declared = [...adopters.entries()].sort((left, right) => left[0].localeCompare(right[0]));
+if (!unadoptedOnly) {
+  console.log('');
+  for (const [repo, pins] of declared) {
+    console.log(`declares  ${relative(resolve(roots[0], '..'), repo) || repo}  pin ${[...pins].join(', ')}`);
+  }
+}
+
 console.log(
-  `\n${rows.length} checkout(s) carry the vocabulary: ` +
-    `${rows.length - unadopted.length} depend on the package, ${live.length} restate it, ` +
-    `${stale} are stale or detached copies of one that does not`,
+  `\n${declared.length} checkout(s) declare a dependency on the package.` +
+    `\n${rows.length} still quote four or more codes as literals: ` +
+    `${live.length} restate the taxonomy, ` +
+    `${stale} are stale or detached copies of one that does not, ` +
+    `${rows.length - unadopted.length} are part-migrated and name the package too.`,
 );
 process.exit(live.length === 0 ? 0 : 1);
