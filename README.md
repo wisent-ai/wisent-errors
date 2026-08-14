@@ -1,7 +1,8 @@
 # wisent-errors
 
 One failure envelope for the whole fleet: one vocabulary, one shape, one place to
-look a code up.
+look a code up. Four runtimes -- Rust, Python, JavaScript, Swift -- generated from
+one catalogue and proven byte-identical to each other.
 
 ## Why this exists
 
@@ -203,9 +204,10 @@ storage outage read as an empty queue.
 catalogue/codes.json          the single source of truth
 schema/failure.schema.json    the envelope, checkable from any language
 codegen/generate.mjs          one generator, three targets
-rust/    crate  wisent-errors
+rust/    crate   wisent-errors
 python/  package wisent_errors
-js/      package @wisent/errors
+js/      package @wisent/errors  (+ .d.ts, four consumers are TypeScript)
+swift/   library WisentErrors    (two native clients: oko-desktop, wisent-ios)
 tests/conformance/cases.tsv   golden envelopes every runtime must reproduce
 ci/check.mjs                  what must hold before this ships
 ci/no-handrolled-envelope.mjs the guard a consuming repo runs
@@ -274,6 +276,7 @@ lockfile:
 npm    "@wisent/errors": "github:wisent-ai/wisent-errors#<sha>"
 cargo  wisent-errors = { git = "https://github.com/wisent-ai/wisent-errors", rev = "<sha>" }
 pip    wisent-errors @ git+https://github.com/wisent-ai/wisent-errors@<sha>#subdirectory=python
+spm    .package(url: "https://github.com/wisent-ai/wisent-errors", revision: "<sha>")
 ```
 
 Upgrading therefore costs seven deliberate one-line bumps, which is the price of
