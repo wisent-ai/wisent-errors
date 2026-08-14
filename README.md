@@ -244,7 +244,9 @@ hand-built failure envelope in 2 place(s):
 
 ## Adopted
 
-All seven consumers were migrated on 2026-08-13, the day the package was written.
+Thirteen implementations in four languages, all migrated on 2026-08-13, the day
+the package was written. The first seven are the ones an early search of mine
+found; the last six are the ones it missed.
 
 | product | what it took | what its own diff showed |
 | --- | --- | --- |
@@ -255,17 +257,95 @@ All seven consumers were migrated on 2026-08-13, the day the package was written
 | `wisent-tools` | vocabulary, derived tables, retry exit, trim, coercion | 2 lines, all the status ladder |
 | `wisent-backend-images` | vocabulary, four tables, trim, coercion | 12 lines: the ladder, plus a dangling space |
 | `wisent-customer-support` | vocabulary, derived tables, trim, coercion | 5 lines: the ladder, plus stripped padding |
+| `wisent-app` | vocabulary, derived tables, trim | 33 pairs: the ladder, plus stripped padding — and a live throw closed |
+| `echo-web` | vocabulary, derived tables, trim, coercion | 12 of 178: the ladder, plus the trim's strip |
+| `wisent-trade` | vocabulary, derived tables, trim, predicate | 50 of 247: the ladder, the strip — and 18 hostile values that used to throw |
+| `wisent-landing-blog` | vocabulary, derived tables, trim, predicate | 14 lines: the ladder, the strip — and a live throw inside a React boundary |
+| `wisent-gradio` | vocabulary, derived tables, trim, coercion | 39 lines: the ladder, plus one leading space |
+| `oko-desktop` | the seven codes' severity, retryable, outage, and the trim | **empty diff**; it had not drifted |
 
-Roughly 500 lines of duplicated derivation deleted across six products, and every
-behavioural line of every diff is one of the two drifts named at the top of this
-file. `stado-rs` is the reference: the Rust runtime was extracted from it rather
-than rewritten, and its diff being empty is what makes the other six diffs
-readable as corrections rather than changes.
+Roughly 800 lines of duplicated derivation deleted, and every behavioural line of
+every diff is one of the three differences named in this file: the missing 407
+branch, the unbounded `>= 500`, and the trim stripping whitespace at the ends.
+`stado-rs` and `oko-desktop` are the two empty diffs, and they are what make the
+other eleven readable as corrections rather than changes.
 
-`wisent-backend-images` deserves a footnote. Its 707-line copy was the largest in
-the fleet, in a repository that is archived, never released, with zero tags and
-zero workflow runs — and `app/failure.py` had never been committed at all. It
-entered version control for the first time in its own migration.
+`wisent-ios` is the fourteenth candidate and is not in the table: it consumes
+envelopes rather than defining a vocabulary. It appears here only because the
+Swift runtime exists for it and for `oko-desktop`.
+
+### The count was wrong twice, in both directions
+
+`echo-production` looked like a fourteenth consumer and is not: it is a second
+working copy of `wisent-ai/echo-web`, with `origin` pointing at an unrelated
+17-commit repository that shares no ancestor — which is why its branch read as
+gone and why its first push tried to send 1,573 unrelated commits. Its module is
+the *older* generation, superseded on 2026-08-04 and never merged. Two agents
+migrated two generations of one product before either noticed.
+
+`backends/wisent-app` is the same: a stale clone of `wisent-app` with HEAD at an
+ancestor. Neither is a second source of truth, and neither was deleted — a
+working copy on someone's disk is theirs.
+
+### Five of them had never been committed
+
+`wisent-backend-images/app/failure.py`, `wisent-gradio/wisent/app/failure.py`,
+`wisent-landing-blog/src/lib/failure/`, `wisent-trade/lib/failure/` (eight files,
+877 lines) and `wisent-app`'s whole failure service were **untracked**. They
+entered version control for the first time in their own migrations.
+
+A copy nobody committed is a copy nobody reviewed, and that is most of the
+explanation for how five products drifted the same two lines. It also explains how
+`echo-production`'s module survived being superseded without anyone noticing.
+
+### The error path itself was throwing
+
+In `wisent-app`, `wisent-trade` and `wisent-landing-blog`, `classifyFailure` read
+a thrown value outside every `try`, so reporting a failure threw whenever the
+value would not let itself be read — a getter that raises, a `Proxy` whose traps
+raise. All three are reachable from React error boundaries, and `wisent-trade`
+also from a route wrapper whose whole purpose is that a route never escapes.
+`wisent-app`'s was the worst: its `guard` rethrew the *reporter's* error in place
+of the value its caller threw, destroying the original error. An error boundary
+that loses the error it was handed is worse than one that reports nothing.
+
+This is the invariant `probierz` and `wisent-backend-images` argued for in the
+first round, on principle, before anyone had found it happening. It was happening
+in three products. `echo-web` was the one already safe, because it guards every
+field read.
+
+### Two limits on the evidence, stated rather than buried
+
+For the five untracked modules there is no committed baseline, so the
+before-dumps are reconstructions of the file as read, not checkouts of a blob.
+`wisent-trade` validated its reconstruction by rebuilding it independently and
+matching byte for byte; `echo-production` matched its byte size against the
+directory listing. It is still a reconstruction, which is a consequence of the
+untracked footnote rather than of the measuring.
+
+And every agent in the second round wrote its dumps into a shared `/tmp` while ten
+siblings ran the same instruction. `wisent-gradio` found two of its own "identical"
+comparisons had read a sibling's file. Every claim in this table was re-derived in
+a private directory afterwards, and all of them held — `oko-desktop` added a
+negative control to prove its comparison was even sensitive, and `wisent-trade`
+chased a 12-byte size mismatch that turned out to be six em-dashes rather than a
+collision. An identical dump is a claim about which files you compared.
+
+### The intent was written down before the package existed
+
+From `oko-desktop/Sources/Oko/Workspace/OkoFailure.swift`, deleted in its
+migration:
+
+> Failure taxonomy shared with the Wisent web app, the Python backends, the Rust
+> router and the iOS client, so one outage is named identically wherever it
+> surfaces. The Swift reference this file follows is
+> `wisent-ios/.../Sources/Services/FailureClassifier.swift`; the codes and their
+> retry semantics are copied from it deliberately, not reinvented.
+
+Shared by being copied from another client's file. The first sentence is this
+package's entire purpose, written by someone who then implemented it with the one
+mechanism that guarantees drift.
+
 
 ## Pin the commit
 
