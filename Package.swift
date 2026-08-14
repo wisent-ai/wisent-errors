@@ -9,7 +9,11 @@ import PackageDescription
 
 let package = Package(
     name: "wisent-errors",
-    platforms: [.macOS(.v13), .iOS(.v16)],
+    // iOS 13, not 16: nothing in `WisentErrors` uses an API newer than that,
+    // and `wisent-ios` — one of the two clients this runtime was written for —
+    // deploys to 15.8. A floor picked from taste rather than from the sources
+    // refused the product it was built for.
+    platforms: [.macOS(.v13), .iOS(.v13)],
     products: [
         .library(name: "WisentErrors", targets: ["WisentErrors"])
     ],
