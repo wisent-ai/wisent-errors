@@ -13,6 +13,11 @@
 // only question left is whether its repository depends on the package or restates
 // it.
 //
+// What it cannot find, stated so nobody trusts it further than it goes: a module
+// that generates or interpolates the code strings instead of writing them. Every
+// implementation in this fleet spelled them out verbatim -- which is also where the
+// copies did not drift -- but a future one need not.
+//
 // Usage: node ci/find-implementations.mjs [<root>...]     default: the parent of
 //                                                         this repository
 //        node ci/find-implementations.mjs --unadopted-only

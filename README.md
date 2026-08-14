@@ -342,6 +342,54 @@ negative control to prove its comparison was even sensitive, and `wisent-trade`
 chased a 12-byte size mismatch that turned out to be six em-dashes rather than a
 collision. An identical dump is a claim about which files you compared.
 
+### A third search found five more, and the lineage of all of them
+
+Asked whether the migration was finished I answered from a list three times. The
+first list came from reading, the second from grepping `failure_point`, the third
+from grepping `infra_down` — the one code that is not an ordinary English word.
+Each found products the one before it missed: `skarbiec`, `most`, `oko-ios`,
+`wisent-desktop-auth` and `weles-web-blog`, plus `skarbiec-hub`, which was examined
+and had no implementation at all — one code literal in its own 55-value error
+vocabulary, which is a wire format and stays.
+
+Eighteen implementations, four languages. `ci/find-implementations.mjs` now answers
+the question a list cannot.
+
+Those five also established where the copies came from, which nobody had asked for:
+
+- `wisent-ios`' classifier is the parent. `oko-desktop`'s header admitted copying
+  it. `oko-ios` is a copy of the same parent, identified by the single `URLError`
+  member that distinguishes the two candidates — `.callIsActive`, present in
+  `wisent-ios` and absent from `oko-desktop`.
+- `wisent-desktop-auth` is a sibling copy carrying `oko-desktop`'s header sentence
+  with the line naming its source removed. Its body is `wisent-ios`' file with
+  "device" changed to "Mac" and a subway tunnel changed to a hotel Wi-Fi.
+- `most` holds four blocks byte-identical to pre-migration `stado`, including
+  `retryable` with the same variant order, while its status ladder had been retyped
+  against `axum::StatusCode` — and that retyped ladder is the part that lost the
+  407 branch and the 5xx bound.
+
+**Drift entered exactly where a copy had to be adapted to a local type.** The
+verbatim blocks stayed correct for months; the adapted ones did not. That is the
+mechanism, and it is why "shared by copying" is not a way of sharing.
+
+### The catalogue contradicting itself
+
+`most` read the catalogue's own words back at it. The 500-599 range called 501 and
+505 `infra_down`, which this file defines as "a dependency did not answer at all" —
+and a 501 answered. A server saying it does not implement the method is our
+deployment being incomplete, so it is `config`, and retrying cannot help. Both are
+now exact matches ahead of the range, which flips `retryable` from true to false
+for them.
+
+Every consumer that could see a 501 was asked whether that is reachable and what
+reads `retryable`, rather than being told it was safe: `wisent-desktop-auth` found
+it reachable through a host-configured gateway and better as `config` — the user
+now gets "isn't set up correctly" with no retry button instead of "isn't
+responding" with one — `oko-ios` found it needs an intermediary proxy and gates only
+a button, and `most` found nothing in its workspace reads `retryable` at all and
+that it had already classified 501 as `config` in two independent places.
+
 ### The intent was written down before the package existed
 
 From `oko-desktop/Sources/Oko/Workspace/OkoFailure.swift`, deleted in its
