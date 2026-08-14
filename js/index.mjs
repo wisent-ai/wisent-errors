@@ -12,6 +12,7 @@ import {
   SEVERITIES,
   MEANINGS,
   RETRY_EXIT,
+  codeOrFallback,
   codeOrNull,
   exitCode,
   fromUpstreamStatus,
@@ -175,11 +176,6 @@ export function failureOrFallback(fields = {}) {
   return envelope;
 }
 
-/** The code when the catalogue knows it, otherwise the fallback. Never throws. */
-export function codeOrFallback(text) {
-  return CODES.includes(text) ? text : FALLBACK;
-}
-
 /** The same as `failure`, thrown. */
 export function raise(fields) {
   throw new FailureError(failure(fields));
@@ -216,6 +212,7 @@ export {
   MEANINGS,
   RETRY_EXIT,
   SEVERITIES,
+  codeOrFallback,
   codeOrNull,
   exitCode,
   fromUpstreamStatus,

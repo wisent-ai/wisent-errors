@@ -129,7 +129,9 @@ impl Code {
             408 => Self::Timeout,
             410 => Self::NotFound,
             429 => Self::RateLimit,
+            501 => Self::Config,
             504 => Self::Timeout,
+            505 => Self::Config,
             _ => {
         if (500..=599).contains(&status) {
             return Self::InfraDown;

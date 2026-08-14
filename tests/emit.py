@@ -22,6 +22,7 @@ from wisent_errors import (  # noqa: E402
     trim_detail,
     trim_detail_at_word_edge,
 )
+from wisent_errors import code_or_fallback  # noqa: E402
 from wisent_errors.codes import (  # noqa: E402
     CODES,
     exit_code,
@@ -62,11 +63,16 @@ def table_probes() -> tuple[list[int], int, list]:
         for line in TABLE.read_text(encoding="utf-8").splitlines()
         if line.startswith("trim\t") or line.startswith("word\t")
     ]
-    return [int(status) for status in rows["statuses"]], int(rows["chosen_exit"][0]), trims
+    members = [
+        (line.split("\t")[1] if len(line.split("\t")) > 1 else "")
+        for line in TABLE.read_text(encoding="utf-8").splitlines()
+        if line.startswith("member\t")
+    ]
+    return [int(status) for status in rows["statuses"]], int(rows["chosen_exit"][0]), trims, members
 
 
 if "--table" in sys.argv:
-    statuses, chosen, trims = table_probes()
+    statuses, chosen, trims, members = table_probes()
     for code in CODES:
         print(
             "\t".join(
@@ -83,6 +89,8 @@ if "--table" in sys.argv:
         )
     for status in statuses:
         print(f"status={status}\tcode={from_upstream_status(status)}")
+    for text in members:
+        print(f"member={text}\tcode={code_or_fallback(text)}")
     for rule, limit, text in trims:
         cut = trim_detail_at_word_edge(text, limit) if rule == "word" else trim_detail(text, limit)
         print(f"{rule}={limit}\tresult={cut}")

@@ -6,7 +6,11 @@
     "http_status_from": "growth-tactics/api/failure.py, wisent-backend-images/app/failure.py and wisent-customer-support/src/failure.js, which held three identical copies of this mapping. Verbatim: every entry agreed before it moved here.",
     "exit_code_from": "wisent-compute/stado-rs/src/failure.rs, probierz/agent/failure.mjs and wisent-tools/wisent/failure.py, which held the same rule three times."
   },
-  "severities": ["warning", "error", "critical"],
+  "severities": [
+    "warning",
+    "error",
+    "critical"
+  ],
   "codes": [
     {
       "code": "config",
@@ -73,7 +77,7 @@
     }
   ],
   "upstream_status": {
-    "note": "Classification of a status an upstream answered one of our calls with. Ranges are inclusive.",
+    "note": "Classification of a status an upstream answered one of our calls with. Ranges are inclusive. 501 and 505 are exact matches ahead of the 5xx range because the range would call them infra_down, which this catalogue defines as \"a dependency did not answer at all\" -- and a 501 or a 505 did answer. A server saying it does not implement the method, or does not speak the version, is our deployment being incomplete: retrying cannot help, so `config` is the honest code. most-server read 501 as config in two independent places before this fix, on the hot path where it answers \"no backend wired up yet\".",
     "exact": {
       "401": "auth",
       "403": "auth",
@@ -82,10 +86,16 @@
       "410": "not_found",
       "408": "timeout",
       "504": "timeout",
-      "429": "rate_limit"
+      "429": "rate_limit",
+      "501": "config",
+      "505": "config"
     },
     "ranges": [
-      { "from": 500, "to": 599, "code": "infra_down" }
+      {
+        "from": 500,
+        "to": 599,
+        "code": "infra_down"
+      }
     ],
     "default": "unknown"
   },

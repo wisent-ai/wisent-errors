@@ -29,6 +29,12 @@ const table = new Map(
 export const TABLE_STATUSES = table.get('statuses').map(Number);
 export const TABLE_CHOSEN_EXIT = Number(table.get('chosen_exit')[0]);
 
+/** Every `member` row: untrusted text a runtime must answer membership for. */
+export const TABLE_MEMBERS = readFileSync(TABLE_PATH, 'utf8')
+  .split('\n')
+  .filter((line) => line.startsWith('member\t'))
+  .map((line) => line.split('\t')[1] ?? '');
+
 /** Every `trim` and `word` row: which rule, a width, and the text to cut. */
 export const TABLE_TRIMS = readFileSync(TABLE_PATH, 'utf8')
   .split('\n')

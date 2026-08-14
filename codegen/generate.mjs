@@ -255,7 +255,7 @@ def code_or_none(text: str) -> Optional[str]:
     through to a status. Four TypeScript consumers hit that boundary and two asked
     for this within an hour of each other.
     """
-    return text if text in MEANINGS else None
+    return text if text in CODES else None
 
 
 def code_or_fallback(text: str) -> str:
@@ -264,7 +264,7 @@ def code_or_fallback(text: str) -> str:
     Never raises. Three products wrote this coercion by hand during their
     migration, which is the duplication this package exists to remove.
     """
-    return text if text in MEANINGS else FALLBACK
+    return text if text in CODES else FALLBACK
 
 
 def http_status(code: str) -> int:
@@ -312,6 +312,13 @@ ${rows}
 });
 
 export const CODES = Object.freeze(Object.keys(MEANINGS));
+
+// Membership goes through a Set, never \`in\` or a bare property read. \`"toString"
+// in MEANINGS\` is true, and \`__proto__\` reads through the prototype chain, so the
+// \`in\` form accepted toString, constructor, hasOwnProperty and valueOf as codes --
+// at precisely the wire boundary these predicates exist to guard. weles-web-blog
+// had the same hole locally and rendered a failure notice whose headline was \`{}\`.
+const KNOWN = new Set(CODES);
 export const SEVERITIES = Object.freeze(${JSON.stringify(catalogue.severities)});
 export const FALLBACK = ${JSON.stringify(fallback)};
 export const FAILURE_POINT_PATTERN = ${JSON.stringify(catalogue.failure_point.pattern)};
@@ -338,7 +345,7 @@ export const severity = (code) => MEANINGS[code].severity;
  * Never throws. Three products wrote this coercion by hand during their
  * migration, which is the duplication this package exists to remove.
  */
-export const codeOrFallback = (code) => (code in MEANINGS ? code : FALLBACK);
+export const codeOrFallback = (code) => (isCode(code) ? code : FALLBACK);
 
 /**
  * Whether the catalogue knows this text at all.
@@ -347,7 +354,7 @@ export const codeOrFallback = (code) => (code in MEANINGS ? code : FALLBACK);
  * was declared" apart from "something unknown was declared", because only the
  * first may fall through to the status, and codeOrFallback collapses both.
  */
-export const isCode = (code) => typeof code === 'string' && code in MEANINGS;
+export const isCode = (code) => typeof code === 'string' && KNOWN.has(code);
 
 /** The code when the catalogue knows this text, otherwise null. */
 export const codeOrNull = (code) => (isCode(code) ? code : null);

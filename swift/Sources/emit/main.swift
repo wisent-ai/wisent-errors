@@ -42,6 +42,7 @@ if wantsTable {
     var statuses: [Int] = []
     var chosen: Int32 = 0
     var trims: [(String, Int, String)] = []
+    var members: [String] = []
     for line in input.split(separator: "\n", omittingEmptySubsequences: false) {
         let text = String(line)
         if text.trimmingCharacters(in: .whitespaces).isEmpty || text.hasPrefix("#") { continue }
@@ -52,6 +53,8 @@ if wantsTable {
             statuses = fields.dropFirst().compactMap { Int($0) }
         case "chosen_exit":
             chosen = fields.count > 1 ? (Int32(fields[1]) ?? 0) : 0
+        case "member":
+            members.append(fields.count > 1 ? fields[1] : "")
         case "trim", "word":
             if fields.count > 2, let limit = Int(fields[1]) {
                 trims.append((kind, limit, fields[2]))
@@ -76,6 +79,9 @@ if wantsTable {
     }
     for status in statuses {
         print("status=\(status)\tcode=\(Code.fromUpstream(status: status).rawValue)")
+    }
+    for text in members {
+        print("member=\(text)\tcode=\(Code.orFallback(text).rawValue)")
     }
     for (rule, limit, text) in trims {
         let cut = rule == "word" ? trimDetailAtWordEdge(text, limit: limit) : trimDetail(text, limit: limit)

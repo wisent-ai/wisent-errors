@@ -84,7 +84,9 @@ _EXACT_STATUS: dict[int, str] = {
     408: "timeout",
     410: "not_found",
     429: "rate_limit",
+    501: "config",
     504: "timeout",
+    505: "config",
 }
 
 _STATUS_RANGES: tuple[tuple[int, int, str], ...] = (
@@ -118,7 +120,7 @@ def code_or_none(text: str) -> Optional[str]:
     through to a status. Four TypeScript consumers hit that boundary and two asked
     for this within an hour of each other.
     """
-    return text if text in MEANINGS else None
+    return text if text in CODES else None
 
 
 def code_or_fallback(text: str) -> str:
@@ -127,7 +129,7 @@ def code_or_fallback(text: str) -> str:
     Never raises. Three products wrote this coercion by hand during their
     migration, which is the duplication this package exists to remove.
     """
-    return text if text in MEANINGS else FALLBACK
+    return text if text in CODES else FALLBACK
 
 
 def http_status(code: str) -> int:

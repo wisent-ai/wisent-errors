@@ -55,6 +55,7 @@ fn table(input: &str) {
     let mut statuses: Vec<u16> = Vec::new();
     let mut chosen: i32 = 0;
     let mut trims: Vec<(String, usize, String)> = Vec::new();
+    let mut members: Vec<String> = Vec::new();
     for line in input.lines() {
         if line.trim().is_empty() || line.starts_with('#') {
             continue;
@@ -65,6 +66,7 @@ fn table(input: &str) {
             Some("chosen_exit") => {
                 chosen = fields.next().and_then(|value| value.parse().ok()).unwrap_or(0)
             }
+            Some("member") => members.push(fields.next().unwrap_or("").to_owned()),
             Some(rule @ ("trim" | "word")) => {
                 let limit = fields.next().and_then(|value| value.parse().ok()).unwrap_or(0);
                 let text = fields.next().unwrap_or("").to_owned();
@@ -88,6 +90,9 @@ fn table(input: &str) {
     }
     for status in statuses {
         println!("status={status}\tcode={}", Code::from_upstream_status(status));
+    }
+    for text in members {
+        println!("member={text}\tcode={}", Code::or_fallback(&text));
     }
     for (rule, limit, text) in trims {
         let cut = if rule == "word" {

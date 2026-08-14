@@ -9,7 +9,7 @@
 #             from the others is still a disagreement
 # chosen_exit the exit code a caller brings, so the remap rule is visible: a
 #             retryable code must replace it, everything else must keep it
-statuses	200	400	401	403	404	407	408	410	429	500	502	503	504	599	600
+statuses	200	400	401	403	404	407	408	410	429	500	501	502	503	504	505	599	600
 chosen_exit	2
 # Trims, so the rule that six products used to write for themselves is compared
 # across runtimes too. Each row is a width and a text; wisent-tools found the
@@ -27,3 +27,17 @@ word	20	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa nospace
 word	4	xxxxxxxxxx
 word	12	edge right here
 
+# Membership, asked of untrusted text. The JavaScript runtime answered true for
+# `toString` and let `__proto__` through, because it tested with `in` -- at exactly
+# the boundary these predicates exist to guard, and a consumer with the same hole
+# rendered a failure notice whose headline was `{}`. Every runtime answers here now.
+member	toString
+member	__proto__
+member	constructor
+member	hasOwnProperty
+member	valueOf
+member	prototype
+member	
+member	AUTH
+member	auth
+member	infra_down

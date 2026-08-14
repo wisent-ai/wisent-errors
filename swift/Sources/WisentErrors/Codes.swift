@@ -101,7 +101,9 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
         case 408: .timeout
         case 410: .notFound
         case 429: .rateLimit
+        case 501: .config
         case 504: .timeout
+        case 505: .config
         case 500...599: .infraDown
         default: .unknown
         }
