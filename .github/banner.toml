@@ -1,0 +1,15 @@
+[automation]
+managed = true
+source_fingerprint = "523a23d9fcd6c69f"
+category = "developer"
+
+[banner]
+title = "Wisent Errors builds. You ship faster."
+description = "One failure envelope for the whole fleet: one vocabulary, one shape, one place to look a code up. Four runtimes -- Rust, Python, JavaScript, Swift -- generated from one catalogue a"
+product = "Wisent"
+url = "wisent.com"
+theme = "dark"
+layout = "signal-left"
+art_seed = "wisent-errors"
+width = 1584
+height = 396
