@@ -16,7 +16,10 @@ import FoundationNetworking
 /// Configuration is the process environment, read at call time so a launcher
 /// that sets it late still wins: `PROBIERZ_INTAKE_URL` (no path;
 /// `/v1/failures` is appended) and `PROBIERZ_INTAKE_TOKEN` (the bearer). With
-/// either absent, `report` is a no-op. The POST runs off the caller's path --
+/// either absent, the local default is tried: `http://127.0.0.1:9790` with the
+/// token from `~/.probierz/intake-token` (the file the intake itself creates
+/// on first run), which is exactly the configuration a Finder-launched app
+/// inherits nothing of. With neither available, `report` is a no-op. The POST runs off the caller's path --
 /// a detached task, a five-second timeout, the response body ignored, a
 /// non-2xx answer swallowed.
 public final class WisentFailureReporter: Sendable {
@@ -39,10 +42,10 @@ public final class WisentFailureReporter: Sendable {
     /// a detached task and returns before a byte leaves.
     public func report(_ failure: Failure) {
         let environment = ProcessInfo.processInfo.environment
-        guard let rawURL = environment["PROBIERZ_INTAKE_URL"], !rawURL.isEmpty,
-              let token = environment["PROBIERZ_INTAKE_TOKEN"], !token.isEmpty,
-              let base = URL(string: rawURL)
+        guard let configuration = Self.intakeConfiguration(environment),
+              let base = URL(string: configuration.url)
         else { return }
+        let (rawURL, token) = (configuration.url, configuration.token)
         let url = base.appendingPathComponent("v1").appendingPathComponent("failures")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -56,6 +59,21 @@ public final class WisentFailureReporter: Sendable {
             // accepted, refused, or unreachable are the same to the caller.
             session.dataTask(with: request) { _, _, _ in }.resume()
         }
+    }
+    /// Environment first; otherwise the loopback default plus the intake's
+    /// own token file. Reading a 0600 owner-only file can fail for a sandboxed
+    /// app, and that failure is the same no-op as the file being absent.
+    private static func intakeConfiguration(_ environment: [String: String]) -> (url: String, token: String)? {
+        if let url = environment["PROBIERZ_INTAKE_URL"], !url.isEmpty,
+           let token = environment["PROBIERZ_INTAKE_TOKEN"], !token.isEmpty {
+            return (url, token)
+        }
+        let tokenFile = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".probierz/intake-token")
+        guard let token = try? String(contentsOf: tokenFile, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines), !token.isEmpty
+        else { return nil }
+        return ("http://127.0.0.1:9790", token)
     }
 
     /// Report one failure from its parts, coercing like `Failure.orFallback`:
