@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "documents": {
+    "docs/what-is-wisent-errors.md": {},
+    "docs/quick-start.md": {},
+    "docs/catalogue.md": {},
+    "docs/envelope.md": {},
+    "docs/runtimes.md": {},
+    "docs/conformance.md": {},
+    "docs/integration.md": {},
+    "docs/boundary.md": {}
+  },
+  "sources": [
+    "catalogue/codes.json",
+    "schema/failure.schema.json",
+    "codegen/generate.mjs",
+    "rust/src/",
+    "python/wisent_errors/",
+    "js/",
+    "swift/Sources/",
+    "tests/",
+    "ci/",
+    "README.md"
+  ],
+  "instruction": "The docs must stay true to the catalogue as the single source of truth: the seven codes and their derived fields, the envelope schema, the four generated runtimes, and the conformance harness that proves them identical."
+}
