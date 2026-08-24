@@ -12,7 +12,7 @@ far side of this line stays in the products, on purpose.
   ([catalogue](catalogue.md)).
 - The classification of an upstream HTTP status into a code.
 - The envelope shape, its stable key set, and its serialization order
-  ([envelope](envelope.md)).
+  ([envelope](concepts/envelope.md)).
 - The trim *rule* — hard cut, ends stripped — and the opt-in word-edge
   variant.
 - The *shape* of a failure point: a dotted lowercase path, one segment or

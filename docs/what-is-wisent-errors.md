@@ -24,7 +24,7 @@ said (`detail`), and which subject it concerns (`service`, `impact`,
 `context`). It never chooses `severity`, `retryable`, or `outage`: those come
 from the catalogue, which is why one code cannot come to mean different
 things in different products. The full table is in [catalogue](catalogue.md);
-the shape it travels in is in [envelope](envelope.md).
+the shape it travels in is in [envelope](concepts/envelope.md).
 
 ## The generator derives
 

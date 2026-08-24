@@ -103,4 +103,4 @@ own business; see [boundary](boundary.md).
 
 The pattern is stated once: `ci/check.mjs` fails if the catalogue and the
 schema disagree on it. The envelope the codes travel in is
-[envelope](envelope.md).
+[envelope](concepts/envelope.md).

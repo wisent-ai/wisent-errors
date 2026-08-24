@@ -92,4 +92,4 @@ vocabulary means changing the catalogue and running the generator;
 `node codegen/generate.mjs --check` (and `ci/check.mjs`, which runs it) fails
 on any drift between the two. What the vocabulary contains is
 [catalogue](catalogue.md); what the envelope looks like is
-[envelope](envelope.md).
+[envelope](concepts/envelope.md).

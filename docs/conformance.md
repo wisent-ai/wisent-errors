@@ -93,4 +93,8 @@ column. It cannot prove they agree with what a product was already emitting
 — only that product's own before-and-after diff does, which is why each
 migration produced one. The vocabulary the harness defends is
 [catalogue](catalogue.md); the guards a consuming repository runs against
-its own tree are in [integration](integration.md).
+its own tree are in [integration](integration.md). A healthy run of gate
+and harness, pasted in full, is
+[walkthrough-conformance](walkthrough-conformance.md); every failure
+shape, captured from a deliberately broken scratch copy, is in the
+[runbook](runbook.md).

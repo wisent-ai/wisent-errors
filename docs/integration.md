@@ -94,5 +94,5 @@ known corrections — the missing 407 branch, the unbounded `>= 500`, and the
 trim stripping whitespace at the ends. A behavioural change your diff cannot
 attribute to one of the package's stated rules is a question to raise, not
 to merge. The rules themselves are in [catalogue](catalogue.md) and
-[envelope](envelope.md); the proof they hold everywhere is
+[envelope](concepts/envelope.md); the proof they hold everywhere is
 [conformance](conformance.md).
