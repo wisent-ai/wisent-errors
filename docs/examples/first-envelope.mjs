@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// The JavaScript run from docs/integrate/js.md, runnable from a checkout:
+// Runnable JavaScript companion to the Wisent Errors website integration guide:
 //
 //   node docs/examples/first-envelope.mjs
 //
-// A real consumer imports '@wisent/errors' / '@wisent/errors/codes' (pinned to a
-// commit, see docs/quick-start.md); this script imports the same modules by path
-// so it needs no npm install.
+// A real consumer imports '@wisent/errors' / '@wisent/errors/codes' at a pinned
+// revision; this script imports the same modules by path, so it needs no npm
+// install.
 
 import { failure, failureOrFallback, render, chain } from '../../js/index.mjs';
 import { fromUpstreamStatus, exitCode, isCode } from '../../js/codes.mjs';

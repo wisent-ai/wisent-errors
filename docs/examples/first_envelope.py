@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""The Python run from docs/integrate/python.md, runnable from a checkout:
+"""Runnable Python companion to the Wisent Errors website integration guide:
 
     python3 docs/examples/first_envelope.py
 
-A real consumer installs the package (pinned to a commit, see
-docs/quick-start.md); this script puts python/ on the path so it needs no pip
-install.
+A real consumer installs the package at a pinned revision; this script puts
+python/ on the path so it needs no pip install.
 """
 
 import sys

@@ -1,13 +1,13 @@
 #!/bin/sh
 # Scaffold a temporary SwiftPM consumer of WisentErrors, run it against a toy
-# Probierz intake, and show what the intake received — the run behind
-# docs/integrate/swift.md:
+# Probierz intake, and show what the intake received as a companion to the
+# website integration guide:
 #
 #   sh docs/examples/swift-consumer.sh
 #
-# A real consumer pins a git revision (see docs/quick-start.md); this uses a
-# path dependency on the checkout. Everything happens in a temp directory; the
-# toy intake listens on 127.0.0.1:19790 and exits after one request.
+# A real consumer pins a git revision; this uses a path dependency on the
+# checkout. Everything happens in a temporary directory; the toy intake listens
+# on 127.0.0.1:19790 and exits after one request.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/wisent-errors-swift-consumer.XXXXXX")

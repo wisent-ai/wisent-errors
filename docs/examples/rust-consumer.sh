@@ -1,11 +1,11 @@
 #!/bin/sh
 # Scaffold a temporary Cargo consumer of the wisent-errors crate, run it, and
-# show the exit code — the run behind docs/integrate/rust.md:
+# show the exit code as a companion to the website integration guide:
 #
 #   sh docs/examples/rust-consumer.sh
 #
-# A real consumer pins a git revision (see docs/quick-start.md); this uses a
-# path dependency on the checkout. Everything happens in a temp directory.
+# A real consumer pins a git revision; this uses a path dependency on the
+# checkout. Everything happens in a temporary directory.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/wisent-errors-rust-consumer.XXXXXX")
