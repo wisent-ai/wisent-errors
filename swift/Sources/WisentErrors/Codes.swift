@@ -17,6 +17,7 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
     case rateLimit = "rate_limit"
     case timeout
     case infraDown = "infra_down"
+    case refused
     case unknown
 
     /// The exit code a retryable failure leaves the process with.
@@ -30,6 +31,7 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
         case .rateLimit: .warning
         case .timeout: .error
         case .infraDown: .critical
+        case .refused: .warning
         case .unknown: .error
         }
     }
@@ -43,6 +45,7 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
         case .rateLimit: true
         case .timeout: true
         case .infraDown: true
+        case .refused: false
         case .unknown: false
         }
     }
@@ -56,6 +59,7 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
         case .rateLimit: false
         case .timeout: true
         case .infraDown: true
+        case .refused: false
         case .unknown: false
         }
     }
@@ -69,6 +73,7 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
         case .rateLimit: 429
         case .timeout: 504
         case .infraDown: 503
+        case .refused: 403
         case .unknown: 500
         }
     }
@@ -82,6 +87,7 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
         case .rateLimit: "an upstream is throttling us"
         case .timeout: "an upstream did not answer in time"
         case .infraDown: "infrastructure we depend on is unreachable"
+        case .refused: "an explicit policy refused this command"
         case .unknown: "the command failed and we could not attribute the failure"
         }
     }

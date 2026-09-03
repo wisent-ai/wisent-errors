@@ -60,6 +60,13 @@ MEANINGS: dict[str, _Meaning] = {
         severity="critical",
         http_status=503,
     ),
+    "refused": _Meaning(
+        operator_summary="an explicit policy refused this command",
+        retryable=False,
+        outage=False,
+        severity="warning",
+        http_status=403,
+    ),
     "unknown": _Meaning(
         operator_summary="the command failed and we could not attribute the failure",
         retryable=False,

@@ -45,6 +45,13 @@ export const MEANINGS = Object.freeze({
     severity: "critical",
     httpStatus: 503,
   },
+  refused: {
+    operatorSummary: "an explicit policy refused this command",
+    retryable: false,
+    outage: false,
+    severity: "warning",
+    httpStatus: 403,
+  },
   unknown: {
     operatorSummary: "the command failed and we could not attribute the failure",
     retryable: false,

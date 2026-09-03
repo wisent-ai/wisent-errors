@@ -37,6 +37,7 @@ pub enum Code {
     RateLimit,
     Timeout,
     InfraDown,
+    Refused,
     Unknown,
 }
 
@@ -46,7 +47,7 @@ impl Code {
     /// EX_UNAVAILABLE on every platform this fleet runs on.
     pub const RETRY_EXIT: i32 = 69;
 
-    pub const ALL: &'static [Self] = &[Self::Config, Self::Auth, Self::NotFound, Self::RateLimit, Self::Timeout, Self::InfraDown, Self::Unknown];
+    pub const ALL: &'static [Self] = &[Self::Config, Self::Auth, Self::NotFound, Self::RateLimit, Self::Timeout, Self::InfraDown, Self::Refused, Self::Unknown];
 
     pub fn as_str(self) -> &'static str {
         match self {
@@ -56,6 +57,7 @@ impl Code {
             Self::RateLimit => "rate_limit",
             Self::Timeout => "timeout",
             Self::InfraDown => "infra_down",
+            Self::Refused => "refused",
             Self::Unknown => "unknown",
         }
     }
@@ -68,6 +70,7 @@ impl Code {
             "rate_limit" => Some(Self::RateLimit),
             "timeout" => Some(Self::Timeout),
             "infra_down" => Some(Self::InfraDown),
+            "refused" => Some(Self::Refused),
             "unknown" => Some(Self::Unknown),
             _ => None,
         }
@@ -93,6 +96,7 @@ impl Code {
             Self::RateLimit => "an upstream is throttling us",
             Self::Timeout => "an upstream did not answer in time",
             Self::InfraDown => "infrastructure we depend on is unreachable",
+            Self::Refused => "an explicit policy refused this command",
             Self::Unknown => "the command failed and we could not attribute the failure",
         }
     }
@@ -115,6 +119,7 @@ impl Code {
             Self::RateLimit => Severity::Warning,
             Self::Timeout => Severity::Error,
             Self::InfraDown => Severity::Critical,
+            Self::Refused => Severity::Warning,
             Self::Unknown => Severity::Error,
         }
     }
@@ -150,6 +155,7 @@ impl Code {
             Self::RateLimit => 429,
             Self::Timeout => 504,
             Self::InfraDown => 503,
+            Self::Refused => 403,
             Self::Unknown => 500,
         }
     }

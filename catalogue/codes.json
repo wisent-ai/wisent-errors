@@ -67,6 +67,15 @@
       "http_status": 503
     },
     {
+      "code": "refused",
+      "operator_summary": "an explicit policy refused this command",
+      "meaning": "A guard we wrote said no: an allowlist that does not admit the command, a gate whose condition is unmet, a policy that forbids the operation. The request was understood and reached its decision -- nothing is missing, no credential was rejected, and nothing is down. Waiting changes nothing, and neither does repeating it; only the request or the policy can change. Added for stado's host-exec allowlist, whose refusal had no honest code: `not_found` sends an operator looking for a missing path, `auth` names credentials that were never presented, and `config` claims our deployment is broken when it is working exactly as declared. Not in `upstream_status`: a 403 from someone else's server stays `auth`, because a remote refusal usually is about the identity we presented. This code is for a refusal WE state.",
+      "retryable": false,
+      "outage": false,
+      "severity": "warning",
+      "http_status": 403
+    },
+    {
       "code": "unknown",
       "operator_summary": "the command failed and we could not attribute the failure",
       "meaning": "The last resort. A failure that stays unknown is a gap in classification, not a kind of failure, and it is worth reading as a defect in whoever emitted it.",

@@ -31,6 +31,7 @@
         "rate_limit",
         "timeout",
         "infra_down",
+        "refused",
         "unknown"
       ]
     },
