@@ -11,7 +11,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { CASES_PATH, TABLE_PATH, readCases } from './cases.mjs';
@@ -33,7 +33,9 @@ for (const fields of readCases()) {
 // ran it that a missing runtime is normal, and the next time one really is
 // missing they will read past the line. If cargo itself is absent, say that
 // exactly, because it is a different fact about the machine.
-const EMIT = join(ROOT, 'target', 'debug', 'emit');
+// Cargo and the emitter lookup must use the same output directory, including
+// a caller-selected CARGO_TARGET_DIR relative to this repository.
+const EMIT = resolve(ROOT, process.env.CARGO_TARGET_DIR || 'target', 'debug', 'emit');
 const SWIFT_EMIT = join(ROOT, '.build', 'debug', 'emit');
 try {
   execFileSync('cargo', ['build', '--quiet', '--bin', 'emit'], { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' });

@@ -9,3 +9,7 @@ publish = false
 # Deliberately no dependencies. A package every product has to adopt must be
 # cheap to adopt, and a serde requirement is a reason to keep the local copy.
 [dependencies]
+
+[[test]]
+name = "envelope"
+path = "tests/envelope/main.rs"
