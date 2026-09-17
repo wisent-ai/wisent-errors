@@ -55,6 +55,8 @@ const CODES = JSON.parse(readFileSync(join(PACKAGE_ROOT, 'catalogue', 'codes.jso
 // hand, and nothing else.
 const DISCRIMINATOR = 'infra_down';
 const THRESHOLD = 4;
+// A pin is reported by its first eight characters, enough to tell revisions apart in a table.
+const SHORT_PIN_LENGTH = 8;
 
 // Quoted, or it does not count. Unquoted `config`, `auth`, `timeout` and
 // `unknown` are ordinary tokens: counting them made `probierz/agent/stado.mjs`
@@ -155,7 +157,7 @@ function walk(path) {
       const spelling = /wisent-errors|wisent_errors|WisentErrors|@wisent\/errors/g;
       for (let hit = spelling.exec(manifest); hit; hit = spelling.exec(manifest)) {
         const sha = manifest.slice(hit.index, hit.index + 240).match(/[0-9a-f]{40}/);
-        if (sha) pins.add(sha[0].slice(0, 8));
+        if (sha) pins.add(sha[0].slice(0, SHORT_PIN_LENGTH));
       }
       // A workspace inheritance -- `{ workspace = true }` -- carries no sha and is
       // pinned by the workspace manifest, which this sweep reads separately.

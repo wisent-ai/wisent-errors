@@ -223,6 +223,9 @@ public struct Failure: Sendable, Equatable {
 }
 
 /// JSON string escaping, matching the other three runtimes exactly.
+/// Scalars below the first printable character are written as \uXXXX escapes.
+private let firstPrintableScalar: UInt32 = 0x20
+
 private func escape(_ value: String) -> String {
     var out = "\""
     for character in value.unicodeScalars {
@@ -233,7 +236,7 @@ private func escape(_ value: String) -> String {
         case "\r": out += "\\r"
         case "\t": out += "\\t"
         default:
-            if character.value < 0x20 {
+            if character.value < firstPrintableScalar {
                 out += String(format: "\\u%04x", character.value)
             } else {
                 out.unicodeScalars.append(character)
