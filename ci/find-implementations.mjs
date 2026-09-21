@@ -1,30 +1,10 @@
 #!/usr/bin/env node
 // Find every implementation of this envelope in a tree, adopted or not.
 //
-// This exists because I answered "everything is migrated" three times from a list
-// I had written, and was wrong three times. Each search axis found a different
-// subset: the first list came from reading, the second from grepping
-// `failure_point`, and the third from grepping `infra_down` — which found six more
-// products, because a copy need not use the field name but must contain the
-// vocabulary.
-//
-// So the check keys on the thing an implementation cannot avoid: the codes
-// themselves. A file naming three or more of the seven is a candidate, and the
-// only question left is whether its repository depends on the package or restates
-// it.
-//
-// Two passes, because they answer two different questions and one cannot answer the
-// other. The literal scan finds files that restate the vocabulary; a fully migrated
-// consumer quotes no codes at all, so it produces no row and is invisible to that
-// pass -- which is correct for the gate and useless for counting adopters. The
-// manifest sweep answers "who depends on this" by reading the dependency files.
-// weles-web-blog is the proof case: perfectly migrated, zero rows, and the earlier
-// version of this tool would have counted it as neither.
-//
-// What neither pass can find, stated so nobody trusts the tool further than it
-// goes: a module that generates or interpolates the code strings instead of writing
-// them. Every implementation in this fleet spelled them out verbatim -- which is
-// also where the copies did not drift -- but a future one need not.
+// Two passes: a literal scan for files that restate the vocabulary, and a
+// manifest sweep for repositories that declare a dependency on the package.
+// Why it keys on the codes, what neither pass can find, and how the
+// thresholds below were calibrated are in docs/finding-implementations.md.
 //
 // Usage: node ci/find-implementations.mjs [<root>...]     default: the parent of
 //                                                         this repository
