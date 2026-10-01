@@ -227,14 +227,9 @@ hand-built failure envelope in 2 place(s):
 
 ## Adopted
 
-Thirteen implementations in four languages were migrated on 2026-08-13, the day
-the package was written, and five more were found by the search that followed.
-Which product took what, what each one's own diff showed, the four defects the
-migration uncovered and where every copy came from are in
-[docs/migration.md](docs/migration.md).
-
-`ci/find-implementations.mjs` answers "who still restates this" against the tree
-as it is now; the record beside it says what was already answered.
+Every product that restated this envelope by hand consumes the package
+instead. `ci/find-implementations.mjs` answers "who still restates this"
+against the tree as it is now.
 
 ## Pin the commit
 
