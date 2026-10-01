@@ -8,7 +8,7 @@
 // This runtime exists because two native clients held their own copies:
 // oko-desktop and wisent-ios. It is hand-written around the generated `Codes.swift`
 // and produces byte-identical JSON to the Rust, Python and JavaScript runtimes,
-// which the package's conformance harness checks rather than assumes.
+// in the schema's key order.
 
 import Foundation
 
@@ -180,8 +180,8 @@ public struct Failure: Sendable, Equatable {
         return copy
     }
 
-    /// The envelope as JSON, with keys in the schema's order so two runtimes
-    /// produce the same bytes and a conformance test can compare them.
+    /// The envelope as JSON, with keys in the schema's order so every runtime
+    /// writes the same bytes for the same envelope.
     public func toJSON() -> String {
         var out = "{"
         out += "\(escape("failure_point")):\(escape(failurePoint))"

@@ -171,8 +171,8 @@ mechanism that guarantees drift.
 
 ## What actually caught the defects
 
-Not this package's own checks. The conformance harness proves three runtimes agree
-with each other; it cannot tell you they agree with what the fleet was already
+Not this package's own checks. They prove the runtimes are generated from one
+catalogue; they cannot tell you the runtimes agree with what the fleet was already
 emitting. Only a consumer's own before-and-after diff does that, which is why each
 migration was asked to produce one rather than to trust a suite.
 

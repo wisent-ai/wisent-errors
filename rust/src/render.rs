@@ -4,8 +4,8 @@ use crate::Failure;
 use std::fmt;
 
 impl Failure {
-    /// The envelope as JSON, with keys in the schema's order so two runtimes
-    /// produce the same bytes and a conformance test can compare them.
+    /// The envelope as JSON, with keys in the schema's order so every runtime
+    /// writes the same bytes for the same envelope.
     pub fn to_json(&self) -> String {
         let mut out = String::new();
         out.push('{');
