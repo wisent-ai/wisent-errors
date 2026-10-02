@@ -1,17 +1,13 @@
 # Finding every implementation of this envelope
 
 Why `ci/find-implementations.mjs` searches the way it does, and what it
-cannot find. This was the header comment of that file until 2026-09-21, when
-the file stood at 302 lines — two past the three-hundred-line limit every
-file in this workshop lives under.
+cannot find.
 
 ## Why it keys on the codes
 
-I answered "everything is migrated" three times from a list I had written, and
-was wrong three times. Each search axis found a different subset: the first list
-came from reading, the second from grepping `failure_point`, and the third from
-grepping `infra_down` — which found six more products, because a copy need not
-use the field name but must contain the vocabulary.
+Searching for a field name alone misses implementations that rename the field
+but retain the error vocabulary. The codes identify those copies independently
+of the field spelling.
 
 So the check keys on the thing an implementation cannot avoid: the codes
 themselves. A file naming three or more of the seven is a candidate, and the only
@@ -23,8 +19,6 @@ The literal scan finds files that restate the vocabulary; a fully migrated
 consumer quotes no codes at all, so it produces no row and is invisible to that
 pass — which is correct for the gate and useless for counting adopters. The
 manifest sweep answers "who depends on this" by reading the dependency files.
-`weles-web-blog` is the proof case: perfectly migrated, zero rows, and the
-earlier version of this tool would have counted it as neither.
 
 ## What neither pass can find
 
