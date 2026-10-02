@@ -16,6 +16,9 @@ use std::fmt;
 mod codes;
 mod render;
 
+#[cfg(feature = "cli-output")]
+pub mod cli_output;
+
 pub use codes::{Code, Severity};
 
 /// Identifiers a reader needs to find the subject: a host, a subscription, a job.

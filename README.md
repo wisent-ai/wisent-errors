@@ -198,6 +198,17 @@ classify an HTTP status the same way in all three. A 5xx is `infra_down` and
 never `not_found`: collapsing server errors into "nothing there" is what let a
 storage outage read as an empty queue.
 
+### CLI output, behind `cli-output`
+
+The Rust crate also carries what every Wisent CLI prints and reads, off by
+default so the envelope stays dependency-free. With
+`features = ["cli-output"]`, `wisent_errors::cli_output` gives
+`read_json(path)` (refusing with `failed to read <path>` or
+`invalid JSON in <path>`, the cause attached), `output(&value, text)` (pretty
+JSON, or with `text` one `path: value` line per field from the same document)
+and `text_lines`, the flattening behind it: keys joined with `.`, array items
+as `[index]`, `-` for null and for an empty array or object.
+
 ## What is not in here
 
 - **Product messages.** They go in `detail`, verbatim.

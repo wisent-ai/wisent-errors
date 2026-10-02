@@ -6,6 +6,13 @@ description = "The Wisent failure envelope: one vocabulary, one shape, one place
 license = "UNLICENSED"
 publish = false
 
-# Deliberately no dependencies. A package every product has to adopt must be
+# No dependencies by default. A package every product has to adopt must be
 # cheap to adopt, and a serde requirement is a reason to keep the local copy.
+# The `cli-output` feature brings serde for the CLIs that print JSON and
+# `path: value` text through `cli_output`; nothing else pays for it.
+[features]
+cli-output = ["dep:serde", "dep:serde_json"]
+
 [dependencies]
+serde = { version = "1", optional = true }
+serde_json = { version = "1", optional = true }
