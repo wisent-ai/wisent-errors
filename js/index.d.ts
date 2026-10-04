@@ -75,10 +75,10 @@ export declare function render(envelope: Envelope): string;
 export declare function chain(envelope: Envelope): string[];
 
 /** A hard cut, which is what the fleet emits. The width is yours. */
-export declare function trimDetail(text: unknown, limit?: number): string;
+export declare function trimDetail(text: unknown, limit: number): string;
 
 /** Cut back to a word edge when one falls within `slack`. Opt-in: it moves bytes. */
-export declare function trimDetailAtWordEdge(text: unknown, limit?: number, slack?: number): string;
+export declare function trimDetailAtWordEdge(text: unknown, limit: number, slack: number): string;
 
 /** The code when the catalogue knows it, otherwise the fallback. Never throws. */
 export declare function codeOrFallback(text: unknown): Code;
@@ -105,4 +105,3 @@ export declare const MEANINGS: Readonly<
 export declare const FALLBACK: Code;
 export declare const FAILURE_POINT_PATTERN: string;
 export declare const RETRY_EXIT: number;
-export declare const DETAIL_LIMIT: number;

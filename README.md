@@ -127,10 +127,11 @@ const envelope = failureOrFallback({ failurePoint: whatever, code: maybe, servic
 without throwing; three products wrote that coercion by hand during their
 migration, which is the duplication this package exists to remove.
 
-`trimDetail(text, limit)` / `trim_detail` exposes the trim rule with the width as
-an argument, because the width is a product's own decision — `stado` and
-`probierz` keep 300, `wisent-customer-support` 400, `wisent-tools` 500 — while the
-rule for how to cut is the thing that was written six times.
+An envelope carries its `detail` whole: `failure()`, `Failure::detail` and the
+fallback builders strip only the whitespace around it, because a cut detail is a
+cut diagnosis. `trimDetail(text, limit)` / `trim_detail` exists for a product
+that prints a detail into a narrower place; the width is always the caller's
+argument and the package has no width of its own.
 
 It is a **hard cut**, because that is what all four of those products emit.
 `trimDetailAtWordEdge` / `trim_detail_at_word_edge` backs up to a word edge and is

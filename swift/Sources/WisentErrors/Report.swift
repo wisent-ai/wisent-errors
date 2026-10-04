@@ -20,20 +20,14 @@ import FoundationNetworking
 /// token from `~/.probierz/intake-token` (the file the intake itself creates
 /// on first run), which is exactly the configuration a Finder-launched app
 /// inherits nothing of. With neither available, `report` is a no-op. The POST runs off the caller's path --
-/// a detached task, a five-second timeout, the response body ignored, a
-/// non-2xx answer swallowed.
+/// a detached task, the response body ignored, a non-2xx answer swallowed.
 public final class WisentFailureReporter: Sendable {
     public static let shared = WisentFailureReporter()
 
     /// One session for the process's reports: ephemeral, because an intake
-    /// answer is read once and forgotten, and bounded, because a wedged
-    /// Probierz must not hold a report open.
-    private let session: URLSession = {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = 5
-        configuration.timeoutIntervalForResource = 5
-        return URLSession(configuration: configuration)
-    }()
+    /// answer is read once and forgotten. The request runs on a detached task,
+    /// so a slow Probierz holds that task and never the caller.
+    private let session = URLSession(configuration: .ephemeral)
 
     public init() {}
 

@@ -26,9 +26,6 @@ import {
 
 const FAILURE_POINT = new RegExp(FAILURE_POINT_PATTERN);
 
-/** This package's own bound. A product's bound is the product's to choose. */
-export const DETAIL_LIMIT = 2000;
-
 /**
  * Trim a detail to a bound. A hard cut, which is what the fleet emits.
  *
@@ -43,7 +40,7 @@ export const DETAIL_LIMIT = 2000;
  * space, which is nearly all of them. Ends are still stripped, because
  * whitespace around a detail is never information.
  */
-export function trimDetail(text, limit = DETAIL_LIMIT) {
+export function trimDetail(text, limit) {
   const value = String(text ?? '').trim();
   return value.length <= limit ? value : value.slice(0, limit);
 }
@@ -54,7 +51,7 @@ export function trimDetail(text, limit = DETAIL_LIMIT) {
  * Separate and opt-in, because it changes emitted bytes. Worth having where a
  * detail is read by a person rather than parsed, and worth never being a default.
  */
-export function trimDetailAtWordEdge(text, limit = DETAIL_LIMIT, slack = 24) {
+export function trimDetailAtWordEdge(text, limit, slack) {
   const cut = trimDetail(text, limit);
   const value = String(text ?? '').trim();
   if (cut.length < limit) return cut;
@@ -117,7 +114,7 @@ export function failure({ failurePoint, code, service, impact, detail, cause, co
     severity: severity(code),
     retryable: retryable(code),
     outage: outage(code),
-    detail: detail === undefined || detail === null ? null : trimDetail(required(detail, 'detail'), DETAIL_LIMIT),
+    detail: detail === undefined || detail === null ? null : required(detail, 'detail'),
   };
   if (cause !== undefined && cause !== null) {
     envelope.cause = cause instanceof FailureError ? cause.envelope : cause;
@@ -166,7 +163,7 @@ export function failureOrFallback(fields = {}) {
     severity: severity(code),
     retryable: retryable(code),
     outage: outage(code),
-    detail: optional(fields.detail) === null ? null : trimDetail(optional(fields.detail), DETAIL_LIMIT),
+    detail: optional(fields.detail),
   };
   if (fields.cause !== undefined && fields.cause !== null) {
     envelope.cause = fields.cause instanceof FailureError ? fields.cause.envelope : fields.cause;

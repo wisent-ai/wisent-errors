@@ -30,13 +30,11 @@ const CODES = JSON.parse(readFileSync(join(PACKAGE_ROOT, 'catalogue', 'codes.jso
 // reported 541 repositories, because `config`, `auth`, `timeout` and `unknown` are
 // ordinary tokens in any codebase -- it matched minified Next.js chunks. The
 // discriminator is the one code that is not an English phrase: a file that says
-// `infra_down` is talking about this taxonomy and nothing else. Requiring it plus
-// a majority of the rest reproduces exactly the nineteen implementations found by
-// hand, and nothing else.
+// `infra_down` is talking about this taxonomy and nothing else. Requiring it
+// among a majority of the catalogue's codes reproduces exactly the nineteen
+// implementations found by hand, and nothing else.
 const DISCRIMINATOR = 'infra_down';
-const THRESHOLD = 4;
-// A pin is reported by its first eight characters, enough to tell revisions apart in a table.
-const SHORT_PIN_LENGTH = 8;
+const THRESHOLD = Math.floor(CODES.length / 2) + 1;
 
 // Quoted, or it does not count. Unquoted `config`, `auth`, `timeout` and
 // `unknown` are ordinary tokens: counting them made `probierz/agent/stado.mjs`
@@ -137,7 +135,7 @@ function walk(path) {
       const spelling = /wisent-errors|wisent_errors|WisentErrors|@wisent\/errors/g;
       for (let hit = spelling.exec(manifest); hit; hit = spelling.exec(manifest)) {
         const sha = manifest.slice(hit.index, hit.index + 240).match(/[0-9a-f]{40}/);
-        if (sha) pins.add(sha[0].slice(0, SHORT_PIN_LENGTH));
+        if (sha) pins.add(sha[0]);
       }
       // A workspace inheritance -- `{ workspace = true }` -- carries no sha and is
       // pinned by the workspace manifest, which this sweep reads separately.

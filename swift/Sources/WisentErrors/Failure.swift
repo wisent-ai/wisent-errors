@@ -12,15 +12,12 @@
 
 import Foundation
 
-/// This package's own bound. A product's bound is the product's to choose.
-public let detailLimit = 2000
-
 /// Trim a detail to a bound. A hard cut, which is what the fleet emits.
 ///
 /// The limit is an argument because the width is a product's own decision --
 /// stado and probierz keep 300, wisent-customer-support 400, wisent-tools 500 --
 /// while the rule for how to cut is the thing that was written six times.
-public func trimDetail(_ text: String?, limit: Int = detailLimit) -> String {
+public func trimDetail(_ text: String?, limit: Int) -> String {
     let value = (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     if value.count <= limit { return value }
     return String(value.prefix(limit))
@@ -31,7 +28,7 @@ public func trimDetail(_ text: String?, limit: Int = detailLimit) -> String {
 /// Separate and opt-in, because it changes emitted bytes. The edge is measured in
 /// characters: an earlier Rust version compared a byte offset against a character
 /// limit and discarded two thirds of a non-ASCII detail.
-public func trimDetailAtWordEdge(_ text: String?, limit: Int = detailLimit, slack: Int = 24) -> String {
+public func trimDetailAtWordEdge(_ text: String?, limit: Int, slack: Int) -> String {
     let value = (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     let cut = trimDetail(value, limit: limit)
     if cut.count < limit { return cut }
@@ -159,10 +156,11 @@ public struct Failure: Sendable, Equatable {
         return copy
     }
 
-    /// The reason the layer below gave, verbatim and bounded.
+    /// The reason the layer below gave, verbatim and whole; only the
+    /// whitespace around it goes.
     public func detail(_ detail: String?) -> Failure {
         var copy = self
-        let value = trimDetail(detail, limit: detailLimit)
+        let value = (detail ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         copy.detail = value.isEmpty ? nil : value
         return copy
     }

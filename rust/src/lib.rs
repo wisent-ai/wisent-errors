@@ -24,9 +24,6 @@ pub use codes::{Code, Severity};
 /// Identifiers a reader needs to find the subject: a host, a subscription, a job.
 pub type Context = BTreeMap<String, String>;
 
-/// This crate's own bound. A product's bound is the product's to choose.
-pub const DETAIL_LIMIT: usize = 2000;
-
 /// Trim a detail to a bound. A hard cut, which is what the fleet emits.
 ///
 /// The limit is an argument because the width is a product's own decision --
@@ -235,9 +232,10 @@ impl Failure {
         self
     }
 
-    /// The reason the layer below gave, verbatim and bounded.
+    /// The reason the layer below gave, verbatim and whole; only the
+    /// whitespace around it goes.
     pub fn detail(mut self, detail: impl Into<String>) -> Self {
-        let value = trim_detail(&detail.into(), DETAIL_LIMIT);
+        let value = detail.into().trim().to_owned();
         self.detail = if value.is_empty() { None } else { Some(value) };
         self
     }

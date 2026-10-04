@@ -31,7 +31,6 @@ from .codes import (
 
 __all__ = [
     "CODES",
-    "DETAIL_LIMIT",
     "FALLBACK",
     "MEANINGS",
     "RETRY_EXIT",
@@ -57,11 +56,8 @@ __all__ = [
 
 _FAILURE_POINT = re.compile(FAILURE_POINT_PATTERN)
 
-#: This package's own bound. A product's bound is the product's to choose.
-DETAIL_LIMIT = 2000
 
-
-def trim_detail(text: Any, limit: int = DETAIL_LIMIT) -> str:
+def trim_detail(text: Any, limit: int) -> str:
     """Trim a detail to a bound. A hard cut, which is what the fleet emits.
 
     The limit is an argument because the width is a product's own decision --
@@ -79,7 +75,7 @@ def trim_detail(text: Any, limit: int = DETAIL_LIMIT) -> str:
     return value if len(value) <= limit else value[:limit]
 
 
-def trim_detail_at_word_edge(text: Any, limit: int = DETAIL_LIMIT, slack: int = 24) -> str:
+def trim_detail_at_word_edge(text: Any, limit: int, slack: int) -> str:
     """The same, cut back to a word edge when one falls within ``slack`` of the bound.
 
     Separate and opt-in, because it changes emitted bytes.
@@ -155,7 +151,7 @@ def failure(
         "severity": severity(code),
         "retryable": retryable(code),
         "outage": outage(code),
-        "detail": None if detail is None else trim_detail(_required(detail, "detail"), DETAIL_LIMIT),
+        "detail": None if detail is None else _required(detail, "detail"),
     }
     if cause is not None:
         envelope["cause"] = dict(cause)
@@ -200,7 +196,7 @@ def failure_or_fallback(**fields: Any) -> dict:
         "severity": severity(code),
         "retryable": retryable(code),
         "outage": outage(code),
-        "detail": None if detail is None else trim_detail(detail, DETAIL_LIMIT),
+        "detail": detail,
     }
     cause = fields.get("cause")
     if cause is not None:
