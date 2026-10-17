@@ -1,21 +1,27 @@
 #!/bin/sh
-# Scaffold a temporary SwiftPM consumer of WisentErrors, run it against a toy
+# Scaffold a scratch SwiftPM consumer of WisentErrors, run it against a toy
 # Probierz intake, and show what the intake received as a companion to the
 # website integration guide:
 #
 #   sh docs/examples/swift-consumer.sh
 #
 # A real consumer pins a git revision; this uses a path dependency on the
-# checkout. Everything happens in a temporary directory; the toy intake listens
-# on 127.0.0.1:19790 and exits after one request.
+# checkout. Everything happens under the checkout's ignored .build directory;
+# the toy intake listens on the loopback interface at a port the kernel
+# assigns, publishes its address through a file the consumer reads, and exits
+# after one request.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-WORK=$(mktemp -d "${TMPDIR:-/tmp}/wisent-errors-swift-consumer.XXXXXX")
-trap 'rm -rf "$WORK"' EXIT
-
+WORK="$ROOT/.build/swift-consumer"
+rm -rf "$WORK"
 mkdir -p "$WORK/consumer/Sources/consumer"
+
+# The consumer's manifest declares the same tools version as this package's
+# own Package.swift, whose first line is that declaration: the floor a
+# consumer of it needs.
+read -r TOOLS_VERSION < "$ROOT/Package.swift"
 cat > "$WORK/consumer/Package.swift" <<MANIFEST
-// swift-tools-version:5.9
+$TOOLS_VERSION
 import PackageDescription
 
 let package = Package(
@@ -53,15 +59,23 @@ catch let error as Invalid { print("strict refusal: \(error.message)") }
 let salvaged = Failure.orFallback(failurePoint: nil, code: .unknown, service: nil)
 print("salvaged: \(salvaged.toJSON())")
 
-WisentFailureReporter.shared.report(throttled)
 // The reporter hands the POST to a detached task and returns at once; a
 // process that exits immediately would take the report with it. A real app
-// keeps running — this demo waits instead.
-Thread.sleep(forTimeInterval: 2)
+// keeps running -- this demo awaits the intake's answer before it exits.
+await withCheckedContinuation { (settled: CheckedContinuation<Void, Never>) in
+    WisentFailureReporter.shared.report(throttled) { settled.resume() }
+}
 MAIN
 
 cat > "$WORK/intake.mjs" <<'INTAKE'
 import { createServer } from 'node:http';
+import { writeFileSync } from 'node:fs';
+import { networkInterfaces } from 'node:os';
+
+const [, , addressFile] = process.argv;
+const loopback = Object.values(networkInterfaces()).flat()
+  .find((entry) => entry.internal && entry.family === 'IPv4');
+if (!loopback) throw new Error('this machine has no IPv4 loopback interface for the toy intake to listen on');
 
 const server = createServer((request, response) => {
   let body = '';
@@ -70,22 +84,37 @@ const server = createServer((request, response) => {
     console.log(`intake: ${request.method} ${request.url}`);
     console.log(`intake: authorization: ${request.headers.authorization}`);
     console.log(`intake: body: ${body}`);
-    response.end();
+    response.setHeader('content-type', 'application/json');
+    response.end(JSON.stringify({ accepted: true }));
     server.close();
   });
 });
-server.listen(19790, '127.0.0.1');
-setTimeout(() => server.close(), 15000).unref();
+// With no port named, the kernel assigns a free one.
+server.listen({ host: loopback.address }, () => {
+  const { address, port } = server.address();
+  writeFileSync(addressFile, `http://${address}:${port}\n`);
+});
 INTAKE
 
-node "$WORK/intake.mjs" &
+(cd "$WORK/consumer" && swift build 2>&1 | tail -n 1)
+
+# The intake publishes its address through a named pipe: the shell's read
+# returns exactly when the intake has bound, so the consumer never runs
+# against an address that is not listening yet.
+ADDRESS_PIPE="$WORK/intake-url"
+mkfifo "$ADDRESS_PIPE"
+node "$WORK/intake.mjs" "$ADDRESS_PIPE" &
 INTAKE_PID=$!
+# A consumer that fails to run leaves no request for the intake to answer, so
+# the intake is stopped with it instead of outliving the script.
+trap 'kill "$INTAKE_PID"' EXIT
+read -r INTAKE_URL < "$ADDRESS_PIPE"
 
 (
   cd "$WORK/consumer" &&
-  swift build 2>&1 | tail -n 1 &&
-  PROBIERZ_INTAKE_URL=http://127.0.0.1:19790 PROBIERZ_INTAKE_TOKEN=toy-token \
+  PROBIERZ_INTAKE_URL="$INTAKE_URL" PROBIERZ_INTAKE_TOKEN=toy-token \
     swift run --skip-build consumer
 )
 
+trap - EXIT
 wait "$INTAKE_PID"

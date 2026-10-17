@@ -194,6 +194,11 @@ let refused = Failure::new("brama.gateway.oauth-refresh", Code::Auth, "brama")?
     .with_context("subscription", id);
 ```
 
+The Swift package adds `WisentFailureReporter`, which posts envelopes to a
+Probierz intake without ever failing the caller; `docs/swift-reporter.md` says
+where the intake comes from, what is said on stderr, and how a process about to
+exit awaits delivery.
+
 `Code::from_upstream_status` / `from_upstream_status` / `fromUpstreamStatus`
 classify an HTTP status the same way in all three. A 5xx is `infra_down` and
 never `not_found`: collapsing server errors into "nothing there" is what let a
@@ -258,18 +263,14 @@ spm    .package(url: "https://github.com/wisent-ai/wisent-errors", revision: "<s
 Upgrading therefore costs thirteen deliberate one-line bumps, which is the price
 of the guarantee.
 
-The fleet is on three revisions, not one, and that is stated rather than tidied:
-seven consumers on `e3014d2`, `oko-desktop` on `75df476`, and six on `2c8a355`.
-The spread is provably inert. `e3014d2..2c8a355` is 29 added lines in
-`js/` and `python/` only — `codeOrNull` and `isCode` — and touches
-`catalogue/`, `schema/` and `rust/` not at all, so every consumer derives from the
-identical catalogue whatever it pins. `75df476` differs from `e3014d2` only in the
-Swift package's platform floor. Each agent that bumped proved that diff itself
-before moving, and the ones that did not bump were right not to churn a repository
-for two functions they never call. An unpinned spec was the original instruction, and within one hour
-it let one product pick up a rule change and drop it again with no commit anywhere
-recording either move. A lockfile stops a checkout from drifting; it does not stop
-the command a person types.
+Consumers may sit on different revisions, and that is stated rather than tidied:
+a consumer bumps when the diff it would pick up touches something it calls, and
+proves that diff before moving. The catalogue, the schema and the derivations
+are what every consumer must agree on; a revision that changes none of them is
+inert for a consumer that never calls what it added. An unpinned spec lets a
+product pick up a rule change and drop it again with no commit anywhere
+recording either move. A lockfile stops a checkout from drifting; it does not
+stop the command a person types.
 
 ## The eighth code, decided
 

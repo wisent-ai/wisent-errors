@@ -12,6 +12,7 @@
 // Usage: node codegen/generate.mjs [--check]
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rust } from './rust.mjs';
@@ -37,8 +38,27 @@ const ranges = catalogue.upstream_status.ranges;
 const fallback = catalogue.upstream_status.default;
 const context = { catalogue, codes, exact, ranges, fallback, banner };
 
+// The Rust module is what rustfmt makes of it, run in the crate under the
+// edition rust/Cargo.toml declares, so the push gate's `cargo fmt --check`
+// and this generator agree on the same bytes. A manifest without an edition,
+// or a rustfmt that cannot run or refuses the module, ends the generation
+// with the cause.
+const CRATE_MANIFEST = join(ROOT, 'rust', 'Cargo.toml');
+function crateEdition() {
+  const declared = readFileSync(CRATE_MANIFEST, 'utf8').match(/^edition\s*=\s*"([^"]+)"/m);
+  if (!declared) throw new Error(`${CRATE_MANIFEST} declares no edition for rustfmt to format under`);
+  return declared[1];
+}
+
+function rustfmt(body, path) {
+  const edition = crateEdition();
+  console.log(`formatting ${path.slice(ROOT.length + 1)} with rustfmt --edition ${edition}`);
+  return execFileSync('rustfmt', ['--edition', edition], { input: body, encoding: 'utf8', cwd: dirname(path) });
+}
+
+const rustModule = join(ROOT, 'rust', 'src', 'codes.rs');
 const targets = [
-  { path: join(ROOT, 'rust', 'src', 'codes.rs'), body: rust(context) },
+  { path: rustModule, body: rustfmt(rust(context), rustModule) },
   { path: join(ROOT, 'python', 'wisent_errors', 'codes.py'), body: python(context) },
   { path: join(ROOT, 'js', 'codes.mjs'), body: javascript(context) },
   { path: join(ROOT, 'swift', 'Sources', 'WisentErrors', 'Codes.swift'), body: swift(context) },
@@ -47,11 +67,13 @@ const targets = [
 let drifted = false;
 for (const target of targets) {
   mkdirSync(dirname(target.path), { recursive: true });
+  // A target not generated yet is absent; any other read failure ends the
+  // generation rather than being overwritten blind.
   let existing = null;
   try {
     existing = readFileSync(target.path, 'utf8');
-  } catch {
-    existing = null;
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
   }
   if (existing === target.body) {
     console.log(`unchanged  ${target.path.slice(ROOT.length + 1)}`);

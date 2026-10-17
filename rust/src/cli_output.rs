@@ -17,15 +17,25 @@ use serde_json::Value;
 /// An input file that could not be read or is not the JSON it should be.
 #[derive(Debug)]
 pub enum ReadJsonError {
-    Read { path: PathBuf, source: std::io::Error },
-    Parse { path: PathBuf, source: serde_json::Error },
+    Read {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    Parse {
+        path: PathBuf,
+        source: serde_json::Error,
+    },
 }
 
 impl fmt::Display for ReadJsonError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ReadJsonError::Read { path, .. } => write!(formatter, "failed to read {}", path.display()),
-            ReadJsonError::Parse { path, .. } => write!(formatter, "invalid JSON in {}", path.display()),
+            ReadJsonError::Read { path, .. } => {
+                write!(formatter, "failed to read {}", path.display())
+            }
+            ReadJsonError::Parse { path, .. } => {
+                write!(formatter, "invalid JSON in {}", path.display())
+            }
         }
     }
 }

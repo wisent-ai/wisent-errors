@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "product": "wisent-errors",
+  "releases": false,
+  "reason": "The repository is a source library consumed at a pinned git revision by npm, cargo, pip and SwiftPM; it has no release workflow, publishes no registry package or image, and hosts nothing, so it declares no versioned artifact publisher."
+}

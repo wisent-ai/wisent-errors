@@ -47,7 +47,16 @@ impl Code {
     /// EX_UNAVAILABLE on every platform this fleet runs on.
     pub const RETRY_EXIT: i32 = 69;
 
-    pub const ALL: &'static [Self] = &[Self::Config, Self::Auth, Self::NotFound, Self::RateLimit, Self::Timeout, Self::InfraDown, Self::Refused, Self::Unknown];
+    pub const ALL: &'static [Self] = &[
+        Self::Config,
+        Self::Auth,
+        Self::NotFound,
+        Self::RateLimit,
+        Self::Timeout,
+        Self::InfraDown,
+        Self::Refused,
+        Self::Unknown,
+    ];
 
     pub fn as_str(self) -> &'static str {
         match self {
@@ -138,9 +147,9 @@ impl Code {
             504 => Self::Timeout,
             505 => Self::Config,
             _ => {
-        if (500..=599).contains(&status) {
-            return Self::InfraDown;
-        }
+                if (500..=599).contains(&status) {
+                    return Self::InfraDown;
+                }
                 Self::Unknown
             }
         }
