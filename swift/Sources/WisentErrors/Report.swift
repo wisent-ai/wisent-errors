@@ -119,7 +119,11 @@ public final class WisentFailureReporter: Sendable {
            let token = environment["PROBIERZ_INTAKE_TOKEN"], !token.isEmpty {
             return (url, token)
         }
-        let directory = FileManager.default.homeDirectoryForCurrentUser
+        // NSHomeDirectory, not homeDirectoryForCurrentUser: the latter is
+        // unavailable on iOS, which this package declares. An iOS app's home
+        // is its container, where no intake writes these files, so there the
+        // token file is absent and reporting is off.
+        let directory = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
             .appendingPathComponent(".probierz")
         let tokenFile = directory.appendingPathComponent("intake-token")
         guard FileManager.default.fileExists(atPath: tokenFile.path) else { return nil }
