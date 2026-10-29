@@ -128,6 +128,7 @@ pub static FLEET_UNDECLARED: Cause = Cause {
     id: "fleet-undeclared",
     code: Code::Refused,
     usage: false,
+    exit: None,
     failed: "placing '{name}' in fleet '{fleet}'",
     cause: "the registry declares no fleet named '{fleet}'",
     observed: "declared fleets: {declared}",

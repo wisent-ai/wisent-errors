@@ -29,6 +29,10 @@ pub struct Cause {
     /// The request was refused for its own form and exits with
     /// [`Code::USAGE_EXIT`]; such a cause is never retryable.
     pub usage: bool,
+    /// The product's own documented exit status for this cause, where it has
+    /// one (a lost compare-and-swap, say). A usage refusal and a retryable
+    /// code take theirs from the catalogue and declare none.
+    pub exit: Option<i32>,
     /// The step that failed, as the reader would name it.
     pub failed: &'static str,
     /// Why it failed.
@@ -185,6 +189,8 @@ impl Cause {
     pub fn exit_code(&self, failure_exit: i32) -> i32 {
         if self.usage {
             Code::USAGE_EXIT
+        } else if let Some(exit) = self.exit {
+            exit
         } else {
             self.code.exit_code(failure_exit)
         }
@@ -252,6 +258,22 @@ impl Cause {
                 "cause {id}: a usage refusal cannot be `{}`, which is retryable",
                 self.code
             ));
+        }
+        if let Some(exit) = self.exit {
+            if self.usage || self.code.retryable() {
+                problems.push(format!(
+                    "cause {id}: exit {exit} is declared, but a usage refusal exits {} and a retryable code {}",
+                    Code::USAGE_EXIT,
+                    Code::RETRY_EXIT
+                ));
+            }
+            if exit == 0 || exit == Code::USAGE_EXIT || exit == Code::RETRY_EXIT {
+                problems.push(format!(
+                    "cause {id}: exit {exit} is not a status of its own: 0 is success, {} usage and {} retry",
+                    Code::USAGE_EXIT,
+                    Code::RETRY_EXIT
+                ));
+            }
         }
         if !is_test_path(self.test) {
             problems.push(format!(

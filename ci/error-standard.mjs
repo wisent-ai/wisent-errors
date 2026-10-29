@@ -22,7 +22,7 @@
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
-import { CODES, FAILURE_POINT_PATTERN, GENERIC_SENTENCES, genericSentencesIn, retryable } from '../js/index.mjs';
+import { CODES, FAILURE_POINT_PATTERN, GENERIC_SENTENCES, RETRY_EXIT, USAGE_EXIT, genericSentencesIn, retryable } from '../js/index.mjs';
 
 const USAGE =
   'usage: node ci/error-standard.mjs scan <dir>... [--baseline <file>] [--json]\n' +
@@ -144,6 +144,9 @@ function causeProblems(operation, cause) {
   if (!CODES.includes(cause.code)) problems.push(`cause ${id}: code ${JSON.stringify(cause.code)} is not in the catalogue`);
   else if (cause.code === 'unknown') problems.push(`cause ${id}: a declared cause is never \`unknown\`; \`unknown\` is the catch-all a declaration replaces`);
   else if (cause.usage === true && retryable(cause.code)) problems.push(`cause ${id}: a usage refusal cannot be \`${cause.code}\`, which is retryable`);
+  if (cause.usage === true && cause.exit !== USAGE_EXIT) problems.push(`cause ${id}: a usage refusal exits ${USAGE_EXIT}, not ${cause.exit}`);
+  else if (CODES.includes(cause.code) && retryable(cause.code) && cause.exit !== RETRY_EXIT) problems.push(`cause ${id}: a retryable code exits ${RETRY_EXIT}, not ${cause.exit}`);
+  else if (!Number.isInteger(cause.exit) || cause.exit === 0) problems.push(`cause ${id}: exit ${JSON.stringify(cause.exit)} is not a failure status`);
   if (typeof cause.test !== 'string' || !TEST_PATH.test(cause.test)) problems.push(`cause ${id}: test ${JSON.stringify(cause.test)} is not tests/<area>/<file>::<test name>`);
   if (typeof cause.doc !== 'string' || !cause.doc.startsWith(`${operation.docs}#`)) problems.push(`cause ${id}: doc ${JSON.stringify(cause.doc)} is not an anchor on the operation's page ${operation.docs}`);
   return problems;
