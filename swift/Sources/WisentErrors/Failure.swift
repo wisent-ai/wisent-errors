@@ -85,6 +85,8 @@ public struct Failure: Sendable, Equatable {
     public let service: String
     public private(set) var impact: String?
     public private(set) var detail: String?
+    /// What would fix it. Absent only where nothing the reader does can help.
+    public private(set) var remedy: String?
     public private(set) var cause: [Failure]
     public private(set) var context: [String: String]
 
@@ -111,6 +113,7 @@ public struct Failure: Sendable, Equatable {
         self.service = service
         self.impact = nil
         self.detail = nil
+        self.remedy = nil
         self.cause = []
         self.context = [:]
     }
@@ -121,6 +124,7 @@ public struct Failure: Sendable, Equatable {
         self.service = service
         self.impact = nil
         self.detail = nil
+        self.remedy = nil
         self.cause = []
         self.context = context
     }
@@ -165,6 +169,14 @@ public struct Failure: Sendable, Equatable {
         return copy
     }
 
+    /// What would fix it, whole; only the whitespace around it goes.
+    public func remedy(_ remedy: String?) -> Failure {
+        var copy = self
+        let value = (remedy ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        copy.remedy = value.isEmpty ? nil : value
+        return copy
+    }
+
     /// The failure underneath this one.
     public func causedBy(_ cause: Failure) -> Failure {
         var copy = self
@@ -190,6 +202,7 @@ public struct Failure: Sendable, Equatable {
         out += ",\(escape("retryable")):\(retryable)"
         out += ",\(escape("outage")):\(outage)"
         out += ",\(escape("detail")):\(detail.map(escape) ?? "null")"
+        out += ",\(escape("remedy")):\(remedy.map(escape) ?? "null")"
         if let cause = cause.first {
             out += ",\(escape("cause")):\(cause.toJSON())"
         }

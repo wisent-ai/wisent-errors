@@ -76,6 +76,53 @@ export const FAILURE_POINT_PATTERN = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-
 /** EX_UNAVAILABLE. retryable codes exit with `retry`; every other code keeps the exit code the caller already chose. */
 export const RETRY_EXIT = 69;
 
+/** the clap and click usage code: a request refused for its own form. Never retryable. */
+export const USAGE_EXIT = 2;
+
+/** Wording that says a failure happened without saying which; matched case-insensitively in string literals. */
+export const GENERIC_SENTENCES = Object.freeze([
+  {
+    "text": "did not succeed",
+    "reason": "says the operation failed without the step, the cause or the fix"
+  },
+  {
+    "text": "was not successful",
+    "reason": "says the operation failed without the step, the cause or the fix"
+  },
+  {
+    "text": "operation failed",
+    "reason": "names no operation step and no cause"
+  },
+  {
+    "text": "something went wrong",
+    "reason": "names nothing that went wrong"
+  },
+  {
+    "text": "an error occurred",
+    "reason": "names no error"
+  },
+  {
+    "text": "unexpected error",
+    "reason": "a failure nobody declared: declare its cause instead"
+  },
+  {
+    "text": "unknown error",
+    "reason": "a failure nobody classified: declare its cause instead"
+  },
+  {
+    "text": "internal error",
+    "reason": "names no component and no cause"
+  },
+  {
+    "text": "please try again",
+    "reason": "advises a retry without saying whether a retry can help"
+  },
+  {
+    "text": "failed for an unknown reason",
+    "reason": "a failure nobody classified: declare its cause instead"
+  }
+]);
+
 const EXACT_STATUS = Object.freeze({
   401: "auth",
   403: "auth",

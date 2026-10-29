@@ -121,6 +121,7 @@ def failure(
     service: str,
     impact: Any = None,
     detail: Any = None,
+    remedy: Any = None,
     cause: Optional[Mapping[str, Any]] = None,
     context: Optional[Mapping[str, Any]] = None,
 ) -> dict:
@@ -152,6 +153,7 @@ def failure(
         "retryable": retryable(code),
         "outage": outage(code),
         "detail": None if detail is None else _required(detail, "detail"),
+        "remedy": _optional(remedy),
     }
     if cause is not None:
         envelope["cause"] = dict(cause)
@@ -197,6 +199,7 @@ def failure_or_fallback(**fields: Any) -> dict:
         "retryable": retryable(code),
         "outage": outage(code),
         "detail": detail,
+        "remedy": _optional(fields.get("remedy")),
     }
     cause = fields.get("cause")
     if cause is not None:

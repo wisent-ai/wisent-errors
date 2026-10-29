@@ -14,12 +14,14 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 mod codes;
+pub mod operation;
 mod render;
 
 #[cfg(feature = "cli-output")]
 pub mod cli_output;
 
-pub use codes::{Code, Severity};
+pub use codes::{Code, GenericSentence, Severity, GENERIC_SENTENCES};
+pub use operation::{Cause, Operation};
 
 /// Identifiers a reader needs to find the subject: a host, a subscription, a job.
 pub type Context = BTreeMap<String, String>;
@@ -110,6 +112,10 @@ pub struct Failure {
     pub service: String,
     pub impact: Option<String>,
     pub detail: Option<String>,
+    /// What would fix it, for the person reading the failure: the command to
+    /// run, the declaration to change, the dependency to bring back. Absent
+    /// only where nothing the reader does can help.
+    pub remedy: Option<String>,
     pub cause: Option<Box<Failure>>,
     pub context: Context,
 }
@@ -180,6 +186,7 @@ impl Failure {
             service,
             impact: None,
             detail: None,
+            remedy: None,
             cause: None,
             context: Context::new(),
         })
@@ -216,6 +223,7 @@ impl Failure {
             service,
             impact: None,
             detail: None,
+            remedy: None,
             cause: None,
             context: Context::new(),
         };
@@ -237,6 +245,13 @@ impl Failure {
     pub fn detail(mut self, detail: impl Into<String>) -> Self {
         let value = detail.into().trim().to_owned();
         self.detail = if value.is_empty() { None } else { Some(value) };
+        self
+    }
+
+    /// What would fix it, whole; only the whitespace around it goes.
+    pub fn remedy(mut self, remedy: impl Into<String>) -> Self {
+        let value = remedy.into().trim().to_owned();
+        self.remedy = if value.is_empty() { None } else { Some(value) };
         self
     }
 

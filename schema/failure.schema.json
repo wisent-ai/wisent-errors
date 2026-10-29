@@ -13,7 +13,8 @@
     "severity",
     "retryable",
     "outage",
-    "detail"
+    "detail",
+    "remedy"
   ],
   "properties": {
     "failure_point": {
@@ -71,6 +72,14 @@
         "null"
       ],
       "description": "What the layer below actually said, verbatim and truncated, never paraphrased. Null where there was no layer below to quote: a call site that already knows its code exactly has nothing to add, and making it invent a sentence produces `detail: unknown`, which is a worse lie than an absent value. The key is always present, because a stable key set is what makes these lines queryable in a log store.",
+      "minLength": 1
+    },
+    "remedy": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "What would fix it, for the person reading the failure: the command to run, the declaration to change, the dependency to bring back. A refusal that names what failed and why but not what fixes it leaves the reader to rediscover the fix. Null only where nothing the reader does can help; the key is always present, like `detail`.",
       "minLength": 1
     },
     "cause": {

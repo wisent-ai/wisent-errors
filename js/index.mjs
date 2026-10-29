@@ -11,7 +11,9 @@ import {
   FALLBACK,
   SEVERITIES,
   MEANINGS,
+  GENERIC_SENTENCES,
   RETRY_EXIT,
+  USAGE_EXIT,
   codeOrFallback,
   codeOrNull,
   exitCode,
@@ -98,7 +100,7 @@ const optional = (value) => {
  * Throws on anything malformed. Inside an error path, where throwing destroys
  * the diagnosis being carried, use `failureOrFallback`.
  */
-export function failure({ failurePoint, code, service, impact, detail, cause, context }) {
+export function failure({ failurePoint, code, service, impact, detail, remedy, cause, context }) {
   const point = required(failurePoint, 'failurePoint');
   if (!FAILURE_POINT.test(point)) {
     throw new TypeError(`failurePoint ${JSON.stringify(point)} is not a dotted lowercase path`);
@@ -115,6 +117,7 @@ export function failure({ failurePoint, code, service, impact, detail, cause, co
     retryable: retryable(code),
     outage: outage(code),
     detail: detail === undefined || detail === null ? null : required(detail, 'detail'),
+    remedy: optional(remedy),
   };
   if (cause !== undefined && cause !== null) {
     envelope.cause = cause instanceof FailureError ? cause.envelope : cause;
@@ -164,6 +167,7 @@ export function failureOrFallback(fields = {}) {
     retryable: retryable(code),
     outage: outage(code),
     detail: optional(fields.detail),
+    remedy: optional(fields.remedy),
   };
   if (fields.cause !== undefined && fields.cause !== null) {
     envelope.cause = fields.cause instanceof FailureError ? fields.cause.envelope : fields.cause;
@@ -202,12 +206,53 @@ export function chain(envelope) {
   return rows;
 }
 
+/**
+ * The generic sentences inside the string literals of one source line.
+ *
+ * Comment lines are skipped: a comment explaining why a sentence is generic is
+ * not an error message. `singleQuoted` also reads '...' as a literal, which is
+ * right for JavaScript and Python and wrong for Rust and Swift. The Rust crate's
+ * `operation::generic_sentences_in` applies the same rule.
+ */
+export function genericSentencesIn(line, singleQuoted) {
+  const trimmed = line.trimStart();
+  if (['//', '/*', '*', '#', '--'].some((marker) => trimmed.startsWith(marker))) return [];
+  const found = [];
+  for (const literal of literals(line, singleQuoted)) {
+    const lower = literal.toLowerCase();
+    for (const sentence of GENERIC_SENTENCES) {
+      if (lower.includes(sentence.text) && !found.includes(sentence)) found.push(sentence);
+    }
+  }
+  return found;
+}
+
+function literals(line, singleQuoted) {
+  const segments = [];
+  let index = 0;
+  while (index < line.length) {
+    const quote = line[index];
+    if (!(quote === '"' || quote === '`' || (singleQuoted && quote === "'"))) {
+      index += 1;
+      continue;
+    }
+    let end = index + 1;
+    while (end < line.length && line[end] !== quote) end += line[end] === '\\' ? 2 : 1;
+    end = Math.min(end, line.length);
+    segments.push(line.slice(index + 1, end));
+    index = end + 1;
+  }
+  return segments;
+}
+
 export {
   CODES,
   FAILURE_POINT_PATTERN,
   FALLBACK,
   MEANINGS,
+  GENERIC_SENTENCES,
   RETRY_EXIT,
+  USAGE_EXIT,
   SEVERITIES,
   codeOrFallback,
   codeOrNull,

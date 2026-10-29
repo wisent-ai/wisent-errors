@@ -17,6 +17,7 @@ impl Failure {
         out.push_str(&format!(",\"retryable\":{}", self.retryable()));
         out.push_str(&format!(",\"outage\":{}", self.outage()));
         push_optional(&mut out, "detail", self.detail.as_deref());
+        push_optional(&mut out, "remedy", self.remedy.as_deref());
         if let Some(cause) = &self.cause {
             out.push_str(",\"cause\":");
             out.push_str(&cause.to_json());
@@ -102,7 +103,7 @@ fn push_pair(out: &mut String, key: &str, value: &str, first: bool) {
 
 /// Minimal JSON string escaping. The crate deliberately carries no serde
 /// dependency: a package every product must adopt has to be cheap to adopt.
-fn escape(value: &str) -> String {
+pub(crate) fn escape(value: &str) -> String {
     let mut out = String::with_capacity(value.len() + 2);
     out.push('"');
     for character in value.chars() {

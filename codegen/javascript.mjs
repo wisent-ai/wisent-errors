@@ -37,6 +37,12 @@ export const FAILURE_POINT_PATTERN = ${JSON.stringify(catalogue.failure_point.pa
 /** ${catalogue.exit_code.retry_name}. ${catalogue.exit_code.rule}. */
 export const RETRY_EXIT = ${catalogue.exit_code.retry};
 
+/** ${catalogue.exit_code.usage_name}: a request refused for its own form. Never retryable. */
+export const USAGE_EXIT = ${catalogue.exit_code.usage};
+
+/** Wording that says a failure happened without saying which; matched case-insensitively in string literals. */
+export const GENERIC_SENTENCES = Object.freeze(${JSON.stringify(catalogue.generic_sentences.sentences.map(({ text, reason }) => ({ text, reason })), null, 2)});
+
 const EXACT_STATUS = Object.freeze({
 ${exactRows}
 });

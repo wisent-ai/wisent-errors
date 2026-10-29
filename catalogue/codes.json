@@ -109,10 +109,27 @@
     "default": "unknown"
   },
   "exit_code": {
-    "note": "What a command exits with. Only the retryable path is remapped: a caller that already chose an exit code keeps it, so a CLI's own conventions survive adoption.",
+    "note": "What a command exits with. Only the retryable path is remapped: a caller that already chose an exit code keeps it, so a CLI's own conventions survive adoption. A usage refusal -- the request refused for its own form -- exits with `usage`, the code clap and click already exit with on a parse failure, and is never retryable.",
     "retry": 69,
     "retry_name": "EX_UNAVAILABLE",
+    "usage": 2,
+    "usage_name": "the clap and click usage code",
     "rule": "retryable codes exit with `retry`; every other code keeps the exit code the caller already chose"
+  },
+  "generic_sentences": {
+    "note": "Wording that says a failure happened without saying which. Each one is a sentence a reader cannot act on: it names no step, no cause, no observed state and no fix. A product's own lint refuses an error message that contains one of these, because every refusal is a declared cause of its operation, and a declared cause has a name. Matched case-insensitively inside string literals, never in comments.",
+    "sentences": [
+      { "text": "did not succeed", "reason": "says the operation failed without the step, the cause or the fix" },
+      { "text": "was not successful", "reason": "says the operation failed without the step, the cause or the fix" },
+      { "text": "operation failed", "reason": "names no operation step and no cause" },
+      { "text": "something went wrong", "reason": "names nothing that went wrong" },
+      { "text": "an error occurred", "reason": "names no error" },
+      { "text": "unexpected error", "reason": "a failure nobody declared: declare its cause instead" },
+      { "text": "unknown error", "reason": "a failure nobody classified: declare its cause instead" },
+      { "text": "internal error", "reason": "names no component and no cause" },
+      { "text": "please try again", "reason": "advises a retry without saying whether a retry can help" },
+      { "text": "failed for an unknown reason", "reason": "a failure nobody classified: declare its cause instead" }
+    ]
   },
   "failure_point": {
     "grammar": "a dotted lowercase path, one segment or more",

@@ -9,12 +9,13 @@ the schema and the generated runtimes saying the same thing.
 catalogue/codes.json          the single source of truth
 schema/failure.schema.json    the envelope, checkable from any language
 codegen/generate.mjs          one generator, three targets
-rust/    crate   wisent-errors
+rust/    crate   wisent-errors   (rust/src/operation.rs: an operation's declared causes)
 python/  package wisent_errors
 js/      package @wisent/errors  (+ .d.ts, four consumers are TypeScript)
 swift/   library WisentErrors    (two native clients: oko-desktop, wisent-ios)
 ci/check.mjs                  what must hold before this ships
 ci/no-handrolled-envelope.mjs the guard a consuming repo runs
+ci/error-standard.mjs         the lint a consuming repo runs: generic sentences, operation catalogues
 ```
 
 Generated files are committed, so a consumer needs no build step, and

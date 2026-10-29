@@ -6,7 +6,7 @@
 // exist at all: a package every product has to adopt must be cheap to adopt, and
 // for a TypeScript app "cheap" means it type-checks.
 
-export type Code = 'config' | 'auth' | 'not_found' | 'rate_limit' | 'timeout' | 'infra_down' | 'unknown';
+export type Code = 'config' | 'auth' | 'not_found' | 'rate_limit' | 'timeout' | 'infra_down' | 'refused' | 'unknown';
 export type Severity = 'warning' | 'error' | 'critical';
 
 /** Identifiers a reader needs to find the subject: a host, a subscription, a job. */
@@ -28,6 +28,8 @@ export interface Envelope {
   retryable: boolean;
   outage: boolean;
   detail: string | null;
+  /** What would fix it. Null only where nothing the reader does can help. */
+  remedy: string | null;
   cause?: Envelope;
   context?: Context;
 }
@@ -38,6 +40,7 @@ export interface Fields {
   service: string;
   impact?: string | null;
   detail?: string | null;
+  remedy?: string | null;
   cause?: Envelope | FailureError | null;
   context?: Context | null;
 }
@@ -49,6 +52,7 @@ export interface SalvageableFields {
   service?: unknown;
   impact?: unknown;
   detail?: unknown;
+  remedy?: unknown;
   cause?: Envelope | FailureError | null;
   context?: Context | null;
 }
@@ -105,3 +109,13 @@ export declare const MEANINGS: Readonly<
 export declare const FALLBACK: Code;
 export declare const FAILURE_POINT_PATTERN: string;
 export declare const RETRY_EXIT: number;
+export declare const USAGE_EXIT: number;
+
+export interface GenericSentence {
+  text: string;
+  reason: string;
+}
+export declare const GENERIC_SENTENCES: readonly GenericSentence[];
+
+/** The generic sentences inside the string literals of one source line; comment lines are skipped. */
+export declare function genericSentencesIn(line: string, singleQuoted: boolean): GenericSentence[];

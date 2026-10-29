@@ -47,6 +47,9 @@ impl Code {
     /// EX_UNAVAILABLE on every platform this fleet runs on.
     pub const RETRY_EXIT: i32 = 69;
 
+    /// The exit code a usage refusal leaves the process with: the clap and click usage code.
+    pub const USAGE_EXIT: i32 = 2;
+
     pub const ALL: &'static [Self] = &[
         Self::Config,
         Self::Auth,
@@ -185,3 +188,56 @@ impl fmt::Display for Code {
         formatter.write_str(self.as_str())
     }
 }
+
+/// Wording that says a failure happened without saying which.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GenericSentence {
+    /// Matched case-insensitively inside a string literal.
+    pub text: &'static str,
+    /// Why a reader cannot act on it.
+    pub reason: &'static str,
+}
+
+/// Every generic sentence the catalogue refuses in an error message.
+pub const GENERIC_SENTENCES: &[GenericSentence] = &[
+    GenericSentence {
+        text: "did not succeed",
+        reason: "says the operation failed without the step, the cause or the fix",
+    },
+    GenericSentence {
+        text: "was not successful",
+        reason: "says the operation failed without the step, the cause or the fix",
+    },
+    GenericSentence {
+        text: "operation failed",
+        reason: "names no operation step and no cause",
+    },
+    GenericSentence {
+        text: "something went wrong",
+        reason: "names nothing that went wrong",
+    },
+    GenericSentence {
+        text: "an error occurred",
+        reason: "names no error",
+    },
+    GenericSentence {
+        text: "unexpected error",
+        reason: "a failure nobody declared: declare its cause instead",
+    },
+    GenericSentence {
+        text: "unknown error",
+        reason: "a failure nobody classified: declare its cause instead",
+    },
+    GenericSentence {
+        text: "internal error",
+        reason: "names no component and no cause",
+    },
+    GenericSentence {
+        text: "please try again",
+        reason: "advises a retry without saying whether a retry can help",
+    },
+    GenericSentence {
+        text: "failed for an unknown reason",
+        reason: "a failure nobody classified: declare its cause instead",
+    },
+];

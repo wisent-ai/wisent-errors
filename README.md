@@ -68,6 +68,7 @@ one code cannot come to mean different things in different products.
   "retryable": true,
   "outage": false,
   "detail": "all bounded 'claude-code' credentials unavailable for agent",
+  "remedy": "wait for the provider's rate window to reset, or add a bounded credential for the agent",
   "cause": {
     "failure_point": "brama.gateway.oauth-refresh",
     "error_code": "auth",
@@ -76,7 +77,8 @@ one code cannot come to mean different things in different products.
     "severity": "warning",
     "retryable": false,
     "outage": false,
-    "detail": "invalid_grant -- Refresh token not found or invalid"
+    "detail": "invalid_grant -- Refresh token not found or invalid",
+    "remedy": "sign the subscription's account in again: the provider no longer honours the stored refresh token"
   }
 }
 ```
@@ -105,6 +107,81 @@ exactly three until the migrations read the registries: `probierz` and
 `growth-tactics` are two-segment, and `stado` runs from `cli` to
 `cli.host.user.create`. The depth carries no meaning and the rule stopped
 pretending it does.
+
+`remedy` is what would fix it: the command to run, the declaration to change,
+the dependency to bring back. A refusal that names what failed and why but not
+what fixes it leaves its reader to rediscover the fix, which is the same work
+the refusal was supposed to save. It is `null` only where nothing the reader
+does can help, and the key is always present, like `detail`.
+
+## Every operation declares how it fails
+
+"Operation did not succeed" is a failure nobody analysed. The analysis belongs
+to the operation, done once, for every cause it can meet — including the ones
+nobody has met yet, because whoever meets one first has nothing else to go on.
+`wisent_errors::operation` is where it is written down:
+
+```rust
+use wisent_errors::{Cause, Code, Operation};
+
+pub static FLEET_UNDECLARED: Cause = Cause {
+    id: "fleet-undeclared",
+    code: Code::Refused,
+    usage: false,
+    failed: "placing '{name}' in fleet '{fleet}'",
+    cause: "the registry declares no fleet named '{fleet}'",
+    observed: "declared fleets: {declared}",
+    remedy: "declare it with `stado fleet create {fleet}`, or name a declared fleet with --fleet",
+    test: "tests/fleet/enroll_failures.rs::enroll_refuses_an_undeclared_fleet",
+};
+
+pub static ENROLL: Operation = Operation {
+    id: "fleet.enroll",
+    command: "stado fleet enroll",
+    summary: "register a machine verified over SSH",
+    docs: "https://stado.wisent.com/docs/cli/fleet-enrollment",
+    causes: &[&FLEET_UNDECLARED /* , every other cause */],
+};
+```
+
+One declaration gives everything a cause is shown as, so none of them can say
+something the others do not:
+
+- the refusal: `Cause::sentence(values)` is `<what failed>: <cause>; observed:
+  <state>`, and `Cause::fix(values)` the remedy, `{name}` filled from the
+  values the raising code supplies;
+- the envelope: `Cause::failure(point, service, values)` with `detail`,
+  `remedy` and `context.cause` set;
+- the exit status: `Cause::exit_code(product_failure_exit)` is
+  `Code::USAGE_EXIT` (2) for a usage refusal, `Code::RETRY_EXIT` (69) for a
+  retryable code and the product's own status otherwise;
+- the listing a product prints from `<product> errors list|show`
+  (`Operation::to_json`) and its documentation page (`Operation::markdown`),
+  one anchored entry per cause, so every refusal is on the page verbatim.
+
+`Operation::problems` refuses a declaration that is not one: a cause without
+its test (`tests/<area>/<file>::<name>`), an empty `failed`, `cause`,
+`observed` or `remedy`, a cause declared `unknown` (the catch-all a declaration
+replaces), a retryable usage refusal, a duplicate id, a page that is not https.
+
+### The lint a product runs
+
+`ci/error-standard.mjs` holds a product's tree to the same standard:
+
+```
+$ node ci/error-standard.mjs scan ../stado/stado-rs/src
+../stado/stado-rs/src/cli/workload/runners/weles/browser.rs:295: "did not succeed" says the operation failed without the step, the cause or the fix (1 in this file, baseline 0); ...
+$ node ci/error-standard.mjs catalogue operations.json
+ok    fleet.enroll: 21 declared cause(s)
+```
+
+`scan` refuses an error message holding one of the catalogue's
+`generic_sentences` inside a string literal; a baseline lets a product adopt
+the rule before every old message is rewritten, and may only shrink.
+`catalogue` applies `Operation::problems`'s rules to the JSON a product's
+`errors list --json` prints, for products whose catalogue is not Rust.
+`generic_sentences_in` / `genericSentencesIn` are the one line rule both
+runtimes scan with.
 
 ## Reporting a failure must never fail
 
@@ -217,7 +294,9 @@ as `[index]`, `-` for null and for an empty array or object.
 
 ## What is not in here
 
-- **Product messages.** They go in `detail`, verbatim.
+- **Product messages.** A product declares its own causes with
+  `operation::Cause`, in its own code, beside the operation that raises them;
+  a sentence from the layer below goes in `detail`, verbatim.
 - **Provider text.** It passes through and is truncated, never paraphrased or
   re-classified. Their words are data.
 - **New codes.** Seven, exactly as the reference had. A case the seven cannot

@@ -15,6 +15,9 @@ export function rust({ catalogue, codes, exact, ranges, fallback, banner }) {
   const rangeArms = ranges
     .map((range) => `        if (${range.from}..=${range.to}).contains(&status) {\n            return Self::${rustName(range.code)};\n        }`)
     .join('\n');
+  const generic = catalogue.generic_sentences.sentences
+    .map((entry) => `    GenericSentence {\n        text: ${JSON.stringify(entry.text)},\n        reason: ${JSON.stringify(entry.reason)},\n    },`)
+    .join('\n');
 
   return `${banner('//')}
 
@@ -55,6 +58,9 @@ impl Code {
     ///
     /// ${catalogue.exit_code.retry_name} on every platform this fleet runs on.
     pub const RETRY_EXIT: i32 = ${catalogue.exit_code.retry};
+
+    /// The exit code a usage refusal leaves the process with: ${catalogue.exit_code.usage_name}.
+    pub const USAGE_EXIT: i32 = ${catalogue.exit_code.usage};
 
     pub const ALL: &'static [Self] = &[${codes.map((entry) => `Self::${rustName(entry.code)}`).join(', ')}];
 
@@ -139,6 +145,20 @@ impl fmt::Display for Code {
         formatter.write_str(self.as_str())
     }
 }
+
+/// Wording that says a failure happened without saying which.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GenericSentence {
+    /// Matched case-insensitively inside a string literal.
+    pub text: &'static str,
+    /// Why a reader cannot act on it.
+    pub reason: &'static str,
+}
+
+/// Every generic sentence the catalogue refuses in an error message.
+pub const GENERIC_SENTENCES: &[GenericSentence] = &[
+${generic}
+];
 `;
 }
 
