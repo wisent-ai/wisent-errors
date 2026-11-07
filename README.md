@@ -114,12 +114,16 @@ what fixes it leaves its reader to rediscover the fix, which is the same work
 the refusal was supposed to save. It is `null` only where nothing the reader
 does can help, and the key is always present, like `detail`.
 
-## Every operation declares how it fails
+## Every functionality declares how it fails
 
 "Operation did not succeed" is a failure nobody analysed. The analysis belongs
-to the operation, done once, for every cause it can meet — including the ones
-nobody has met yet, because whoever meets one first has nothing else to go on.
-`wisent_errors::operation` is where it is written down:
+to the functionality, done once, for every cause it can meet — including the
+ones nobody has met yet, because whoever meets one first has nothing else to
+go on. The unit is the functionality, not the command: one command runs
+several functionalities (a registry read, a store write, a connection to a
+host), and many run with no command at all — a worker's loop, an API route, a
+desktop screen, a routine. `wisent_errors::operation` is where it is written
+down; an `Operation` is one functionality, named by its failure point:
 
 ```rust
 use wisent_errors::{Cause, Code, Operation};
@@ -137,12 +141,20 @@ pub static FLEET_UNDECLARED: Cause = Cause {
 };
 
 pub static ENROLL: Operation = Operation {
-    id: "fleet.enroll",
-    command: "stado fleet enroll",
+    id: "stado.fleet.enroll",
+    entries: &["stado fleet enroll", "Desktop: Hosts → Enroll a machine"],
+    uses: &[&REGISTRY_WRITE, &HOST_CONNECT],
     summary: "register a machine verified over SSH",
     docs: "https://stado.wisent.com/docs/cli/fleet-enrollment",
-    causes: &[&FLEET_UNDECLARED /* , every other cause */],
+    causes: &[&FLEET_UNDECLARED /* , every cause of its own steps */],
 };
+```
+
+`entries` are every way a user or a program starts the functionality, as they
+meet it. `uses` are the functionalities it runs: their causes are met here
+without being declared again (`Operation::met` lists them all, each with the
+functionality that declares it). A functionality only others run names no
+entry; one made only of what it uses declares no cause of its own.
 ```
 
 One declaration gives everything a cause is shown as, so none of them can say
@@ -157,13 +169,18 @@ something the others do not:
   `Code::USAGE_EXIT` (2) for a usage refusal, `Code::RETRY_EXIT` (69) for a
   retryable code and the product's own status otherwise;
 - the listing a product prints from `<product> errors list|show`
-  (`Operation::to_json`) and its documentation page (`Operation::markdown`),
-  one anchored entry per cause, so every refusal is on the page verbatim.
+  (`Operation::to_json`: `operation`, `entries`, `uses`, `summary`, `docs`,
+  `causes`) and its documentation page (`Operation::markdown`), one anchored
+  entry per cause, so every refusal is on the page verbatim.
 
 `Operation::problems` refuses a declaration that is not one: a cause without
 its test (`tests/<area>/<file>::<name>`), an empty `failed`, `cause`,
 `observed` or `remedy`, a cause declared `unknown` (the catch-all a declaration
-replaces), a retryable usage refusal, a duplicate id, a page that is not https.
+replaces), a retryable usage refusal, a duplicate id, an empty entry, a
+functionality that uses itself, one with no cause and nothing it uses, a page
+that is not https. `catalogue_problems` reads a product's whole catalogue: a
+functionality declared twice, one using a functionality the catalogue does not
+list, and one nothing starts.
 
 ### The lint a product runs
 
@@ -172,17 +189,22 @@ replaces), a retryable usage refusal, a duplicate id, a page that is not https.
 ```
 $ node ci/error-standard.mjs scan ../stado/stado-rs/src
 ../stado/stado-rs/src/cli/workload/runners/weles/browser.rs:295: "did not succeed" says the operation failed without the step, the cause or the fix (1 in this file, baseline 0); ...
-$ node ci/error-standard.mjs catalogue operations.json
-ok    fleet.enroll: 21 declared cause(s)
+$ node ci/error-standard.mjs catalogue catalogue.json --repository ../stado --entries entries.json
+ok    stado.fleet.enroll: 21 declared cause(s)
 ```
 
 `scan` refuses an error message holding one of the catalogue's
 `generic_sentences` inside a string literal; a baseline lets a product adopt
 the rule before every old message is rewritten, and may only shrink.
-`catalogue` applies `Operation::problems`'s rules to the JSON a product's
-`errors list --json` prints, for products whose catalogue is not Rust.
-`generic_sentences_in` / `genericSentencesIn` are the one line rule both
-runtimes scan with.
+`catalogue` applies the declaration rules to the JSON a product's `errors list
+--json` prints, whatever language declares it, and the whole-catalogue rules
+above. With `--repository` it also reads each cause's test: a test file the
+repository does not hold, or one that never names the test, is refused. With
+`--entries`, a JSON list of every entry the product has (each command, route,
+screen and routine, as the product's own inventory reads them), an entry no
+functionality names is refused, so a way into the product with no declared
+failures is visible. `generic_sentences_in` / `genericSentencesIn` are the one
+line rule both runtimes scan with.
 
 ## Reporting a failure must never fail
 

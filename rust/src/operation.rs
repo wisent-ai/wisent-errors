@@ -1,13 +1,21 @@
-//! An operation's failure catalogue: every way one operation can fail,
-//! declared in code beside the operation that raises it.
+//! A functionality's failure catalogue: every way one functionality of a
+//! product can fail, declared in code beside the code that raises it.
 //!
 //! "Operation did not succeed" is a failure nobody analysed. A declared cause
 //! is the analysis written down once: which step failed, why, which state the
 //! reader is shown, what fixes it, the code and the exit status it leaves, the
 //! test that provokes it and the documentation line that lists it. The
-//! catalogue holds every cause the operation can meet, including the ones
-//! nobody has met yet, because the reader who meets one first has nothing else
-//! to go on.
+//! catalogue holds every cause the functionality can meet, including the ones
+//! nobody has met yet, because the reader who meets one first has nothing
+//! else to go on.
+//!
+//! The unit is the functionality, not the command that starts it. One command
+//! runs several functionalities (a registry read, a store write, a connection
+//! to a host), and many run with no command at all: a worker's loop, an API
+//! route, a desktop screen, a routine. So an [`Operation`] is one
+//! functionality, named by its failure point; it lists the `entries` a user or
+//! a program starts it through and the functionalities it `uses`, whose causes
+//! it meets without declaring them again.
 //!
 //! The same declaration produces the refusal the operator reads, the envelope
 //! a machine reads, the `errors show` listing and the documentation page, so
@@ -47,16 +55,26 @@ pub struct Cause {
     pub test: &'static str,
 }
 
-/// One operation and every cause it can fail with.
+/// One functionality and every cause it can fail with.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Operation {
-    /// A failure point: a dotted lowercase path, `fleet.enroll`.
+    /// The functionality's failure point: a dotted lowercase path,
+    /// `stado.registry.read`.
     pub id: &'static str,
-    /// The invocation as a person types it, `stado fleet enroll`.
-    pub command: &'static str,
+    /// Every way a user or a program starts it, as they meet it: a command
+    /// (`stado fleet enroll`), a route (`POST /v1/jobs`), a screen
+    /// (`Desktop: Hosts → Enroll`), a routine or a library call. A
+    /// functionality only other functionalities run has none and is listed
+    /// in their `uses`.
+    pub entries: &'static [&'static str],
+    /// The functionalities it runs, whose causes it meets as they declare
+    /// them.
+    pub uses: &'static [&'static Operation],
     pub summary: &'static str,
-    /// The operation's documentation page; each cause is a line on it.
+    /// The functionality's documentation page; each cause is a line on it.
     pub docs: &'static str,
+    /// The causes of its own steps; a functionality made only of the ones it
+    /// uses declares none.
     pub causes: &'static [&'static Cause],
 }
 
@@ -313,8 +331,10 @@ impl Operation {
         self.causes.iter().copied().find(|cause| cause.id == id)
     }
 
-    /// Everything wrong with this catalogue: a malformed declaration, a
-    /// duplicate cause, a cause without its test or a page without a home.
+    /// Everything wrong with this declaration: a malformed id, an empty entry,
+    /// a functionality that uses itself, a duplicate cause, a cause without
+    /// its test or a page without a home. What only the whole catalogue can
+    /// show is [`catalogue_problems`].
     pub fn problems(&self) -> Vec<String> {
         let mut problems = Vec::new();
         let id = self.id;
@@ -323,8 +343,11 @@ impl Operation {
                 "operation {id:?}: the id is not a dotted lowercase path"
             ));
         }
-        if self.command.trim().is_empty() {
-            problems.push(format!("operation {id}: `command` is empty"));
+        if self.entries.iter().any(|entry| entry.trim().is_empty()) {
+            problems.push(format!("operation {id}: an entry is empty"));
+        }
+        if self.uses.iter().any(|used| used.id == id) {
+            problems.push(format!("operation {id}: it lists itself in `uses`"));
         }
         if self.summary.trim().is_empty() {
             problems.push(format!("operation {id}: `summary` is empty"));
@@ -335,8 +358,10 @@ impl Operation {
                 self.docs
             ));
         }
-        if self.causes.is_empty() {
-            problems.push(format!("operation {id}: declares no cause"));
+        if self.causes.is_empty() && self.uses.is_empty() {
+            problems.push(format!(
+                "operation {id}: declares no cause and uses no functionality that declares one"
+            ));
         }
         for (index, cause) in self.causes.iter().enumerate() {
             if self.causes[..index]
@@ -358,6 +383,16 @@ impl Operation {
         problems
     }
 
+    /// Every cause this functionality can meet: its own, then those of each
+    /// functionality it uses, each listed once, with the functionality that
+    /// declares it.
+    pub fn met(&self) -> Vec<(&'static str, &'static Cause)> {
+        let mut met: Vec<(&'static str, &'static Cause)> = Vec::new();
+        let mut seen: Vec<&'static str> = Vec::new();
+        collect(self.id, self.causes, self.uses, &mut met, &mut seen);
+        met
+    }
+
     /// The catalogue as one JSON document.
     pub fn to_json(&self, failure_exit: i32) -> String {
         let causes: Vec<String> = self
@@ -365,22 +400,44 @@ impl Operation {
             .iter()
             .map(|cause| cause.to_json(self, failure_exit))
             .collect();
+        let entries: Vec<String> = self.entries.iter().map(|entry| escape(entry)).collect();
+        let uses: Vec<String> = self.uses.iter().map(|used| escape(used.id)).collect();
         format!(
-            "{{\"operation\":{},\"command\":{},\"summary\":{},\"docs\":{},\"causes\":[{}]}}",
+            "{{\"operation\":{},\"entries\":[{}],\"uses\":[{}],\"summary\":{},\"docs\":{},\"causes\":[{}]}}",
             escape(self.id),
-            escape(self.command),
+            entries.join(","),
+            uses.join(","),
             escape(self.summary),
             escape(self.docs),
             causes.join(",")
         )
     }
 
-    /// The operation's section of its documentation page: one entry per
-    /// cause, each with its anchor, so every refusal is listed verbatim.
+    /// The functionality's section of its documentation page: how it is
+    /// started, what it uses, and one entry per cause of its own, each with
+    /// its anchor, so every refusal is listed verbatim.
     pub fn markdown(&self, failure_exit: i32) -> String {
+        let entries = if self.entries.is_empty() {
+            "run only by the functionalities that use it".to_owned()
+        } else {
+            self.entries
+                .iter()
+                .map(|entry| format!("`{entry}`"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        let uses = if self.uses.is_empty() {
+            "none".to_owned()
+        } else {
+            self.uses
+                .iter()
+                .map(|used| format!("`{}`", used.id))
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
         let mut page = format!(
-            "## `{}`\n\n{}\n\nFailure catalogue `{}`: {} declared cause(s).\n",
-            self.command,
+            "## `{}`\n\n{}\n\nStarted through: {entries}. Uses: {uses}. Failure catalogue `{}`: {} declared cause(s) of its own.\n",
+            self.id,
             self.summary,
             self.id,
             self.causes.len()
@@ -413,4 +470,59 @@ impl Operation {
         }
         page
     }
+}
+
+/// The causes of `owner` and of every functionality it uses, transitively,
+/// each functionality visited once.
+fn collect(
+    owner: &'static str,
+    causes: &'static [&'static Cause],
+    uses: &'static [&'static Operation],
+    met: &mut Vec<(&'static str, &'static Cause)>,
+    seen: &mut Vec<&'static str>,
+) {
+    if seen.contains(&owner) {
+        return;
+    }
+    seen.push(owner);
+    for cause in causes {
+        met.push((owner, *cause));
+    }
+    for used in uses {
+        collect(used.id, used.causes, used.uses, met, seen);
+    }
+}
+
+/// What only a product's whole catalogue shows, each as one sentence: a
+/// functionality declared twice, one that uses a functionality the catalogue
+/// does not list, and one nothing starts — no entry names it and no listed
+/// functionality uses it, so no reader can reach its causes.
+pub fn catalogue_problems(operations: &[&Operation]) -> Vec<String> {
+    let mut problems = Vec::new();
+    for (index, operation) in operations.iter().enumerate() {
+        if operations[..index]
+            .iter()
+            .any(|earlier| earlier.id == operation.id)
+        {
+            problems.push(format!("operation {} is declared twice", operation.id));
+        }
+        for used in operation.uses {
+            if !operations.iter().any(|listed| listed.id == used.id) {
+                problems.push(format!(
+                    "operation {}: it uses {}, which the catalogue does not list; list every functionality the product runs",
+                    operation.id, used.id
+                ));
+            }
+        }
+        let used = operations
+            .iter()
+            .any(|other| other.uses.iter().any(|used| used.id == operation.id));
+        if operation.entries.is_empty() && !used {
+            problems.push(format!(
+                "operation {}: nothing starts it: it names no entry and no functionality of the catalogue uses it",
+                operation.id
+            ));
+        }
+    }
+    problems
 }

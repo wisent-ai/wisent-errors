@@ -21,7 +21,7 @@ mod render;
 pub mod cli_output;
 
 pub use codes::{Code, GenericSentence, Severity, GENERIC_SENTENCES};
-pub use operation::{Cause, Operation};
+pub use operation::{catalogue_problems, Cause, Operation};
 
 /// Identifiers a reader needs to find the subject: a host, a subscription, a job.
 pub type Context = BTreeMap<String, String>;
