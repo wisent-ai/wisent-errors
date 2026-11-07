@@ -182,6 +182,15 @@ that is not https. `catalogue_problems` reads a product's whole catalogue: a
 functionality declared twice, one using a functionality the catalogue does not
 list, and one nothing starts.
 
+A JavaScript product declares the same thing as plain objects —
+`{ id, entries, uses, summary, docs, causes }`, each cause `{ id, code,
+usage, exit, failed, cause, observed, remedy, test }` — and `@wisent/errors`
+gives it the same rules and the same JSON: `fill`, `sentence`, `fix`,
+`causeExit`, `anchor`, `causeProblems`, `operationProblems`,
+`catalogueProblems`, `met` and `catalogue(operation, failureExit)`, which
+prints exactly what `Operation::to_json` prints. A product keeps no copy of
+these rules of its own.
+
 ### The lint a product runs
 
 `ci/error-standard.mjs` holds a product's tree to the same standard:

@@ -265,3 +265,16 @@ export {
   retryable,
   severity,
 };
+
+export {
+  anchor,
+  catalogue,
+  catalogueProblems,
+  causeExit,
+  causeProblems,
+  fill,
+  fix,
+  met,
+  operationProblems,
+  sentence,
+} from './operation.mjs';

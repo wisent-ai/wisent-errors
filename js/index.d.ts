@@ -119,3 +119,66 @@ export declare const GENERIC_SENTENCES: readonly GenericSentence[];
 
 /** The generic sentences inside the string literals of one source line; comment lines are skipped. */
 export declare function genericSentencesIn(line: string, singleQuoted: boolean): GenericSentence[];
+
+/** One way a functionality can fail; the four sentences are `{name}` templates. */
+export interface Cause {
+  id: string;
+  code: Code;
+  /** A refusal of the request's own form, exiting with USAGE_EXIT. */
+  usage?: boolean;
+  /** The product's own documented exit status for this cause, where it has one. */
+  exit?: number | null;
+  failed: string;
+  cause: string;
+  observed: string;
+  remedy: string;
+  /** The real test that provokes it: `tests/<area>/<file>::<test name>`. */
+  test: string;
+}
+
+/** One functionality, named by its failure point, and every cause of its own steps. */
+export interface Operation {
+  id: string;
+  /** Every way a user or a program starts it: a command, a route, a screen, a routine. */
+  entries: readonly string[];
+  /** The functionalities it runs, whose causes it meets without declaring them again. */
+  uses: readonly Operation[];
+  summary: string;
+  docs: string;
+  causes: readonly Cause[];
+}
+
+export interface CatalogueCause {
+  id: string;
+  code: Code;
+  exit: number;
+  retryable: boolean;
+  usage: boolean;
+  failed: string;
+  cause: string;
+  observed: string;
+  remedy: string;
+  test: string;
+  doc: string;
+}
+
+/** The JSON every product prints from `errors list|show --json`. */
+export interface Catalogue {
+  operation: string;
+  entries: string[];
+  uses: string[];
+  summary: string;
+  docs: string;
+  causes: CatalogueCause[];
+}
+
+export declare function fill(template: string, values?: Record<string, unknown>): string;
+export declare function sentence(cause: Cause, values?: Record<string, unknown>): string;
+export declare function fix(cause: Cause, values?: Record<string, unknown>): string;
+export declare function causeExit(cause: Cause, failureExit: number): number;
+export declare function anchor(operation: Operation, cause: Cause): string;
+export declare function causeProblems(cause: Cause): string[];
+export declare function operationProblems(operation: Operation): string[];
+export declare function catalogueProblems(operations: readonly Operation[]): string[];
+export declare function met(operation: Operation): { owner: string; cause: Cause }[];
+export declare function catalogue(operation: Operation, failureExit: number): Catalogue;
