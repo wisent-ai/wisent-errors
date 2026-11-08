@@ -28,6 +28,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
 import { CODES, FAILURE_POINT_PATTERN, GENERIC_SENTENCES, RETRY_EXIT, USAGE_EXIT, genericSentencesIn, retryable } from '../js/index.mjs';
+import { absentTest } from './tests-held.mjs';
 
 const USAGE =
   'usage: node ci/error-standard.mjs scan <dir>... [--baseline <file>] [--json]\n' +
@@ -157,23 +158,6 @@ function causeProblems(operation, cause) {
   return problems;
 }
 
-// Why `cause`'s test is not one `repository` holds, or null when the file it
-// names exists and names the test. A file is read as text, so a test of any
-// language counts by its name standing as a word in it.
-function absentTest(repository, cause) {
-  const [file, name] = String(cause.test).split('::');
-  if (!file || !name) return `${cause.test} names no file::test`;
-  const path = join(repository, file);
-  if (!existsSync(path)) return `${path} is absent`;
-  let text;
-  try {
-    text = readFileSync(path, 'utf8');
-  } catch (error) {
-    return `${path} cannot be read: ${error.message}`;
-  }
-  return new RegExp(`\\b${name}\\b`).test(text) ? null : `${path} never names ${name}`;
-}
-
 function readJson(path, what) {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
@@ -219,7 +203,7 @@ function catalogue(path, repository, entriesPath, asJson) {
       if (causes.slice(0, index).some((earlier) => earlier.id === cause.id)) problems.push(`cause ${cause.id} is declared twice`);
       problems.push(...causeProblems(operation, cause));
       if (repository !== null) {
-        const why = absentTest(repository, cause);
+        const why = absentTest(repository, cause.test);
         if (why !== null) {
           problems.push(`${id}.${cause.id} names the test ${cause.test}, which the repository does not hold: ${why}; write that test, or name the one that provokes this cause`);
         }

@@ -16,12 +16,14 @@ use std::fmt;
 mod codes;
 pub mod operation;
 mod render;
+pub mod warning;
 
 #[cfg(feature = "cli-output")]
 pub mod cli_output;
 
 pub use codes::{Code, GenericSentence, Severity, GENERIC_SENTENCES};
 pub use operation::{catalogue_problems, Cause, Operation};
+pub use warning::{Hazard, Warning};
 
 /// Identifiers a reader needs to find the subject: a host, a subscription, a job.
 pub type Context = BTreeMap<String, String>;

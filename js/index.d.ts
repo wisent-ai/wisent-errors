@@ -146,6 +146,49 @@ export interface Operation {
   summary: string;
   docs: string;
   causes: readonly Cause[];
+  /** What it does that its caller must know before it runs; most functionalities declare none. */
+  warnings?: readonly Warning[];
+}
+
+/** What kind of loss a warning announces. */
+export type Hazard = 'irreversible' | 'overwrites' | 'cuts-off-access' | 'exposes-secret' | 'external-change' | 'costs-money';
+
+/** Every hazard with what it means, as the documentation page states it. */
+export declare const HAZARDS: Readonly<Record<Hazard, string>>;
+
+/** One thing a functionality does that its caller must know before it runs; the four sentences are `{name}` templates. */
+export interface Warning {
+  id: string;
+  hazard: Hazard;
+  /** What the functionality is about to do. */
+  effect: string;
+  /** What cannot be had back afterwards, and whom it reaches. */
+  consequence: string;
+  /** What keeps a way back, done before confirming; where nothing can, it says so and why. */
+  safeguard: string;
+  /** How the caller confirms: the flag, the phrase, the button. */
+  confirm: string;
+  /** The real test that shows it and proves nothing happens without the confirmation: `tests/<area>/<file>::<test name>`. */
+  test: string;
+}
+
+export interface CatalogueWarning {
+  id: string;
+  hazard: Hazard;
+  effect: string;
+  consequence: string;
+  safeguard: string;
+  confirm: string;
+  test: string;
+  doc: string;
+}
+
+/** The JSON every product prints from `warnings list|show --json`. */
+export interface WarningsCatalogue {
+  operation: string;
+  entries: string[];
+  summary: string;
+  warnings: CatalogueWarning[];
 }
 
 export interface CatalogueCause {
@@ -182,3 +225,10 @@ export declare function operationProblems(operation: Operation): string[];
 export declare function catalogueProblems(operations: readonly Operation[]): string[];
 export declare function met(operation: Operation): { owner: string; cause: Cause }[];
 export declare function catalogue(operation: Operation, failureExit: number): Catalogue;
+export declare function warningSentence(warning: Warning, values?: Record<string, unknown>): string;
+export declare function unconfirmed(warning: Warning, values?: Record<string, unknown>): string;
+export declare function warningAnchor(operation: Operation, warning: Warning): string;
+export declare function warningProblems(warning: Warning): string[];
+export declare function warningDeclarationProblems(operation: Operation): string[];
+export declare function warningsCatalogue(operation: Operation, page: string): WarningsCatalogue;
+export declare function warningsMarkdown(operation: Operation): string;

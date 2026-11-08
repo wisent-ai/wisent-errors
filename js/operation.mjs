@@ -11,10 +11,11 @@
 // fixes it, its code, and the real test that provokes it.
 
 import { CODES, FAILURE_POINT_PATTERN, GENERIC_SENTENCES, RETRY_EXIT, USAGE_EXIT, retryable } from './codes.mjs';
+import { warningDeclarationProblems } from './warning.mjs';
 
 const FAILURE_POINT = new RegExp(FAILURE_POINT_PATTERN);
-const CAUSE_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
-const TEST_PATH = /^tests\/[^/]+\/[^:]+::[a-z0-9_]+$/;
+export const CAUSE_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+export const TEST_PATH = /^tests\/[^/]+\/[^:]+::[a-z0-9_]+$/;
 
 /**
  * `template` with each `{name}` replaced by `values[name]`. A placeholder with
@@ -106,6 +107,7 @@ export function operationProblems(operation) {
     if (causes.slice(0, index).some((earlier) => earlier.id === cause.id)) problems.push(`operation ${id}: cause ${cause.id} is declared twice`);
     for (const problem of causeProblems(cause)) problems.push(`operation ${id}: ${problem}`);
   });
+  problems.push(...warningDeclarationProblems(operation));
   return problems;
 }
 

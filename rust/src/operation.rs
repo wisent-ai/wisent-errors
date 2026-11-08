@@ -76,6 +76,12 @@ pub struct Operation {
     /// The causes of its own steps; a functionality made only of the ones it
     /// uses declares none.
     pub causes: &'static [&'static Cause],
+    /// What it does that its caller must know before it runs: an effect
+    /// nothing undoes, access it takes from someone, a secret it lets out, a
+    /// change outside the product, money it spends ([`crate::Warning`]). A
+    /// functionality with no such effect declares none; a warning nobody needs
+    /// teaches its reader to confirm without reading.
+    pub warnings: &'static [&'static crate::Warning],
 }
 
 /// `template` with each `{name}` replaced by its value.
@@ -174,7 +180,7 @@ fn literals(line: &str, single_quoted: bool) -> Vec<&str> {
     segments
 }
 
-fn is_cause_id(id: &str) -> bool {
+pub(crate) fn is_cause_id(id: &str) -> bool {
     !id.is_empty()
         && id.split('-').all(|word| {
             !word.is_empty()
@@ -186,7 +192,7 @@ fn is_cause_id(id: &str) -> bool {
 }
 
 /// `tests/<area>/<file>::<test name>`, the shape every product's tests take.
-fn is_test_path(test: &str) -> bool {
+pub(crate) fn is_test_path(test: &str) -> bool {
     let Some((path, name)) = test.split_once("::") else {
         return false;
     };
@@ -380,6 +386,7 @@ impl Operation {
                     .map(|problem| format!("operation {id}: {problem}")),
             );
         }
+        problems.extend(crate::warning::declaration_problems(self));
         problems
     }
 

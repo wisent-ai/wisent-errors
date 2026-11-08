@@ -278,3 +278,14 @@ export {
   operationProblems,
   sentence,
 } from './operation.mjs';
+
+export {
+  HAZARDS,
+  unconfirmed,
+  warningAnchor,
+  warningDeclarationProblems,
+  warningProblems,
+  warningSentence,
+  warningsCatalogue,
+  warningsMarkdown,
+} from './warning.mjs';
