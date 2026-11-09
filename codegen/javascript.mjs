@@ -6,6 +6,7 @@ export function javascript({ catalogue, codes, exact, ranges, fallback, banner }
       (entry) =>
         `  ${entry.code}: {\n` +
         `    operatorSummary: ${JSON.stringify(entry.operator_summary)},\n` +
+        `    whose: ${JSON.stringify(entry.whose)},\n` +
         `    retryable: ${entry.retryable},\n` +
         `    outage: ${entry.outage},\n` +
         `    severity: ${JSON.stringify(entry.severity)},\n` +
@@ -52,6 +53,8 @@ ${rangeRows}
 ]);
 
 export const operatorSummary = (code) => MEANINGS[code].operatorSummary;
+/** Whose the failure is, in the words a rendered line says after the summary. */
+export const whose = (code) => MEANINGS[code].whose;
 export const retryable = (code) => MEANINGS[code].retryable;
 export const outage = (code) => MEANINGS[code].outage;
 export const severity = (code) => MEANINGS[code].severity;

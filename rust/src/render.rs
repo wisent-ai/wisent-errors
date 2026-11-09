@@ -45,11 +45,9 @@ impl Failure {
         } else {
             "; retrying will not help"
         };
-        let whose = if self.outage() {
-            "our failure"
-        } else {
-            "the request or its credentials"
-        };
+        // Whose it is comes from the catalogue, per code: chosen from outage
+        // alone, a policy refusal read as a problem with credentials.
+        let whose = self.code.whose();
         format!(
             "{} — {whose}{retry} {}",
             self.code.operator_summary(),

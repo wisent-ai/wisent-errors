@@ -217,8 +217,9 @@ public struct Failure: Sendable, Equatable {
     /// One line for a human, and the envelope for everything else.
     public func render() -> String {
         let retry = retryable ? "; retry later" : "; retrying will not help"
-        let whose = outage ? "our failure" : "the request or its credentials"
-        return "\(code.operatorSummary) \u{2014} \(whose)\(retry) \(toJSON())"
+        // Whose it is comes from the catalogue, per code: chosen from outage
+        // alone, a policy refusal read as a problem with credentials.
+        return "\(code.operatorSummary) \u{2014} \(code.whose)\(retry) \(toJSON())"
     }
 
     /// Flatten the cause chain, outermost first, for a reader in a hurry.

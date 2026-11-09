@@ -390,6 +390,17 @@ classify an HTTP status the same way in all three. A 5xx is `infra_down` and
 never `not_found`: collapsing server errors into "nothing there" is what let a
 storage outage read as an empty queue.
 
+`render` prints one line: the code's summary, then whose the failure is, then
+whether retrying helps, then the envelope. Whose it is comes from the
+catalogue's `whose` field for that code, the same in every runtime (`Code::whose`
+/ `whose` / `whose` / `Code.whose`): `our failure` for `config`, `timeout` and
+`infra_down`; `the credentials the request presented` for `auth`; `what the
+request named` for `not_found`; `the pace of the requests, not their content`
+for `rate_limit`; `a rule we wrote, not the request's credentials` for
+`refused`; and `not yet attributed to either side` for `unknown`. It used to be
+chosen from `outage` alone, so a policy refusal read as a problem with
+credentials.
+
 ### CLI output, behind `cli-output`
 
 The Rust crate also carries what every Wisent CLI prints and reads, off by

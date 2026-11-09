@@ -7,6 +7,7 @@ export function rust({ catalogue, codes, exact, ranges, fallback, banner }) {
   const asStr = codes.map((entry) => `            Self::${rustName(entry.code)} => "${entry.code}",`).join('\n');
   const parse = codes.map((entry) => `            "${entry.code}" => Some(Self::${rustName(entry.code)}),`).join('\n');
   const summary = codes.map((entry) => `            Self::${rustName(entry.code)} => "${entry.operator_summary}",`).join('\n');
+  const whose = codes.map((entry) => `            Self::${rustName(entry.code)} => "${entry.whose}",`).join('\n');
   const retryable = codes.filter((entry) => entry.retryable).map((entry) => `Self::${rustName(entry.code)}`).join(' | ');
   const outage = codes.filter((entry) => entry.outage).map((entry) => `Self::${rustName(entry.code)}`).join(' | ');
   const severity = codes.map((entry) => `            Self::${rustName(entry.code)} => Severity::${entry.severity[0].toUpperCase() + entry.severity.slice(1)},`).join('\n');
@@ -92,6 +93,15 @@ ${parse}
     pub fn operator_summary(self) -> &'static str {
         match self {
 ${summary}
+        }
+    }
+
+    /// Whose the failure is, in the words a rendered line says after the
+    /// summary: ours, the request's, a rule's. Read from the catalogue, so no
+    /// runtime tells a policy refusal it was about credentials.
+    pub fn whose(self) -> &'static str {
+        match self {
+${whose}
         }
     }
 

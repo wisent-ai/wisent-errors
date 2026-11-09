@@ -24,6 +24,7 @@ import {
   outage,
   retryable,
   severity,
+  whose as whoseOf,
 } from './codes.mjs';
 
 const FAILURE_POINT = new RegExp(FAILURE_POINT_PATTERN);
@@ -190,7 +191,9 @@ export function raise(fields) {
  */
 export function render(envelope) {
   const retry = envelope.retryable ? '; retry later' : '; retrying will not help';
-  const whose = envelope.outage ? 'our failure' : 'the request or its credentials';
+  // Whose it is comes from the catalogue, per code: chosen from outage alone,
+  // a policy refusal read as a problem with credentials.
+  const whose = whoseOf(envelope.error_code);
   return [
     `${operatorSummary(envelope.error_code)} — ${whose}${retry}`,
     JSON.stringify(envelope),
@@ -264,6 +267,7 @@ export {
   outage,
   retryable,
   severity,
+  whoseOf as whose,
 };
 
 export {

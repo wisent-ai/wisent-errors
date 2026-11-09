@@ -94,6 +94,8 @@ export declare function isCode(text: unknown): text is Code;
 export declare function codeOrNull(text: unknown): Code | null;
 
 export declare function operatorSummary(code: Code): string;
+/** Whose the failure is, in the words a rendered line says after the summary. */
+export declare function whose(code: Code): string;
 export declare function severity(code: Code): Severity;
 export declare function retryable(code: Code): boolean;
 export declare function outage(code: Code): boolean;
@@ -104,7 +106,10 @@ export declare function fromUpstreamStatus(status: number): Code;
 export declare const CODES: readonly Code[];
 export declare const SEVERITIES: readonly Severity[];
 export declare const MEANINGS: Readonly<
-  Record<Code, { operatorSummary: string; retryable: boolean; outage: boolean; severity: Severity; httpStatus: number }>
+  Record<
+    Code,
+    { operatorSummary: string; whose: string; retryable: boolean; outage: boolean; severity: Severity; httpStatus: number }
+  >
 >;
 export declare const FALLBACK: Code;
 export declare const FAILURE_POINT_PATTERN: string;

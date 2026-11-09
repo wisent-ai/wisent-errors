@@ -19,6 +19,7 @@ export function swift({ catalogue, codes, exact, ranges, fallback, banner }) {
   const outageArms = codes.map((entry) => arm(entry, entry.outage)).join('\n');
   const statusArms = codes.map((entry) => arm(entry, entry.http_status)).join('\n');
   const summaryArms = codes.map((entry) => arm(entry, JSON.stringify(entry.operator_summary))).join('\n');
+  const whoseArms = codes.map((entry) => arm(entry, JSON.stringify(entry.whose))).join('\n');
   const exactArms = exact.map(([status, code]) => `        case ${status}: .${swiftName(code)}`).join('\n');
   const rangeArms = ranges
     .map((range) => `        case ${range.from}...${range.to}: .${swiftName(range.code)}`)
@@ -69,6 +70,14 @@ ${statusArms}
     public var operatorSummary: String {
         switch self {
 ${summaryArms}
+        }
+    }
+
+    /// Whose the failure is, in the words a rendered line says after the
+    /// summary: ours, the request's, a rule's.
+    public var whose: String {
+        switch self {
+${whoseArms}
         }
     }
 

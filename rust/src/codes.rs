@@ -113,6 +113,22 @@ impl Code {
         }
     }
 
+    /// Whose the failure is, in the words a rendered line says after the
+    /// summary: ours, the request's, a rule's. Read from the catalogue, so no
+    /// runtime tells a policy refusal it was about credentials.
+    pub fn whose(self) -> &'static str {
+        match self {
+            Self::Config => "our failure",
+            Self::Auth => "the credentials the request presented",
+            Self::NotFound => "what the request named",
+            Self::RateLimit => "the pace of the requests, not their content",
+            Self::Timeout => "our failure",
+            Self::InfraDown => "our failure",
+            Self::Refused => "a rule we wrote, not the request's credentials",
+            Self::Unknown => "not yet attributed to either side",
+        }
+    }
+
     /// Worth running the same thing again without changing anything.
     pub fn retryable(self) -> bool {
         matches!(self, Self::RateLimit | Self::Timeout | Self::InfraDown)

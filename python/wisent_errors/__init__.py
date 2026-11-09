@@ -27,6 +27,7 @@ from .codes import (
     outage,
     retryable,
     severity,
+    whose,
 )
 
 __all__ = [
@@ -52,6 +53,7 @@ __all__ = [
     "severity",
     "trim_detail",
     "trim_detail_at_word_edge",
+    "whose",
 ]
 
 _FAILURE_POINT = re.compile(FAILURE_POINT_PATTERN)
@@ -225,9 +227,11 @@ def render(envelope: Mapping[str, Any]) -> str:
     import json
 
     retry = "; retry later" if envelope["retryable"] else "; retrying will not help"
-    whose = "our failure" if envelope["outage"] else "the request or its credentials"
+    # Whose it is comes from the catalogue, per code: chosen from outage
+    # alone, a policy refusal read as a problem with credentials.
     body = json.dumps(envelope, separators=(",", ":"), ensure_ascii=False)
-    return f"{operator_summary(envelope['error_code'])} \u2014 {whose}{retry} {body}"
+    code = envelope["error_code"]
+    return f"{operator_summary(code)} \u2014 {whose(code)}{retry} {body}"
 
 
 def chain(envelope: Mapping[str, Any]) -> list:

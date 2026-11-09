@@ -11,6 +11,7 @@ from typing import Optional
 @dataclass(frozen=True)
 class _Meaning:
     operator_summary: str
+    whose: str
     retryable: bool
     outage: bool
     severity: str
@@ -20,6 +21,7 @@ class _Meaning:
 MEANINGS: dict[str, _Meaning] = {
     "config": _Meaning(
         operator_summary="our deployment configuration is incomplete or wrong",
+        whose="our failure",
         retryable=False,
         outage=True,
         severity="critical",
@@ -27,6 +29,7 @@ MEANINGS: dict[str, _Meaning] = {
     ),
     "auth": _Meaning(
         operator_summary="the credentials this command used were rejected",
+        whose="the credentials the request presented",
         retryable=False,
         outage=False,
         severity="warning",
@@ -34,6 +37,7 @@ MEANINGS: dict[str, _Meaning] = {
     ),
     "not_found": _Meaning(
         operator_summary="what the command asked for is not there",
+        whose="what the request named",
         retryable=False,
         outage=False,
         severity="warning",
@@ -41,6 +45,7 @@ MEANINGS: dict[str, _Meaning] = {
     ),
     "rate_limit": _Meaning(
         operator_summary="an upstream is throttling us",
+        whose="the pace of the requests, not their content",
         retryable=True,
         outage=False,
         severity="warning",
@@ -48,6 +53,7 @@ MEANINGS: dict[str, _Meaning] = {
     ),
     "timeout": _Meaning(
         operator_summary="an upstream did not answer in time",
+        whose="our failure",
         retryable=True,
         outage=True,
         severity="error",
@@ -55,6 +61,7 @@ MEANINGS: dict[str, _Meaning] = {
     ),
     "infra_down": _Meaning(
         operator_summary="infrastructure we depend on is unreachable",
+        whose="our failure",
         retryable=True,
         outage=True,
         severity="critical",
@@ -62,6 +69,7 @@ MEANINGS: dict[str, _Meaning] = {
     ),
     "refused": _Meaning(
         operator_summary="an explicit policy refused this command",
+        whose="a rule we wrote, not the request's credentials",
         retryable=False,
         outage=False,
         severity="warning",
@@ -69,6 +77,7 @@ MEANINGS: dict[str, _Meaning] = {
     ),
     "unknown": _Meaning(
         operator_summary="the command failed and we could not attribute the failure",
+        whose="not yet attributed to either side",
         retryable=False,
         outage=False,
         severity="error",
@@ -105,6 +114,11 @@ FAILURE_POINT_PATTERN: str = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-
 
 def operator_summary(code: str) -> str:
     return MEANINGS[code].operator_summary
+
+
+def whose(code: str) -> str:
+    """Whose the failure is, in the words a rendered line says after the summary."""
+    return MEANINGS[code].whose
 
 
 def retryable(code: str) -> bool:

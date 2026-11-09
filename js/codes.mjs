@@ -5,6 +5,7 @@
 export const MEANINGS = Object.freeze({
   config: {
     operatorSummary: "our deployment configuration is incomplete or wrong",
+    whose: "our failure",
     retryable: false,
     outage: true,
     severity: "critical",
@@ -12,6 +13,7 @@ export const MEANINGS = Object.freeze({
   },
   auth: {
     operatorSummary: "the credentials this command used were rejected",
+    whose: "the credentials the request presented",
     retryable: false,
     outage: false,
     severity: "warning",
@@ -19,6 +21,7 @@ export const MEANINGS = Object.freeze({
   },
   not_found: {
     operatorSummary: "what the command asked for is not there",
+    whose: "what the request named",
     retryable: false,
     outage: false,
     severity: "warning",
@@ -26,6 +29,7 @@ export const MEANINGS = Object.freeze({
   },
   rate_limit: {
     operatorSummary: "an upstream is throttling us",
+    whose: "the pace of the requests, not their content",
     retryable: true,
     outage: false,
     severity: "warning",
@@ -33,6 +37,7 @@ export const MEANINGS = Object.freeze({
   },
   timeout: {
     operatorSummary: "an upstream did not answer in time",
+    whose: "our failure",
     retryable: true,
     outage: true,
     severity: "error",
@@ -40,6 +45,7 @@ export const MEANINGS = Object.freeze({
   },
   infra_down: {
     operatorSummary: "infrastructure we depend on is unreachable",
+    whose: "our failure",
     retryable: true,
     outage: true,
     severity: "critical",
@@ -47,6 +53,7 @@ export const MEANINGS = Object.freeze({
   },
   refused: {
     operatorSummary: "an explicit policy refused this command",
+    whose: "a rule we wrote, not the request's credentials",
     retryable: false,
     outage: false,
     severity: "warning",
@@ -54,6 +61,7 @@ export const MEANINGS = Object.freeze({
   },
   unknown: {
     operatorSummary: "the command failed and we could not attribute the failure",
+    whose: "not yet attributed to either side",
     retryable: false,
     outage: false,
     severity: "error",
@@ -141,6 +149,8 @@ const STATUS_RANGES = Object.freeze([
 ]);
 
 export const operatorSummary = (code) => MEANINGS[code].operatorSummary;
+/** Whose the failure is, in the words a rendered line says after the summary. */
+export const whose = (code) => MEANINGS[code].whose;
 export const retryable = (code) => MEANINGS[code].retryable;
 export const outage = (code) => MEANINGS[code].outage;
 export const severity = (code) => MEANINGS[code].severity;

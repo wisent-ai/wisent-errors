@@ -3,11 +3,13 @@
 // The `/codes` subpath is what a product imports when it wants only the derived
 // values and keeps its own renderer, which is most of the fleet.
 
-export type Code = 'config' | 'auth' | 'not_found' | 'rate_limit' | 'timeout' | 'infra_down' | 'unknown';
+export type Code = 'config' | 'auth' | 'not_found' | 'rate_limit' | 'timeout' | 'infra_down' | 'refused' | 'unknown';
 export type Severity = 'warning' | 'error' | 'critical';
 
 export interface Meaning {
   operatorSummary: string;
+  /** Whose the failure is, in the words a rendered line says after the summary. */
+  whose: string;
   retryable: boolean;
   outage: boolean;
   severity: Severity;
@@ -22,6 +24,8 @@ export declare const FAILURE_POINT_PATTERN: string;
 export declare const RETRY_EXIT: number;
 
 export declare function operatorSummary(code: Code): string;
+/** Whose the failure is, in the words a rendered line says after the summary. */
+export declare function whose(code: Code): string;
 export declare function retryable(code: Code): boolean;
 export declare function outage(code: Code): boolean;
 export declare function severity(code: Code): Severity;

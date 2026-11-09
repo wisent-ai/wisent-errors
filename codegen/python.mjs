@@ -6,6 +6,7 @@ export function python({ catalogue, codes, exact, ranges, fallback, banner }) {
       (entry) =>
         `    "${entry.code}": _Meaning(\n` +
         `        operator_summary=${JSON.stringify(entry.operator_summary)},\n` +
+        `        whose=${JSON.stringify(entry.whose)},\n` +
         `        retryable=${entry.retryable ? 'True' : 'False'},\n` +
         `        outage=${entry.outage ? 'True' : 'False'},\n` +
         `        severity=${JSON.stringify(entry.severity)},\n` +
@@ -29,6 +30,7 @@ from typing import Optional
 @dataclass(frozen=True)
 class _Meaning:
     operator_summary: str
+    whose: str
     retryable: bool
     outage: bool
     severity: str
@@ -59,6 +61,11 @@ FAILURE_POINT_PATTERN: str = ${JSON.stringify(catalogue.failure_point.pattern)}
 
 def operator_summary(code: str) -> str:
     return MEANINGS[code].operator_summary
+
+
+def whose(code: str) -> str:
+    """Whose the failure is, in the words a rendered line says after the summary."""
+    return MEANINGS[code].whose
 
 
 def retryable(code: str) -> bool:

@@ -92,6 +92,21 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
         }
     }
 
+    /// Whose the failure is, in the words a rendered line says after the
+    /// summary: ours, the request's, a rule's.
+    public var whose: String {
+        switch self {
+        case .config: "our failure"
+        case .auth: "the credentials the request presented"
+        case .notFound: "what the request named"
+        case .rateLimit: "the pace of the requests, not their content"
+        case .timeout: "our failure"
+        case .infraDown: "our failure"
+        case .refused: "a rule we wrote, not the request's credentials"
+        case .unknown: "not yet attributed to either side"
+        }
+    }
+
     /// The exit code this failure leaves the process with, given the chosen one.
     public func exitCode(chosen: Int32) -> Int32 {
         retryable ? Self.retryExit : chosen

@@ -15,6 +15,7 @@
     {
       "code": "config",
       "operator_summary": "our deployment configuration is incomplete or wrong",
+      "whose": "our failure",
       "meaning": "A value the process needs was absent or malformed. Ours to fix, and no amount of retrying changes it.",
       "retryable": false,
       "outage": true,
@@ -24,6 +25,7 @@
     {
       "code": "auth",
       "operator_summary": "the credentials this command used were rejected",
+      "whose": "the credentials the request presented",
       "meaning": "An upstream refused the identity we presented. Retrying with the same credential repeats the refusal.",
       "retryable": false,
       "outage": false,
@@ -33,6 +35,7 @@
     {
       "code": "not_found",
       "operator_summary": "what the command asked for is not there",
+      "whose": "what the request named",
       "meaning": "The request named something absent. A server error is never classified here: collapsing 5xx into 'nothing there' is what let a storage outage read as an empty queue.",
       "retryable": false,
       "outage": false,
@@ -42,6 +45,7 @@
     {
       "code": "rate_limit",
       "operator_summary": "an upstream is throttling us",
+      "whose": "the pace of the requests, not their content",
       "meaning": "The request was well formed and refused for pace. Worth repeating later, unchanged.",
       "retryable": true,
       "outage": false,
@@ -51,6 +55,7 @@
     {
       "code": "timeout",
       "operator_summary": "an upstream did not answer in time",
+      "whose": "our failure",
       "meaning": "No verdict arrived. The operation may or may not have happened, which is why it counts as our outage.",
       "retryable": true,
       "outage": true,
@@ -60,6 +65,7 @@
     {
       "code": "infra_down",
       "operator_summary": "infrastructure we depend on is unreachable",
+      "whose": "our failure",
       "meaning": "A dependency did not answer at all. Nothing about the request was wrong.",
       "retryable": true,
       "outage": true,
@@ -69,6 +75,7 @@
     {
       "code": "refused",
       "operator_summary": "an explicit policy refused this command",
+      "whose": "a rule we wrote, not the request's credentials",
       "meaning": "A guard we wrote said no: an allowlist that does not admit the command, a gate whose condition is unmet, a policy that forbids the operation. The request was understood and reached its decision -- nothing is missing, no credential was rejected, and nothing is down. Waiting changes nothing, and neither does repeating it; only the request or the policy can change. Added for stado's host-exec allowlist, whose refusal had no honest code: `not_found` sends an operator looking for a missing path, `auth` names credentials that were never presented, and `config` claims our deployment is broken when it is working exactly as declared. Not in `upstream_status`: a 403 from someone else's server stays `auth`, because a remote refusal usually is about the identity we presented. This code is for a refusal WE state.",
       "retryable": false,
       "outage": false,
@@ -78,6 +85,7 @@
     {
       "code": "unknown",
       "operator_summary": "the command failed and we could not attribute the failure",
+      "whose": "not yet attributed to either side",
       "meaning": "The last resort. A failure that stays unknown is a gap in classification, not a kind of failure, and it is worth reading as a defect in whoever emitted it.",
       "retryable": false,
       "outage": false,
