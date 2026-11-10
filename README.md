@@ -385,6 +385,13 @@ Probierz intake without ever failing the caller; `docs/swift-reporter.md` says
 where the intake comes from, what is said on stderr, and how a process about to
 exit awaits delivery.
 
+The Rust crate's `telemetry` feature is how an installed copy reports what
+failed on a user's machine: with the user's consent (`off`, `errors`,
+`usage`), with the home directory and host name taken out, queued on disk and
+sent to Echo's app collector without ever holding the user;
+[docs/telemetry.md](docs/telemetry.md) is its contract, and
+`tests/telemetry/` runs it against the real collector.
+
 `Code::from_upstream_status` / `from_upstream_status` / `fromUpstreamStatus`
 classify an HTTP status the same way in all three. A 5xx is `infra_down` and
 never `not_found`: collapsing server errors into "nothing there" is what let a

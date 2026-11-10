@@ -12,12 +12,23 @@ publish = false
 # `path: value` text through `cli_output`; nothing else pays for it.
 [features]
 cli-output = ["dep:serde", "dep:serde_json"]
+# Failures and usage from an installed copy, sent to Echo's app collector with
+# the user's consent (docs/telemetry.md). Only a product that ships to people
+# outside the fleet needs it, so only it pays for an HTTP client.
+telemetry = ["dep:serde_json", "dep:ureq", "dep:getrandom"]
 
 [dependencies]
 serde = { version = "1", optional = true }
 serde_json = { version = "1", optional = true }
+ureq = { version = "2.12", optional = true }
+getrandom = { version = "0.2", optional = true }
 
 # The fleet's tests live under tests/<area>/ at the repository root.
 [[test]]
 name = "warnings"
 path = "../tests/warnings/declaration.rs"
+
+[[test]]
+name = "telemetry"
+path = "../tests/telemetry/main.rs"
+required-features = ["telemetry"]
