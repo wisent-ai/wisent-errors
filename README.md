@@ -380,17 +380,16 @@ let refused = Failure::new("brama.gateway.oauth-refresh", Code::Auth, "brama")?
     .with_context("subscription", id);
 ```
 
-The Swift package adds `WisentFailureReporter`, which posts envelopes to a
-Probierz intake without ever failing the caller; `docs/swift-reporter.md` says
-where the intake comes from, what is said on stderr, and how a process about to
-exit awaits delivery.
-
-The Rust crate's `telemetry` feature is how an installed copy reports what
-failed on a user's machine: with the user's consent (`off`, `errors`,
-`usage`), with the home directory and host name taken out, queued on disk and
-sent to Echo's app collector without ever holding the user;
-[docs/telemetry.md](docs/telemetry.md) is its contract, and
-`tests/telemetry/` runs it against the real collector.
+The Rust crate's `telemetry` feature and the Swift package's `WisentTelemetry`
+are how an installed copy reports what failed on a user's machine: with the
+user's consent (`off`, `errors`, `usage`), with the home directory and host
+name taken out, queued on disk and sent to Echo's app collector without ever
+holding the user. Both keep the same files, so a product's command line and
+its app share one consent. `WisentFailureReporter` reports through it, for the
+product the app's Info.plist declares.
+[docs/telemetry.md](docs/telemetry.md) is the contract,
+[docs/swift-reporter.md](docs/swift-reporter.md) the Swift side, and
+`tests/telemetry/` runs both against the real collector.
 
 `Code::from_upstream_status` / `from_upstream_status` / `fromUpstreamStatus`
 classify an HTTP status the same way in all three. A 5xx is `infra_down` and

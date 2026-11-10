@@ -18,6 +18,8 @@ let package = Package(
         .library(name: "WisentErrors", targets: ["WisentErrors"])
     ],
     targets: [
-        .target(name: "WisentErrors", path: "swift/Sources/WisentErrors")
+        .target(name: "WisentErrors", path: "swift/Sources/WisentErrors"),
+        // Telemetry against the real Echo app collector (docs/telemetry.md).
+        .testTarget(name: "TelemetryTests", dependencies: ["WisentErrors"], path: "tests/telemetry/swift"),
     ]
 )

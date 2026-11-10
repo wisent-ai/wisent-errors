@@ -1,63 +1,66 @@
 # The Swift reporter
 
-`WisentFailureReporter` sends envelopes to a Probierz intake from desktop and
-iOS components. One rule carries it: reporting never fails the caller.
+`WisentFailureReporter` reports an app's failures through its telemetry,
+`WisentTelemetry`: the same contract, files and event shape as the Rust crate's
+`telemetry` feature ([telemetry.md](telemetry.md)), so a product's command line
+and its app share one consent, one installation id and one queue under
+`$XDG_STATE_HOME/<product>/telemetry` (else `~/.local/state/<product>/telemetry`;
+`WISENT_TELEMETRY_HOME` names another). One rule carries it: reporting never
+fails the caller.
 
 ```swift
 import WisentErrors
 
-let refused = try Failure(failurePoint: "brama.gateway.oauth-refresh", code: .auth, service: "brama")
-    .impact("one credential refresh")
+let refused = try Failure(failurePoint: "ster.backend-start", code: .config, service: "ster")
     .detail(providerText)
 
-// Never throws, never blocks: the POST runs on a detached task and the caller
-// returns before a byte leaves. A report the intake did not take is said on
-// stderr, so a quiet intake is never mistaken for a healthy app.
+// Never throws, never blocks: the event is queued when the user agreed to
+// send errors, and sent to the collector on a detached task.
 WisentFailureReporter.shared.report(refused)
 
-// A process about to exit awaits the intake's answer instead of guessing how
-// long the report needs: `settled` runs once the report is accepted, refused
-// or unreachable, and at once when reporting is off.
+// A process about to exit awaits the attempt instead of guessing how long it
+// needs: `settled` runs once it ended, and at once when nothing was queued.
 await withCheckedContinuation { (settled: CheckedContinuation<Void, Never>) in
     WisentFailureReporter.shared.report(refused) { settled.resume() }
 }
 ```
 
-## Where the intake comes from
+## Which product reports
 
-The environment is read at call time, so a launcher that sets it late still
-wins: `PROBIERZ_INTAKE_URL` (no path; `/v1/failures` is appended) and
-`PROBIERZ_INTAKE_TOKEN` (the bearer). With either absent, the running intake's
-own files are read: the address it listens on from `~/.probierz/intake-url`,
-written when it binds, and the token from `~/.probierz/intake-token`, created on
-its first run. That is exactly the configuration a Finder-launched app inherits
-nothing of.
+The app's Info.plist declares it:
 
-With no token file, `report` is a no-op. A token whose intake never wrote its
-address, or either file that exists but cannot be read, is said on stderr and
-reporting stays off.
+| key | holds |
+|---|---|
+| `WisentTelemetryProduct` | the product id, the directory its state lives under (`ster`) |
+| `WisentTelemetryAppID` | the app Echo's collector declares in its `MOBILE_ANALYTICS_APPS_JSON` (`ster-desktop`) |
+| `WisentTelemetryCollectorURL` | the collector, stamped by our release build only; a build from source has none |
+
+An app whose Info.plist lacks the first two reports nothing and says once on
+stderr `wisent-errors: telemetry: this app's Info.plist declares no <key>, so
+it reports no failure`. `WISENT_TELEMETRY_COLLECTOR_URL` in the environment
+overrides the stamped collector.
+
+## Consent and settings
+
+Nothing is queued until the user answers, in the app or with the product's
+command line. `WisentTelemetry` gives an app's settings screen what the command
+line gives a terminal: `level()` and `setLevel(_:)` (`off`, `errors`, `usage`;
+`off` drops what waits), `queued()` (every waiting event exactly as it will be
+sent), `flush()` (what it sent, what remains, and why it stopped) and
+`status()` (the same fields as `<product> telemetry status`). `DO_NOT_TRACK=1`
+sends nothing.
 
 ## What is said on stderr
 
-Every sentence starts with `wisent-errors:`.
+Every sentence starts with `wisent-errors: telemetry:` and is the sentence the
+command line prints for the same cause: a directory that cannot be written, a
+state file telemetry did not write, a collector address that is not https (or
+http on the loopback), the collector's refusal with its own answer, an answer
+from an address that is not the collector, and a collector that could not be
+reached. The events stay queued in every case but the first.
 
-| sentence | meaning |
-|---|---|
-| `failure report to <url> was not sent: <cause>` | the transport failed; the intake was never reached |
-| `failure report to <url> was not accepted: HTTP <status>: <body>` | the intake answered something other than `{"accepted": true}` |
-| `failure report to <url> was not accepted: HTTP <status> with no body` | the intake answered without a body |
-| `failure report to <url> was not accepted: HTTP <status>, body is not JSON (<cause>): <body>` | the intake answered a body that does not parse |
-| `... was not accepted: an answer that is not HTTP ...` | the transport answered without an HTTP status in place of `HTTP <status>` |
-| `the intake token <path> has no address beside it (...)` | the token file exists but `intake-url` does not; reporting is off |
-| `the <file> <path> cannot be read, so failure reports are off: <cause>` | a sandboxed app, or a file the process may not read |
-| `the <file> <path> is empty, so failure reports are off` | the token or address file holds nothing |
-| `the intake address <url> is not a URL, so failure reports are off` | the environment or `intake-url` names an address that does not parse |
+## Test
 
-## Try it
-
-`sh docs/examples/swift-consumer.sh` builds a scratch consumer of the checkout
-under `.build/swift-consumer`, starts a toy intake on a kernel-assigned loopback
-port, hands its address to the consumer through a named pipe and prints what the
-intake received. The consumer awaits `settled` before it exits; the intake
-answers one request and exits, and is stopped if the consumer fails before it
-sends one.
+`swift test` runs `tests/telemetry/swift` against the real collector named by
+`WISENT_TELEMETRY_TEST_COLLECTOR`; without it the delivery case is skipped as
+blocked, never passed.
