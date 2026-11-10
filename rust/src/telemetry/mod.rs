@@ -22,7 +22,9 @@ use std::time::Duration;
 
 use serde_json::{json, Map, Value};
 
-pub use causes::operations;
+/// The functionalities a product's own `telemetry` command uses, for its
+/// catalogue's `uses`.
+pub use causes::{operations, CONSENT, DELIVER, RECORD};
 pub use deliver::Delivered;
 
 use crate::Failure;
