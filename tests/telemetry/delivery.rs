@@ -5,7 +5,7 @@ use std::net::TcpListener;
 use std::sync::LazyLock;
 
 use serde_json::{json, Value};
-use wisent_errors::telemetry::Level;
+use wisent_errors::telemetry::{Level, PUBLIC_COLLECTOR};
 
 use crate::{collector, sample_failure, Case};
 
@@ -141,6 +141,18 @@ fn a_plain_http_collector_is_refused_by_name() {
     );
     assert!(detail.contains("http://collector.example"), "{detail}");
     assert_eq!(telemetry.status()["collector"], Value::Null);
+}
+
+#[test]
+fn without_an_address_the_public_collector_is_named() {
+    let mut case = Case::new("public-collector");
+    let telemetry = case.telemetry("wisent-errors-test-cli");
+    let status = telemetry.status();
+    case.note("status", status.clone());
+    assert_eq!(status["collector"], PUBLIC_COLLECTOR);
+    assert_eq!(status["collector_source"], "wisent-errors");
+    std::env::set_var("WISENT_TELEMETRY_COLLECTOR_URL", collector());
+    assert_eq!(telemetry.status()["collector"], collector().as_str());
 }
 
 #[test]

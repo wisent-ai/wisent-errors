@@ -18,7 +18,6 @@ let telemetry = Telemetry::new(Product {
     id: "ster",
     app_id: "ster-cli",
     version: env!("CARGO_PKG_VERSION"),
-    built_collector: option_env!("WISENT_TELEMETRY_COLLECTOR_URL"),
 });
 telemetry.failure(&failure, Some("pairs-unreadable"));
 telemetry.command("pairs import", 1, elapsed);
@@ -73,12 +72,14 @@ state uses:
 
 ## The collector address
 
-The release build passes `WISENT_TELEMETRY_COLLECTOR_URL` at compile time, so
-only our own release knows our collector; a copy built from source knows none.
-The same variable at run time overrides it, which is how a self-hosted Echo or
-a test collector is named. An address that is not `https://` (or `http://` on a
-loopback host) is refused by name. Without an address events still queue, and
-`<product> telemetry status` says no collector is known.
+Every product sends to Wisent's public collector,
+`https://telemetry.wisent.com/api/analytics/mobile/collect`
+(`telemetry::PUBLIC_COLLECTOR`, `WisentTelemetry.publicCollector`), the same
+in a release and in a copy built from source. `WISENT_TELEMETRY_COLLECTOR_URL`
+at run time names another one, which is how a self-hosted Echo or a test
+collector is reached. An address that is not `https://` (or `http://` on a
+loopback host) is refused by name, and the events wait. Nothing goes anywhere
+until the user chose a level that sends it.
 
 ## Delivery
 
@@ -103,7 +104,7 @@ status`:
   "level": "errors",
   "do_not_track": false,
   "collector": "https://…/api/analytics/mobile/collect",
-  "collector_source": "build",
+  "collector_source": "wisent-errors",
   "installation": "1f0c…",
   "queued": 0,
   "last_delivery": { "at": "…", "sent": 1, "stopped": null },

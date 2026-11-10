@@ -27,7 +27,7 @@ final class TelemetryTests: XCTestCase {
 
     private func telemetry(app: String) -> WisentTelemetry {
         WisentTelemetry(
-            product: TelemetryProduct(id: "wisent-errors-test", appID: app, version: "0.0.0", builtCollector: nil),
+            product: TelemetryProduct(id: "wisent-errors-test", appID: app, version: "0.0.0"),
             environment: ["WISENT_TELEMETRY_HOME": root.appendingPathComponent("state").path])
     }
 

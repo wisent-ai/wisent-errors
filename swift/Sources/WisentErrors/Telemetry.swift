@@ -30,20 +30,17 @@ public enum TelemetryLevel: String, Sendable, CaseIterable, Comparable {
 }
 
 /// Which product is reporting, read from the app's Info.plist:
-/// `WisentTelemetryProduct` (the product id, `ster`), `WisentTelemetryAppID`
-/// (the app the collector declares, `ster-desktop`) and
-/// `WisentTelemetryCollectorURL`, which only our release build stamps.
+/// `WisentTelemetryProduct` (the product id, `ster`) and `WisentTelemetryAppID`
+/// (the app the collector declares, `ster-desktop`).
 public struct TelemetryProduct: Sendable, Equatable {
     public let id: String
     public let appID: String
     public let version: String
-    public let builtCollector: String?
 
-    public init(id: String, appID: String, version: String, builtCollector: String?) {
+    public init(id: String, appID: String, version: String) {
         self.id = id
         self.appID = appID
         self.version = version
-        self.builtCollector = builtCollector
     }
 
     /// The product the main bundle declares, or nil naming the missing key.
@@ -56,7 +53,7 @@ public struct TelemetryProduct: Sendable, Equatable {
         guard let id = value("WisentTelemetryProduct") else { return (nil, "WisentTelemetryProduct") }
         guard let app = value("WisentTelemetryAppID") else { return (nil, "WisentTelemetryAppID") }
         let version = value("CFBundleShortVersionString") ?? "unknown"
-        return (TelemetryProduct(id: id, appID: app, version: version, builtCollector: value("WisentTelemetryCollectorURL")), nil)
+        return (TelemetryProduct(id: id, appID: app, version: version), nil)
     }
 }
 
@@ -127,25 +124,25 @@ public final class WisentTelemetry: @unchecked Sendable {
 
     // MARK: Collector
 
+    /// The public address Wisent's collector answers telemetry on. Every
+    /// product sends here unless `WISENT_TELEMETRY_COLLECTOR_URL` names another
+    /// collector, such as a self-hosted Echo or a test's.
+    public static let publicCollector = URL(string: "https://telemetry.wisent.com/api/analytics/mobile/collect")!
+
     /// The collector address and what named it: `WISENT_TELEMETRY_COLLECTOR_URL`,
-    /// `build`, or `none`; an address that is not https (or http on the
-    /// loopback) is refused naming it.
-    public func collector() throws -> (url: URL?, source: String) {
+    /// or `wisent-errors` for the public collector; an address that is not
+    /// https (or http on the loopback) is refused naming it.
+    public func collector() throws -> (url: URL, source: String) {
         let runtime = ProcessInfo.processInfo.environment["WISENT_TELEMETRY_COLLECTOR_URL"]?
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let (address, source): (String, String)
-        if let runtime, !runtime.isEmpty {
-            (address, source) = (runtime, "WISENT_TELEMETRY_COLLECTOR_URL")
-        } else if let built = product.builtCollector {
-            (address, source) = (built, "build")
-        } else {
-            return (nil, "none")
+        guard let address = runtime, !address.isEmpty else {
+            return (Self.publicCollector, "wisent-errors")
         }
         guard let url = URL(string: address), Self.acceptable(url) else {
             throw TelemetryError.collectorInvalid(
-                "reading the collector address from \(source): a collector address must be https://, or http:// on a loopback host; observed: \(source) holds \(address)")
+                "reading the collector address from WISENT_TELEMETRY_COLLECTOR_URL: a collector address must be https://, or http:// on a loopback host; observed: WISENT_TELEMETRY_COLLECTOR_URL holds \(address)")
         }
-        return (url, source)
+        return (url, "WISENT_TELEMETRY_COLLECTOR_URL")
     }
 
     private static func acceptable(_ url: URL) -> Bool {
@@ -285,10 +282,7 @@ public final class WisentTelemetry: @unchecked Sendable {
         }
         let target: URL
         do {
-            guard let url = try collector().url else {
-                return Delivered(sent: 0, remaining: events.count, stopped: nil, skipped: "no collector is known")
-            }
-            target = url
+            target = try collector().url
         } catch {
             let delivered = Delivered(sent: 0, remaining: events.count, stopped: "\(error)", skipped: nil)
             keep(delivered)
@@ -369,14 +363,13 @@ public final class WisentTelemetry: @unchecked Sendable {
     public func status() -> [String: Any] {
         let level: Any
         do { level = try self.level()?.rawValue ?? "unanswered" } catch { level = ["unreadable": "\(error)"] }
-        var collector: Any = NSNull()
-        var source: Any = "none"
+        let collector: Any
+        let source: Any
         do {
             let found = try self.collector()
-            collector = found.url?.absoluteString as Any? ?? NSNull()
-            source = found.source
+            (collector, source) = (found.url.absoluteString, found.source)
         } catch {
-            source = ["refused": "\(error)"]
+            (collector, source) = (NSNull(), ["refused": "\(error)"])
         }
         let installation = file("installation.json").flatMap { try? readObject($0, what: "the installation id") }?["id"]
         let queued: Any

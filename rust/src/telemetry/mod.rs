@@ -30,9 +30,7 @@ pub use deliver::Delivered;
 use crate::Failure;
 use store::Cleaner;
 
-/// Which product is reporting. `built_collector` is what the release build
-/// passed as `WISENT_TELEMETRY_COLLECTOR_URL`, read with `option_env!` in the
-/// product's own crate, so only our release knows our collector.
+/// Which product is reporting.
 #[derive(Clone, Copy, Debug)]
 pub struct Product {
     pub id: &'static str,
@@ -40,7 +38,6 @@ pub struct Product {
     /// `ster-cli`, `ster-desktop`.
     pub app_id: &'static str,
     pub version: &'static str,
-    pub built_collector: Option<&'static str>,
 }
 
 /// What the user agreed to send.
@@ -76,10 +73,16 @@ impl Level {
 /// Where events are sent, and what named the address.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Collector {
-    pub url: Option<String>,
-    /// `WISENT_TELEMETRY_COLLECTOR_URL`, `build`, or `none`.
+    pub url: String,
+    /// `WISENT_TELEMETRY_COLLECTOR_URL`, or `wisent-errors` for the public
+    /// collector address every product is built with.
     pub source: &'static str,
 }
+
+/// The public address Wisent's collector answers telemetry on. Every product
+/// sends here unless `WISENT_TELEMETRY_COLLECTOR_URL` names another collector,
+/// such as a self-hosted Echo or a test's.
+pub const PUBLIC_COLLECTOR: &str = "https://telemetry.wisent.com/api/analytics/mobile/collect";
 
 const CONSENT_POINT: &str = "wisent-errors.telemetry.consent";
 const RUNTIME_COLLECTOR: &str = "WISENT_TELEMETRY_COLLECTOR_URL";
@@ -199,26 +202,22 @@ impl Telemetry {
             .ok()
             .map(|value| value.trim().to_owned())
             .filter(|value| !value.is_empty());
-        let (address, source) = match (runtime, self.product.built_collector) {
-            (Some(address), _) => (address, RUNTIME_COLLECTOR),
-            (None, Some(built)) if !built.trim().is_empty() => (built.trim().to_owned(), "build"),
-            _ => {
-                return Ok(Collector {
-                    url: None,
-                    source: "none",
-                })
-            }
+        let Some(address) = runtime else {
+            return Ok(Collector {
+                url: PUBLIC_COLLECTOR.to_owned(),
+                source: "wisent-errors",
+            });
         };
         if acceptable_collector(&address) {
             Ok(Collector {
-                url: Some(address),
-                source,
+                url: address,
+                source: RUNTIME_COLLECTOR,
             })
         } else {
             Err(causes::COLLECTOR_INVALID.failure(
                 DELIVER_POINT,
                 self.product.id,
-                &[("source", source), ("address", &address)],
+                &[("source", RUNTIME_COLLECTOR), ("address", &address)],
             ))
         }
     }
@@ -425,7 +424,7 @@ impl Telemetry {
             Ok(Level::Off) | Err(_) => return None,
             Ok(_) => {}
         }
-        if !matches!(self.collector(), Ok(Collector { url: Some(_), .. })) {
+        if self.collector().is_err() {
             return None;
         }
         let queued = match self.queued() {

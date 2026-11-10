@@ -100,7 +100,8 @@ public struct TelemetrySettingsView: View {
                 }
                 Section("This installation") {
                     LabeledContent("Waiting to be sent", value: "\(settings.status["queued"] as? Int ?? 0)")
-                    LabeledContent("Sent to", value: settings.status["collector"] as? String ?? "no collector is known")
+                    LabeledContent("Sent to", value: settings.status["collector"] as? String
+                        ?? ((settings.status["collector_source"] as? [String: Any])?["refused"] as? String ?? "no address"))
                     if let delivery = settings.status["last_delivery"] as? [String: Any] {
                         LabeledContent("Last sent", value: delivery["at"] as? String ?? "never")
                     }

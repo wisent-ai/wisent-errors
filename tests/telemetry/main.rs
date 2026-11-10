@@ -57,7 +57,6 @@ impl Case {
             id: "wisent-errors-test",
             app_id,
             version: env!("CARGO_PKG_VERSION"),
-            built_collector: None,
         })
     }
 

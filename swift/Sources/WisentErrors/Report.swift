@@ -11,8 +11,7 @@ import Foundation
 /// Reports failures through the app's telemetry (`WisentTelemetry`): queued
 /// under the product's state directory once the user agreed to send errors,
 /// and sent to Echo's app collector. The product comes from the app's
-/// Info.plist (`WisentTelemetryProduct`, `WisentTelemetryAppID`, and the
-/// `WisentTelemetryCollectorURL` our release build stamps); an app that
+/// Info.plist (`WisentTelemetryProduct`, `WisentTelemetryAppID`); an app that
 /// declares no product reports nothing, said once on stderr.
 public final class WisentFailureReporter: Sendable {
     public static let shared = WisentFailureReporter()

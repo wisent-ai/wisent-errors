@@ -1,6 +1,6 @@
 // The Settings section every app shows, through its model: the choice it makes
 // is the file the command line reads, an app that declares no product says so,
-// and sending without a collector says why nothing went.
+// and an app no address was given shows Wisent's public collector.
 
 import Foundation
 import XCTest
@@ -26,7 +26,7 @@ final class SettingsTests: XCTestCase {
 
     private func telemetry() -> WisentTelemetry {
         WisentTelemetry(
-            product: TelemetryProduct(id: "wisent-errors-test", appID: "wisent-errors-test-desktop", version: "0.0.0", builtCollector: nil),
+            product: TelemetryProduct(id: "wisent-errors-test", appID: "wisent-errors-test-desktop", version: "0.0.0"),
             environment: ["WISENT_TELEMETRY_HOME": root.path])
     }
 
@@ -40,12 +40,10 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(consent?["level"] as? String, "errors")
     }
 
-    func testSendingWithoutACollectorSaysWhyNothingWent() async throws {
+    func testWithoutAnAddressThePublicCollectorIsShown() throws {
         let settings = TelemetrySettings(telemetry: telemetry())
-        settings.set(level: .errors)
-        await settings.flush()
-        XCTAssertEqual(settings.outcome, "Nothing sent: no collector is known.")
-        XCTAssertNil(settings.failure)
+        XCTAssertEqual(settings.status["collector"] as? String, WisentTelemetry.publicCollector.absoluteString)
+        XCTAssertEqual(settings.status["collector_source"] as? String, "wisent-errors")
     }
 
     func testAnAppWithoutAProductHasNothingToChange() {

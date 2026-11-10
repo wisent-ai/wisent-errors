@@ -33,12 +33,12 @@ The app's Info.plist declares it:
 |---|---|
 | `WisentTelemetryProduct` | the product id, the directory its state lives under (`ster`) |
 | `WisentTelemetryAppID` | the app Echo's collector declares in its `MOBILE_ANALYTICS_APPS_JSON` (`ster-desktop`) |
-| `WisentTelemetryCollectorURL` | the collector, stamped by our release build only; a build from source has none |
 
-An app whose Info.plist lacks the first two reports nothing and says once on
-stderr `wisent-errors: telemetry: this app's Info.plist declares no <key>, so
-it reports no failure`. `WISENT_TELEMETRY_COLLECTOR_URL` in the environment
-overrides the stamped collector.
+An app whose Info.plist lacks either reports nothing and says once on stderr
+`wisent-errors: telemetry: this app's Info.plist declares no <key>, so it
+reports no failure`. Events go to Wisent's public collector unless
+`WISENT_TELEMETRY_COLLECTOR_URL` in the environment names another
+([telemetry.md](telemetry.md#the-collector-address)).
 
 ## Consent and settings
 

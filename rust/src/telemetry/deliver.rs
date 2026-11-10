@@ -15,11 +15,10 @@ pub struct Delivered {
     /// Events still waiting.
     pub remaining: usize,
     /// Why sending stopped before the queue was empty: the collector's
-    /// refusal, a transport error, or no collector known. `None` when every
-    /// event went, or when the user's level sends nothing.
+    /// refusal, a transport error, or a collector address that is refused.
+    /// `None` when every event went, or when the user's level sends nothing.
     pub stopped: Option<Failure>,
-    /// Why nothing was attempted: `off`, `unanswered`, `DO_NOT_TRACK`, or no
-    /// collector known.
+    /// Why nothing was attempted: `off`, `unanswered` or `DO_NOT_TRACK`.
     pub skipped: Option<&'static str>,
 }
 
@@ -63,15 +62,7 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
         });
     }
     let collector = match telemetry.collector() {
-        Ok(Collector { url: Some(url), .. }) => url,
-        Ok(Collector { url: None, .. }) => {
-            return Ok(Delivered {
-                sent: 0,
-                remaining: queued.len(),
-                stopped: None,
-                skipped: Some("no collector is known"),
-            });
-        }
+        Ok(Collector { url, .. }) => url,
         Err(failure) => {
             let delivered = Delivered {
                 sent: 0,
