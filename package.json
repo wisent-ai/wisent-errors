@@ -21,6 +21,6 @@
   ],
   "//": "At the root so `npm install github:wisent-ai/wisent-errors` works: npm has no way to install from a subdirectory of a git repository, and a vendored copy is the thing this package exists to end.",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "types": "js/index.d.ts"
 }
