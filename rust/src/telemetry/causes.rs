@@ -62,7 +62,7 @@ pub static COLLECTOR_REFUSED: Cause = Cause {
     failed: "sending event {event} to {collector}",
     cause: "the collector refused HTTP {status}: {answer}",
     observed: "{queued} event(s) stay queued",
-    remedy: "declare app {app} in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON when the collector does not know it, or read its answer above",
+    remedy: "when the answer says Unknown mobile analytics app, declare app {app} in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON; any other answer is the collector's own reason, and the events are sent again on the next flush",
     test: "tests/telemetry/delivery.rs::an_app_the_collector_does_not_declare_stays_queued_with_its_refusal",
 };
 

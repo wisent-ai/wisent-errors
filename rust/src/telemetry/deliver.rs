@@ -127,8 +127,17 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
             }
             Err(ureq::Error::Status(status, response)) => {
                 let body = response.into_string().unwrap_or_default();
+                // The collector refuses with a JSON object; anything else came
+                // from an address that is not the collector.
+                let collector_said =
+                    serde_json::from_str::<Value>(&body).is_ok_and(|answer| answer.is_object());
                 let values = values(&[("status", status.to_string()), ("answer", body)]);
-                COLLECTOR_REFUSED.failure(DELIVER_POINT, product, &borrowed(&values))
+                let cause = if collector_said {
+                    &COLLECTOR_REFUSED
+                } else {
+                    &COLLECTOR_ANSWER_UNREADABLE
+                };
+                cause.failure(DELIVER_POINT, product, &borrowed(&values))
             }
             Err(ureq::Error::Transport(transport)) => {
                 let values = values(&[("error", transport.to_string())]);
