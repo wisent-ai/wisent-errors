@@ -1,15 +1,16 @@
 #!/bin/sh
-# Scaffold a scratch SwiftPM consumer of WisentErrors, run it against a toy
-# Probierz intake, and show what the intake received as a companion to the
-# website integration guide:
+# Scaffold a scratch SwiftPM consumer of WisentErrors, report one failure
+# through its telemetry to a toy collector, and show what the collector
+# received, as a companion to the website integration guide:
 #
 #   sh docs/examples/swift-consumer.sh
 #
-# A real consumer pins a git revision; this uses a path dependency on the
-# checkout. Everything happens under the checkout's ignored .build directory;
-# the toy intake listens on the loopback interface at a port the kernel
-# assigns, publishes its address through a file the consumer reads, and exits
-# after one request.
+# A real consumer pins a version; this uses a path dependency on the checkout.
+# Everything happens under the checkout's ignored .build directory: the
+# consumer's telemetry state (consent, queue, installation id) and the toy
+# collector, which listens on the loopback interface at a port the kernel
+# assigns, publishes its address through a named pipe the script reads, answers
+# the collector's {"ok": true} and exits after one event.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WORK="$ROOT/.build/swift-consumer"
@@ -59,15 +60,23 @@ catch let error as Invalid { print("strict refusal: \(error.message)") }
 let salvaged = Failure.orFallback(failurePoint: nil, code: .unknown, service: nil)
 print("salvaged: \(salvaged.toJSON())")
 
-// The reporter hands the POST to a detached task and returns at once; a
-// process that exits immediately would take the report with it. A real app
-// keeps running -- this demo awaits the intake's answer before it exits.
+// An app declares its product in Info.plist and the user answers in its
+// Settings; this command-line demo names the product and answers `errors`
+// itself, keeping the state where WISENT_TELEMETRY_HOME says.
+let telemetry = WisentTelemetry(product: TelemetryProduct(id: "toy", appID: "toy-desktop", version: "0.0.0"))
+try telemetry.setLevel(.errors)
+let reporter = WisentFailureReporter(telemetry: telemetry)
+
+// The reporter queues the failure and sends the queue from a detached task; a
+// process that exits immediately would take the attempt with it. A real app
+// keeps running -- this demo awaits the attempt before it exits.
 await withCheckedContinuation { (settled: CheckedContinuation<Void, Never>) in
-    WisentFailureReporter.shared.report(throttled) { settled.resume() }
+    reporter.report(throttled) { settled.resume() }
 }
+print("telemetry status: \(telemetry.status())")
 MAIN
 
-cat > "$WORK/intake.mjs" <<'INTAKE'
+cat > "$WORK/collector.mjs" <<'COLLECTOR'
 import { createServer } from 'node:http';
 import { writeFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
@@ -75,46 +84,45 @@ import { networkInterfaces } from 'node:os';
 const [, , addressFile] = process.argv;
 const loopback = Object.values(networkInterfaces()).flat()
   .find((entry) => entry.internal && entry.family === 'IPv4');
-if (!loopback) throw new Error('this machine has no IPv4 loopback interface for the toy intake to listen on');
+if (!loopback) throw new Error('this machine has no IPv4 loopback interface for the toy collector to listen on');
 
 const server = createServer((request, response) => {
   let body = '';
   request.on('data', (chunk) => { body += chunk; });
   request.on('end', () => {
-    console.log(`intake: ${request.method} ${request.url}`);
-    console.log(`intake: authorization: ${request.headers.authorization}`);
-    console.log(`intake: body: ${body}`);
+    console.log(`collector: ${request.method} ${request.url}`);
+    console.log(`collector: body: ${body}`);
     response.setHeader('content-type', 'application/json');
-    response.end(JSON.stringify({ accepted: true }));
+    response.end(JSON.stringify({ ok: true }));
     server.close();
   });
 });
-// With no port named, the kernel assigns a free one.
-server.listen({ host: loopback.address }, () => {
+// Port 0 asks the kernel for a free one; Node requires it named.
+server.listen({ host: loopback.address, port: 0 }, () => {
   const { address, port } = server.address();
-  writeFileSync(addressFile, `http://${address}:${port}\n`);
+  writeFileSync(addressFile, `http://${address}:${port}/api/analytics/mobile/collect\n`);
 });
-INTAKE
+COLLECTOR
 
 (cd "$WORK/consumer" && swift build 2>&1 | tail -n 1)
 
-# The intake publishes its address through a named pipe: the shell's read
-# returns exactly when the intake has bound, so the consumer never runs
-# against an address that is not listening yet.
-ADDRESS_PIPE="$WORK/intake-url"
+# The collector publishes its address through a named pipe: the shell's read
+# returns exactly when the collector has bound, so the consumer never sends to
+# an address that is not listening yet.
+ADDRESS_PIPE="$WORK/collector-url"
 mkfifo "$ADDRESS_PIPE"
-node "$WORK/intake.mjs" "$ADDRESS_PIPE" &
-INTAKE_PID=$!
-# A consumer that fails to run leaves no request for the intake to answer, so
-# the intake is stopped with it instead of outliving the script.
-trap 'kill "$INTAKE_PID"' EXIT
-read -r INTAKE_URL < "$ADDRESS_PIPE"
+node "$WORK/collector.mjs" "$ADDRESS_PIPE" &
+COLLECTOR_PID=$!
+# A consumer that fails to run sends nothing for the collector to answer, so
+# the collector is stopped with it instead of outliving the script.
+trap 'kill "$COLLECTOR_PID"' EXIT
+read -r COLLECTOR_URL < "$ADDRESS_PIPE"
 
 (
   cd "$WORK/consumer" &&
-  PROBIERZ_INTAKE_URL="$INTAKE_URL" PROBIERZ_INTAKE_TOKEN=toy-token \
+  WISENT_TELEMETRY_COLLECTOR_URL="$COLLECTOR_URL" WISENT_TELEMETRY_HOME="$WORK/telemetry" \
     swift run --skip-build consumer
 )
 
 trap - EXIT
-wait "$INTAKE_PID"
+wait "$COLLECTOR_PID"
