@@ -15,11 +15,18 @@ let package = Package(
     // refused the product it was built for.
     platforms: [.macOS(.v13), .iOS(.v13)],
     products: [
-        .library(name: "WisentErrors", targets: ["WisentErrors"])
+        .library(name: "WisentErrors", targets: ["WisentErrors"]),
+        // The telemetry section every app's Settings window shows.
+        .library(name: "WisentTelemetryUI", targets: ["WisentTelemetryUI"]),
     ],
     targets: [
         .target(name: "WisentErrors", path: "swift/Sources/WisentErrors"),
+        .target(name: "WisentTelemetryUI", dependencies: ["WisentErrors"], path: "swift/Sources/WisentTelemetryUI"),
         // Telemetry against the real Echo app collector (docs/telemetry.md).
-        .testTarget(name: "TelemetryTests", dependencies: ["WisentErrors"], path: "tests/telemetry/swift"),
+        .testTarget(
+            name: "TelemetryTests",
+            dependencies: ["WisentErrors", "WisentTelemetryUI"],
+            path: "tests/telemetry/swift"
+        ),
     ]
 )

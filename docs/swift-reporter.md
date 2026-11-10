@@ -50,6 +50,15 @@ sent), `flush()` (what it sent, what remains, and why it stopped) and
 `status()` (the same fields as `<product> telemetry status`). `DO_NOT_TRACK=1`
 sends nothing.
 
+The `WisentTelemetryUI` product is that screen, so no app writes its own: an
+app adds it to its `Settings` scene with
+`TelemetrySettingsView(productName: "Jeden", telemetry: WisentFailureReporter.shared.telemetry)`.
+It shows the choice (with "Not answered yet" until there is one), how many
+events wait, where they go and when they last went, the waiting events
+exactly as they will be sent, and Send now with what it sent or why nothing
+went. An app whose Info.plist declares no product shows that it reports
+nothing.
+
 ## What is said on stderr
 
 Every sentence starts with `wisent-errors: telemetry:` and is the sentence the
