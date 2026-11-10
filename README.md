@@ -391,6 +391,14 @@ product the app's Info.plist declares.
 [docs/swift-reporter.md](docs/swift-reporter.md) the Swift side, and
 `tests/telemetry/` runs both against the real collector.
 
+The same feature files support reports: `Telemetry::file_report` and
+`Telemetry::reports` in Rust, `WisentTelemetry.fileReport` and `reports` in
+Swift, and `WisentSupportWindow` for an app's Help → Report a Problem. A
+report carries the product, version, system and installation, and with the
+user's leave the last failure; the key that reads its replies back stays on
+the machine. [docs/support.md](docs/support.md) is the contract, and
+`tests/telemetry/` runs both clients against a real `wisent-customer-support`.
+
 `Code::from_upstream_status` / `from_upstream_status` / `fromUpstreamStatus`
 classify an HTTP status the same way in all three. A 5xx is `infra_down` and
 never `not_found`: collapsing server errors into "nothing there" is what let a

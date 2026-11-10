@@ -61,7 +61,7 @@ public struct TelemetryProduct: Sendable, Equatable {
 public final class WisentTelemetry: @unchecked Sendable {
     public let product: TelemetryProduct
     public let directory: URL?
-    private let session = URLSession(configuration: .ephemeral)
+    let session = URLSession(configuration: .ephemeral)
     private let sessionID = UUID().uuidString.lowercased()
     private let lock = NSLock()
 
@@ -84,7 +84,7 @@ public final class WisentTelemetry: @unchecked Sendable {
             .appendingPathComponent(product).appendingPathComponent("telemetry")
     }
 
-    private func file(_ name: String) -> URL? { directory?.appendingPathComponent(name) }
+    func file(_ name: String) -> URL? { directory?.appendingPathComponent(name) }
 
     // MARK: Consent
 
@@ -189,7 +189,7 @@ public final class WisentTelemetry: @unchecked Sendable {
         try writeObject(event, to: queue.appendingPathComponent("\(eventID).json"), what: "an event")
     }
 
-    private func installationID() throws -> String {
+    func installationID() throws -> String {
         guard let path = file("installation.json") else { throw TelemetryError.noHome }
         if let existing = try readObject(path, what: "the installation id"), let id = existing["id"] as? String {
             return id
@@ -391,7 +391,7 @@ public final class WisentTelemetry: @unchecked Sendable {
 
     // MARK: Files
 
-    private func readObject(_ path: URL, what: String) throws -> [String: Any]? {
+    func readObject(_ path: URL, what: String) throws -> [String: Any]? {
         let data: Data
         do {
             data = try Data(contentsOf: path)
@@ -405,7 +405,7 @@ public final class WisentTelemetry: @unchecked Sendable {
         return object
     }
 
-    private func writeObject(_ object: [String: Any], to path: URL, what: String) throws {
+    func writeObject(_ object: [String: Any], to path: URL, what: String) throws {
         let folder = path.deletingLastPathComponent()
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

@@ -14,6 +14,7 @@
 mod causes;
 mod deliver;
 mod store;
+mod support;
 
 use std::io::{BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -22,10 +23,11 @@ use std::time::Duration;
 
 use serde_json::{json, Map, Value};
 
-/// The functionalities a product's own `telemetry` command uses, for its
-/// catalogue's `uses`.
-pub use causes::{operations, CONSENT, DELIVER, RECORD};
+/// The functionalities a product's own `telemetry` and `support` commands
+/// use, for its catalogue's `uses`.
+pub use causes::{operations, CONSENT, DELIVER, RECORD, REPORT, STATUS};
 pub use deliver::Delivered;
+pub use support::{Report, PUBLIC_SUPPORT};
 
 use crate::Failure;
 use store::Cleaner;

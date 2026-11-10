@@ -16,7 +16,11 @@ final class TelemetryTests: XCTestCase {
             .appendingPathComponent("telemetry-swift-\(UUID().uuidString)")
         root = build
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        unsetenv("WISENT_TELEMETRY_COLLECTOR_URL")
+        // A failure queued at level errors is sent at once; without a named
+        // collector it would go to the public one. Port 9 is the IANA discard
+        // port, which nothing on a test machine answers, so a case that does
+        // not name the real collector sends nowhere.
+        setenv("WISENT_TELEMETRY_COLLECTOR_URL", "http://127.0.0.1:9/api/analytics/mobile/collect", 1)
         unsetenv("DO_NOT_TRACK")
     }
 

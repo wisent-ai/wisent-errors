@@ -11,6 +11,7 @@
 mod consent;
 mod delivery;
 mod store;
+mod support;
 
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex, MutexGuard};
@@ -38,6 +39,7 @@ impl Case {
         std::fs::create_dir_all(&root).expect("the case directory");
         for variable in [
             "WISENT_TELEMETRY_COLLECTOR_URL",
+            "WISENT_SUPPORT_URL",
             "DO_NOT_TRACK",
             "XDG_STATE_HOME",
         ] {
