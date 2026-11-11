@@ -24,6 +24,9 @@ pub mod cli_output;
 #[cfg(feature = "telemetry")]
 pub mod telemetry;
 
+#[cfg(feature = "diagnosis")]
+pub mod diagnosis;
+
 pub use codes::{Code, GenericSentence, Severity, GENERIC_SENTENCES};
 pub use operation::{catalogue_problems, Cause, Operation};
 pub use warning::{Hazard, Warning};

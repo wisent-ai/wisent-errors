@@ -16,6 +16,9 @@ cli-output = ["dep:serde", "dep:serde_json"]
 # the user's consent (docs/telemetry.md). Only a product that ships to people
 # outside the fleet needs it, so only it pays for an HTTP client.
 telemetry = ["dep:serde_json", "dep:ureq", "dep:getrandom"]
+# `<product> doctor`: every functionality of the product's catalogue tried now
+# (docs/diagnosis.md).
+diagnosis = ["dep:serde_json"]
 
 [dependencies]
 serde = { version = "1", optional = true }
@@ -32,3 +35,8 @@ path = "../tests/warnings/declaration.rs"
 name = "telemetry"
 path = "../tests/telemetry/main.rs"
 required-features = ["telemetry"]
+
+[[test]]
+name = "diagnosis"
+path = "../tests/diagnosis/main.rs"
+required-features = ["diagnosis"]
