@@ -104,7 +104,14 @@ fn a_collector_failing_on_its_side_keeps_the_events_with_its_own_failure() {
         !remedy.contains("MOBILE_ANALYTICS_APPS_JSON"),
         "a collector's own failure names no deployment remedy: {remedy}"
     );
-    assert!(remedy.contains("support report"), "{remedy}");
+    assert!(
+        remedy.contains("`wisent-errors-test support report`"),
+        "the remedy names this product's own command: {remedy}"
+    );
+    assert!(
+        !remedy.contains('{'),
+        "no placeholder is left unfilled: {remedy}"
+    );
     assert_eq!(delivery(&case)["stopped"]["error_code"], "infra_down");
     assert_eq!(telemetry.status()["queued"], 1);
 }

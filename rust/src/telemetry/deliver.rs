@@ -90,6 +90,7 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
                 ("collector", collector.clone()),
                 ("queued", waiting.clone()),
                 ("app", app.to_owned()),
+                ("product", product.to_owned()),
             ];
             values.extend(extra.iter().map(|(key, value)| (*key, value.clone())));
             values
