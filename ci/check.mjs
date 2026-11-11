@@ -6,13 +6,13 @@
 // Usage: node ci/check.mjs
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readJsonFile } from './json-file.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-const catalogue = JSON.parse(readFileSync(join(ROOT, 'catalogue', 'codes.json'), 'utf8'));
-const schema = JSON.parse(readFileSync(join(ROOT, 'schema', 'failure.schema.json'), 'utf8'));
+const catalogue = readJsonFile(join(ROOT, 'catalogue', 'codes.json'));
+const schema = readJsonFile(join(ROOT, 'schema', 'failure.schema.json'));
 
 const problems = [];
 const report = (label, ok, detail) => {

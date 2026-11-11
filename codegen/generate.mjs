@@ -15,6 +15,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readJsonFile } from '../ci/json-file.mjs';
 import { rust } from './rust.mjs';
 import { python } from './python.mjs';
 import { javascript } from './javascript.mjs';
@@ -25,7 +26,7 @@ const ROOT = join(HERE, '..');
 const CATALOGUE = join(ROOT, 'catalogue', 'codes.json');
 const CHECK = process.argv.includes('--check');
 
-const catalogue = JSON.parse(readFileSync(CATALOGUE, 'utf8'));
+const catalogue = readJsonFile(CATALOGUE);
 const banner = (comment) => [
   `${comment} Generated from catalogue/codes.json by codegen/generate.mjs.`,
   `${comment} Do not edit: change the catalogue and regenerate.`,

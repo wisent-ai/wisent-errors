@@ -14,6 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readJsonFile } from './json-file.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(HERE, '..');
@@ -23,7 +24,7 @@ const unadoptedOnly = args.includes('--unadopted-only');
 const roots = args.filter((argument) => !argument.startsWith('--'));
 if (roots.length === 0) roots.push(resolve(PACKAGE_ROOT, '..'));
 
-const CODES = JSON.parse(readFileSync(join(PACKAGE_ROOT, 'catalogue', 'codes.json'), 'utf8')).codes.map(
+const CODES = readJsonFile(join(PACKAGE_ROOT, 'catalogue', 'codes.json')).codes.map(
   (entry) => entry.code,
 );
 // Calibration, not taste. A first attempt asked for three of the seven and
