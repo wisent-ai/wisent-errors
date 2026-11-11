@@ -94,6 +94,7 @@ RETRY_EXIT: int = 69
 
 _EXACT_STATUS: dict[int, str] = {
     401: "auth",
+    402: "auth",
     403: "auth",
     404: "not_found",
     407: "auth",

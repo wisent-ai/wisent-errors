@@ -414,7 +414,10 @@ check ([docs/diagnosis.md](docs/diagnosis.md)).
 `Code::from_upstream_status` / `from_upstream_status` / `fromUpstreamStatus`
 classify an HTTP status the same way in all three. A 5xx is `infra_down` and
 never `not_found`: collapsing server errors into "nothing there" is what let a
-storage outage read as an empty queue.
+storage outage read as an empty queue. A 402 Payment Required is `auth`: the
+vendor refuses the account the credential belongs to until it pays, and
+repeating the call repeats the refusal (`node --test
+tests/upstream/payment-required.mjs`).
 
 `render` prints one line: the code's summary, then whose the failure is, then
 whether retrying helps, then the envelope. Whose it is comes from the
