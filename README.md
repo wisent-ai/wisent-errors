@@ -399,6 +399,18 @@ user's leave the last failure; the key that reads its replies back stays on
 the machine. [docs/support.md](docs/support.md) is the contract, and
 `tests/telemetry/` runs both clients against a real `wisent-customer-support`.
 
+Every event the reporter can send is declared once in `telemetry::EVENTS`,
+with its consent and every property, and the queue takes only a declared one,
+so a product's privacy page can list exactly what goes out. The reporter also
+counts the frustration signals only a client sees (`frustration.repeat_failure`,
+`frustration.usage_loop`, `frustration.help_after_failure`) without any
+threshold of its own ([docs/telemetry.md](docs/telemetry.md)).
+
+The `diagnosis` feature is a product's `doctor`: one `diagnosis::Check` per
+functionality of its failure catalogue, tried now or skipped with why, and
+`diagnosis::problems` fails the product's test when a functionality has no
+check ([docs/diagnosis.md](docs/diagnosis.md)).
+
 `Code::from_upstream_status` / `from_upstream_status` / `fromUpstreamStatus`
 classify an HTTP status the same way in all three. A 5xx is `infra_down` and
 never `not_found`: collapsing server errors into "nothing there" is what let a
