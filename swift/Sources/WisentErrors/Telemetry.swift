@@ -162,11 +162,33 @@ public final class WisentTelemetry: @unchecked Sendable {
         guard effective() >= .errors else { return settled() }
         do {
             try queue(eventName: "failure", properties: failureProperties(failure, causeID: causeID))
+            try noteFailure(failure)
         } catch {
             Self.say(error)
             return settled()
         }
         flushInBackground(settled: settled)
+    }
+
+    /// `frustration.repeat_failure` when the failure before this one had the
+    /// same failure point, with how many in a row and the seconds since the
+    /// previous (docs/telemetry.md, Frustration signals). The state is the
+    /// command line's `signals.json`, so an app and its CLI count one run.
+    private func noteFailure(_ failure: Failure) throws {
+        guard let path = file("signals.json") else { throw TelemetryError.noHome }
+        var state = try readObject(path, what: "the frustration signals") ?? [:]
+        let now = Int(Date().timeIntervalSince1970)
+        let last = state["last_failure"] as? [String: Any]
+        let previous = (last?["failure_point"] as? String) == failure.failurePoint ? last : nil
+        let consecutive = ((previous?["consecutive"] as? Int) ?? 0) + 1
+        state["last_failure"] = ["failure_point": failure.failurePoint, "consecutive": consecutive, "at": now]
+        if consecutive >= 2 {
+            let since: Any = (previous?["at"] as? Int).map { max(0, now - $0) } ?? NSNull()
+            try queue(eventName: "frustration.repeat_failure", properties: [
+                "failure_point": failure.failurePoint, "consecutive": consecutive, "seconds_since_previous": since,
+            ])
+        }
+        try writeObject(state, to: path, what: "the frustration signals")
     }
 
     private func queue(eventName: String, properties: [String: Any]) throws {

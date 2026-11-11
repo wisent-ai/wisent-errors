@@ -13,6 +13,7 @@
 
 mod causes;
 mod deliver;
+mod signals;
 mod store;
 mod support;
 
@@ -255,6 +256,7 @@ impl Telemetry {
         self.record(Level::Errors, "failure", || {
             self.failure_properties(failure, cause_id)
         });
+        self.note_failure(failure);
     }
 
     /// Queue one finished command, when the user agreed to send usage. The
@@ -267,6 +269,7 @@ impl Telemetry {
             properties.insert("duration_ms".into(), json!(duration.as_millis() as u64));
             properties
         });
+        self.note_command(command, exit_status);
     }
 
     fn record(

@@ -70,6 +70,15 @@ to fix on this machine), an answer from an address that is not the collector,
 and a collector that could not be reached. The events stay queued in every
 case but the first.
 
+## Frustration signals
+
+A failure with the same failure point as the one before it also queues
+`frustration.repeat_failure`, with `consecutive` and `seconds_since_previous`,
+exactly as the command line does ([telemetry](telemetry.md#frustration-signals)).
+The app and its command line keep one `signals.json`, so a failure in the app
+and the same failure in the CLI count as one run. Usage refusals are a
+command-line signal and are not counted here.
+
 ## Test
 
 `swift test` runs `tests/telemetry/swift` against the real collector named by

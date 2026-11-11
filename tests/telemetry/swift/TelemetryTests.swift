@@ -111,6 +111,21 @@ final class TelemetryTests: XCTestCase {
         XCTAssertEqual(try telemetry.queued().count, 1)
     }
 
+    func testTheSameFailureAgainIsARepeatCountedInARow() throws {
+        // The discard port: the flush each failure starts keeps the events.
+        setenv("WISENT_TELEMETRY_COLLECTOR_URL", "http://127.0.0.1:9/api/analytics/mobile/collect", 1)
+        let telemetry = telemetry(app: "wisent-errors-test-desktop")
+        try telemetry.setLevel(.errors)
+        settle(telemetry, failure())
+        settle(telemetry, failure())
+        settle(telemetry, failure())
+        let repeats = try telemetry.queued().filter { $0["eventName"] as? String == "frustration.repeat_failure" }
+        XCTAssertEqual(repeats.count, 2)
+        let counts = Set(repeats.compactMap { ($0["properties"] as? [String: Any])?["consecutive"] as? Int })
+        XCTAssertEqual(counts, [2, 3])
+        XCTAssertTrue(repeats.allSatisfy { ($0["properties"] as? [String: Any])?["failure_point"] as? String == "wisent-errors-test.pairs.import" })
+    }
+
     func testTurningOffDropsWhatWaits() throws {
         let telemetry = telemetry(app: "wisent-errors-test-desktop")
         try telemetry.setLevel(.errors)

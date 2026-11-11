@@ -10,6 +10,7 @@
 
 mod consent;
 mod delivery;
+mod signals;
 mod store;
 mod support;
 

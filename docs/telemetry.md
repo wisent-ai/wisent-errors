@@ -57,6 +57,24 @@ directory becomes `~` and the machine's host name becomes `<this-host>`. What
 is in the queue is exactly what will be sent; `<product> telemetry show`
 prints it.
 
+## Frustration signals
+
+The reporter counts three signals only the client sees, because they depend on
+the order of what happened:
+
+| event | when | consent | `properties` |
+|---|---|---|---|
+| `frustration.repeat_failure` | a failure has the same `failure_point` as the failure before it | `errors` | `failure_point`, `consecutive`, `seconds_since_previous` |
+| `frustration.usage_loop` | a command is refused as usage (exit 2) and the usage refusal before it was the same command | `usage` | `command`, `consecutive`, `seconds_since_previous` |
+| `frustration.help_after_failure` | the product calls `Telemetry::help(command)` when the user asks for help (`--help`, `help`, a Help menu) and a failure was recorded before | `usage` | `command`, `failure_point` of the last failure, `seconds_since_failure` |
+
+A repeat is a second occurrence, so `consecutive` starts at 2 and grows with
+each further repeat; a different failure, or the same command run without a
+usage refusal, ends the run. No threshold is applied here: how many repeats in
+how short a time make an alarm, or the one question that offers a support
+report, is the operator's number, read by Echo. What was seen last is kept in
+`signals.json` beside the queue, and only under the consent its signal needs.
+
 ## Where it lives
 
 `$WISENT_TELEMETRY_HOME`, else `$XDG_STATE_HOME/<product>/telemetry`, else
