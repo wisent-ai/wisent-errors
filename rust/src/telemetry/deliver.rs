@@ -3,7 +3,9 @@
 
 use serde_json::{json, Value};
 
-use super::causes::{COLLECTOR_ANSWER_UNREADABLE, COLLECTOR_REFUSED, COLLECTOR_UNREACHABLE};
+use super::causes::{
+    COLLECTOR_ANSWER_UNREADABLE, COLLECTOR_FAILED, COLLECTOR_REFUSED, COLLECTOR_UNREACHABLE,
+};
 use super::{store, Collector, Level, Telemetry, DELIVER_POINT};
 use crate::Failure;
 
@@ -118,12 +120,15 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
             }
             Err(ureq::Error::Status(status, response)) => {
                 let body = response.into_string().unwrap_or_default();
-                // The collector refuses with a JSON object; anything else came
-                // from an address that is not the collector.
+                // A server error is the collector's own failure, whatever its
+                // body; below that, the collector refuses with a JSON object
+                // and anything else came from an address that is not it.
                 let collector_said =
                     serde_json::from_str::<Value>(&body).is_ok_and(|answer| answer.is_object());
                 let values = values(&[("status", status.to_string()), ("answer", body)]);
-                let cause = if collector_said {
+                let cause = if status >= 500 {
+                    &COLLECTOR_FAILED
+                } else if collector_said {
                     &COLLECTOR_REFUSED
                 } else {
                     &COLLECTOR_ANSWER_UNREADABLE

@@ -301,7 +301,9 @@ public final class WisentTelemetry: @unchecked Sendable {
                 sent += 1
                 continue
             case .refused(let status, let answer):
-                stopped = "sending event \(eventID) to \(target.absoluteString): the collector refused HTTP \(status): \(answer); observed: \(waiting) event(s) stay queued; fix: when the answer says Unknown mobile analytics app, declare app \(product.appID) in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON; any other answer is the collector's own reason, and the events are sent again on the next flush"
+                stopped = "sending event \(eventID) to \(target.absoluteString): the collector refused HTTP \(status): \(answer); observed: \(waiting) event(s) stay queued; fix: the answer names what the collector refuses; when it is Unknown mobile analytics app, declare app \(product.appID) in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON; the events are sent again on the next flush"
+            case .failed(let status, let answer):
+                stopped = "sending event \(eventID) to \(target.absoluteString): the collector failed on its own side, HTTP \(status): \(answer); observed: \(waiting) event(s) stay queued; fix: nothing on this machine is to fix: the events are sent again on the next flush; a collector that keeps failing is reported from Help → Report a Problem"
             case .notCollector(let status, let answer):
                 stopped = "reading the collector's answer to event \(eventID): the answer is not the collector's {\"ok\": true}: \(answer); observed: HTTP \(status) from \(target.absoluteString); fix: check that \(target.absoluteString) is the Echo app collector, /api/analytics/mobile/collect"
             case .unreachable(let cause):
@@ -317,6 +319,7 @@ public final class WisentTelemetry: @unchecked Sendable {
     private enum Answer {
         case accepted
         case refused(Int, String)
+        case failed(Int, String)
         case notCollector(Int, String)
         case unreachable(String)
     }
@@ -335,6 +338,11 @@ public final class WisentTelemetry: @unchecked Sendable {
                 let object = data.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any]
                 if (200..<300).contains(status), object?["ok"] as? Bool == true {
                     return answered.resume(returning: .accepted)
+                }
+                // A server error is the collector's own failure, whatever its
+                // body; below that, the collector refuses with a JSON object.
+                if status >= 500 {
+                    return answered.resume(returning: .failed(status, body))
                 }
                 if !(200..<300).contains(status), object != nil {
                     return answered.resume(returning: .refused(status, body))

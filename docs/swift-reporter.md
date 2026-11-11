@@ -64,12 +64,18 @@ nothing.
 Every sentence starts with `wisent-errors: telemetry:` and is the sentence the
 command line prints for the same cause: a directory that cannot be written, a
 state file telemetry did not write, a collector address that is not https (or
-http on the loopback), the collector's refusal with its own answer, an answer
-from an address that is not the collector, and a collector that could not be
-reached. The events stay queued in every case but the first.
+http on the loopback), the collector's refusal with its own answer, the
+collector's own failure (an answer of HTTP 500 and above, which names nothing
+to fix on this machine), an answer from an address that is not the collector,
+and a collector that could not be reached. The events stay queued in every
+case but the first.
 
 ## Test
 
 `swift test` runs `tests/telemetry/swift` against the real collector named by
 `WISENT_TELEMETRY_TEST_COLLECTOR`; without it the delivery case is skipped as
-blocked, never passed.
+blocked, never passed. `WISENT_TELEMETRY_TEST_FAILING_COLLECTOR` names a
+collector deployment that answers with a server error (an Echo that cannot
+reach its database); its case checks that the events stay queued under the
+collector's own failure, with no deployment remedy, and is skipped as blocked
+without it.

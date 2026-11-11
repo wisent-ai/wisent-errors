@@ -70,6 +70,45 @@ fn an_app_the_collector_does_not_declare_stays_queued_with_its_refusal() {
     assert_eq!(telemetry.status()["queued"], 1);
 }
 
+/// A collector deployment that answers every event of a declared app with a
+/// server error, such as an Echo whose database it cannot reach, read once.
+static FAILING_COLLECTOR: LazyLock<String> = LazyLock::new(|| {
+    std::env::var("WISENT_TELEMETRY_TEST_FAILING_COLLECTOR").expect(
+        "set WISENT_TELEMETRY_TEST_FAILING_COLLECTOR to a collector deployment that answers with a server error, such as an Echo that cannot reach its database",
+    )
+});
+
+#[test]
+fn a_collector_failing_on_its_side_keeps_the_events_with_its_own_failure() {
+    let mut case = Case::new("failing-collector");
+    std::env::set_var("WISENT_TELEMETRY_COLLECTOR_URL", FAILING_COLLECTOR.as_str());
+    // The collector checks the app before it writes: only an app it declares
+    // reaches the store that fails.
+    let telemetry = case.telemetry(DECLARED_APP.as_str());
+    telemetry
+        .set_level(Level::Errors)
+        .expect("the level is kept");
+    telemetry.failure(&sample_failure(), None);
+    let delivered = telemetry.flush().expect("the store is readable");
+    case.note("delivered", delivered.to_json());
+    assert_eq!((delivered.sent, delivered.remaining), (0, 1));
+    let stopped = delivered.stopped.expect("the collector's failure");
+    assert_eq!(stopped.code.as_str(), "infra_down");
+    let detail = stopped.detail.expect("a sentence");
+    assert!(
+        detail.contains("the collector failed on its own side, HTTP 5"),
+        "{detail}"
+    );
+    let remedy = stopped.remedy.expect("a fix");
+    assert!(
+        !remedy.contains("MOBILE_ANALYTICS_APPS_JSON"),
+        "a collector's own failure names no deployment remedy: {remedy}"
+    );
+    assert!(remedy.contains("support report"), "{remedy}");
+    assert_eq!(delivery(&case)["stopped"]["error_code"], "infra_down");
+    assert_eq!(telemetry.status()["queued"], 1);
+}
+
 #[test]
 fn an_unreachable_collector_keeps_the_events() {
     let mut case = Case::new("unreachable");

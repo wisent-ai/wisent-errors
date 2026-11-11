@@ -115,7 +115,10 @@ status`:
 `collector` is `null` with `collector_source` saying why (`none`: neither the
 build nor `WISENT_TELEMETRY_COLLECTOR_URL` names one). `last_delivery.stopped`
 is the collector's own sentence for a refusal (`the collector refused HTTP 403:
-{"error":"Unknown mobile analytics app"}`) or the transport error.
+{"error":"Unknown mobile analytics app"}`), the transport error, or, for an
+answer of HTTP 500 and above, the collector's own failure (`the collector failed
+on its own side, HTTP 500: …`): such an event is not refused, nothing on the
+sending machine is to fix, and it goes out again on the next flush.
 
 ## How each operation fails
 
@@ -127,6 +130,9 @@ is the collector's own sentence for a refusal (`the collector refused HTTP 403:
 `cargo test -p wisent-errors --features telemetry --test telemetry` runs
 consent, cleaning, queueing and refusal against the real Echo collector named
 by `WISENT_TELEMETRY_TEST_COLLECTOR`; with `WISENT_TELEMETRY_TEST_APP_ID` set
-to an app the collector declares, it also checks the event is accepted.
+to an app the collector declares, it also checks the event is accepted, and
+`WISENT_TELEMETRY_TEST_FAILING_COLLECTOR` names a collector deployment that
+answers with a server error (an Echo that cannot reach its database) for the
+case that keeps events through the collector's own failure.
 Every run writes its source revision, the collector, each attempt and the
 final state of the store under `.build/telemetry/<run>/report.json`.

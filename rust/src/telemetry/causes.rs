@@ -62,8 +62,22 @@ pub static COLLECTOR_REFUSED: Cause = Cause {
     failed: "sending event {event} to {collector}",
     cause: "the collector refused HTTP {status}: {answer}",
     observed: "{queued} event(s) stay queued",
-    remedy: "when the answer says Unknown mobile analytics app, declare app {app} in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON; any other answer is the collector's own reason, and the events are sent again on the next flush",
+    remedy: "the answer names what the collector refuses; when it is Unknown mobile analytics app, declare app {app} in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON; the events are sent again on the next flush",
     test: "tests/telemetry/delivery.rs::an_app_the_collector_does_not_declare_stays_queued_with_its_refusal",
+};
+
+/// A collector that answered with a server error failed on its own side: the
+/// event is not refused, and nothing on the sending machine causes or fixes it.
+pub static COLLECTOR_FAILED: Cause = Cause {
+    id: "collector-failed",
+    code: Code::InfraDown,
+    usage: false,
+    exit: None,
+    failed: "sending event {event} to {collector}",
+    cause: "the collector failed on its own side, HTTP {status}: {answer}",
+    observed: "{queued} event(s) stay queued",
+    remedy: "nothing on this machine is to fix: the events are sent again on the next flush; a collector that keeps failing is reported with `{product} support report`",
+    test: "tests/telemetry/delivery.rs::a_collector_failing_on_its_side_keeps_the_events_with_its_own_failure",
 };
 
 pub static COLLECTOR_UNREACHABLE: Cause = Cause {
@@ -139,6 +153,7 @@ pub static DELIVER: Operation = Operation {
     causes: &[
         &COLLECTOR_INVALID,
         &COLLECTOR_REFUSED,
+        &COLLECTOR_FAILED,
         &COLLECTOR_UNREACHABLE,
         &COLLECTOR_ANSWER_UNREADABLE,
         &FLUSH_UNSTARTED,

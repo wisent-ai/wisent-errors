@@ -90,6 +90,27 @@ final class TelemetryTests: XCTestCase {
         XCTAssertTrue(stopped.contains("Unknown mobile analytics app"), stopped)
     }
 
+    func testACollectorFailingOnItsSideKeepsTheEventsWithItsOwnFailure() async throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let failing = environment["WISENT_TELEMETRY_TEST_FAILING_COLLECTOR"], let app = environment["WISENT_TELEMETRY_TEST_APP_ID"] else {
+            throw XCTSkip("blocked, not passed: set WISENT_TELEMETRY_TEST_FAILING_COLLECTOR to a collector deployment that answers with a server error, such as an Echo that cannot reach its database, and WISENT_TELEMETRY_TEST_APP_ID to an app it declares")
+        }
+        setenv("WISENT_TELEMETRY_COLLECTOR_URL", failing, 1)
+        // The collector checks the app before it writes: only an app it
+        // declares reaches the store that fails.
+        let telemetry = telemetry(app: app)
+        try telemetry.setLevel(.errors)
+        settle(telemetry, failure())
+        let delivered = await telemetry.flush()
+        XCTAssertEqual(delivered.sent, 0)
+        XCTAssertEqual(delivered.remaining, 1)
+        let stopped = try XCTUnwrap(delivered.stopped)
+        XCTAssertTrue(stopped.contains("the collector failed on its own side, HTTP 5"), stopped)
+        XCTAssertFalse(stopped.contains("MOBILE_ANALYTICS_APPS_JSON"), stopped)
+        XCTAssertTrue(stopped.contains("Help → Report a Problem"), stopped)
+        XCTAssertEqual(try telemetry.queued().count, 1)
+    }
+
     func testTurningOffDropsWhatWaits() throws {
         let telemetry = telemetry(app: "wisent-errors-test-desktop")
         try telemetry.setLevel(.errors)
