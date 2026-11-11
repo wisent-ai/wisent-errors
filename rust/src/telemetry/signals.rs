@@ -17,7 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::{json, Map, Value};
 
-use super::{say_failure, store, Level, Telemetry};
+use super::{events, say_failure, store, Event, Telemetry};
 use crate::Failure;
 
 /// The second occurrence is the first repeat.
@@ -37,7 +37,7 @@ impl Telemetry {
     /// seconds since it. Usage consent, as the command name is usage.
     pub fn help(&self, command: &str) {
         match self.effective() {
-            Ok(level) if level >= Level::Usage => {}
+            Ok(level) if level >= events::HELP_AFTER_FAILURE.consent => {}
             Ok(_) => return,
             Err(failure) => return say_failure(&failure),
         }
@@ -64,7 +64,7 @@ impl Telemetry {
             "seconds_since_failure".into(),
             json!(seconds_now().saturating_sub(at)),
         );
-        if let Err(failure) = self.queue("frustration.help_after_failure", properties) {
+        if let Err(failure) = self.queue(&events::HELP_AFTER_FAILURE, properties) {
             say_failure(&failure);
         }
     }
@@ -75,12 +75,11 @@ impl Telemetry {
     /// when the previous failure was the same failure point.
     pub(super) fn note_failure(&self, failure: &Failure) {
         self.note(
-            Level::Errors,
+            &events::REPEAT_FAILURE,
             "last_failure",
             "failure_point",
             &failure.failure_point,
             true,
-            "frustration.repeat_failure",
         );
     }
 
@@ -90,18 +89,17 @@ impl Telemetry {
     pub(super) fn note_command(&self, command: &str, exit_status: i32) {
         let refused = exit_status == 2;
         self.note(
-            Level::Usage,
+            &events::USAGE_LOOP,
             "last_usage_refusal",
             "command",
             &self.cleaner.clean(command),
             refused,
-            "frustration.usage_loop",
         );
     }
 
-    fn note(&self, needs: Level, slot: &str, key: &str, value: &str, counts: bool, signal: &str) {
+    fn note(&self, signal: &'static Event, slot: &str, key: &str, value: &str, counts: bool) {
         match self.effective() {
-            Ok(level) if level >= needs => {}
+            Ok(level) if level >= signal.consent => {}
             Ok(_) => return,
             Err(failure) => return say_failure(&failure),
         }

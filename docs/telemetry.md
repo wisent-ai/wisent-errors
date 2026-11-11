@@ -46,11 +46,16 @@ Every event is the body the collector takes: `eventId`, `appId`, `platform`
 created on its first queued event), `sessionId` (one per process),
 `appVersion`, `osVersion`, `occurredAt` and `properties`.
 
-A `failure` carries the envelope's `failure_point`, `error_code`, `severity`,
-`retryable`, `outage`, `service`, `detail` and `remedy`, the declared cause's
-id as `cause_id` when the product knows it, and the chain of causes underneath
-as `causes`. A `cli.command` carries `command`, `exit_status` and
-`duration_ms`.
+Every kind of event is declared once, in `telemetry::EVENTS`: its name, the
+least consent under which it is queued, one sentence saying what it says, and
+every key of its `properties`. The queue takes only a declared event, so an
+event the catalogue does not list cannot be sent, and a product's privacy page
+shows this catalogue. A `failure` carries the envelope's `failure_point`,
+`error_code`, `severity`, `retryable`, `outage`, `service`, `impact`, `detail`
+and `remedy`, the declared cause's id as `cause_id` when the product knows it,
+its `context`, and the chain of causes underneath as `causes`. A `cli.command`
+carries `command`, `exit_status` and `duration_ms`. The frustration signals are
+below.
 
 Before an event is queued, every text field is cleaned: the user's home
 directory becomes `~` and the machine's host name becomes `<this-host>`. What

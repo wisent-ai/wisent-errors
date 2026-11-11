@@ -13,6 +13,7 @@
 
 mod causes;
 mod deliver;
+pub mod events;
 mod signals;
 mod store;
 mod support;
@@ -28,6 +29,7 @@ use serde_json::{json, Map, Value};
 /// use, for its catalogue's `uses`.
 pub use causes::{operations, CONSENT, DELIVER, RECORD, REPORT, STATUS};
 pub use deliver::Delivered;
+pub use events::{Event, EVENTS};
 pub use support::{Report, PUBLIC_SUPPORT};
 
 use crate::Failure;
@@ -253,7 +255,7 @@ impl Telemetry {
     /// Queue one failure, when the user agreed to send errors. `cause_id` is
     /// the declared cause's id when the product knows it.
     pub fn failure(&self, failure: &Failure, cause_id: Option<&str>) {
-        self.record(Level::Errors, "failure", || {
+        self.record(&events::FAILURE, || {
             self.failure_properties(failure, cause_id)
         });
         self.note_failure(failure);
@@ -262,7 +264,7 @@ impl Telemetry {
     /// Queue one finished command, when the user agreed to send usage. The
     /// command is its name only (`pairs import`), never its arguments.
     pub fn command(&self, command: &str, exit_status: i32, duration: Duration) {
-        self.record(Level::Usage, "cli.command", || {
+        self.record(&events::CLI_COMMAND, || {
             let mut properties = Map::new();
             properties.insert("command".into(), json!(self.cleaner.clean(command)));
             properties.insert("exit_status".into(), json!(exit_status));
@@ -272,23 +274,19 @@ impl Telemetry {
         self.note_command(command, exit_status);
     }
 
-    fn record(
-        &self,
-        needs: Level,
-        event_name: &str,
-        properties: impl FnOnce() -> Map<String, Value>,
-    ) {
+    fn record(&self, event: &'static Event, properties: impl FnOnce() -> Map<String, Value>) {
         match self.effective() {
-            Ok(level) if level >= needs => {}
+            Ok(level) if level >= event.consent => {}
             Ok(_) => return,
             Err(failure) => return say_failure(&failure),
         }
-        if let Err(failure) = self.queue(event_name, properties()) {
+        if let Err(failure) = self.queue(event, properties()) {
             say_failure(&failure);
         }
     }
 
-    fn queue(&self, event_name: &str, properties: Map<String, Value>) -> Result<(), Failure> {
+    fn queue(&self, event: &'static Event, properties: Map<String, Value>) -> Result<(), Failure> {
+        let event_name = event.name;
         let queue = self
             .queue_directory()
             .ok_or_else(|| self.no_home("an event"))?;
