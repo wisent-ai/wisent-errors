@@ -94,9 +94,10 @@
     }
   ],
   "upstream_status": {
-    "note": "Classification of a status an upstream answered one of our calls with. Ranges are inclusive. 501 and 505 are exact matches ahead of the 5xx range because the range would call them infra_down, which this catalogue defines as \"a dependency did not answer at all\" -- and a 501 or a 505 did answer. A server saying it does not implement the method, or does not speak the version, is our deployment being incomplete: retrying cannot help, so `config` is the honest code. most-server read 501 as config in two independent places before this fix, on the hot path where it answers \"no backend wired up yet\".",
+    "note": "Classification of a status an upstream answered one of our calls with. Ranges are inclusive. 501 and 505 are exact matches ahead of the 5xx range because the range would call them infra_down, which this catalogue defines as \"a dependency did not answer at all\" -- and a 501 or a 505 did answer. A server saying it does not implement the method, or does not speak the version, is our deployment being incomplete: retrying cannot help, so `config` is the honest code. most-server read 501 as config in two independent places before this fix, on the hot path where it answers \"no backend wired up yet\". 402 is `auth`: the vendor refuses the account the credential belongs to until that account pays, so retrying with the same credential repeats the refusal; it fell to `unknown` before, and a Supabase restore refused for unpaid invoices read as a failure no one could attribute.",
     "exact": {
       "401": "auth",
+      "402": "auth",
       "403": "auth",
       "407": "auth",
       "404": "not_found",

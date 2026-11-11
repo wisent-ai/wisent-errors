@@ -133,6 +133,7 @@ export const GENERIC_SENTENCES = Object.freeze([
 
 const EXACT_STATUS = Object.freeze({
   401: "auth",
+  402: "auth",
   403: "auth",
   404: "not_found",
   407: "auth",

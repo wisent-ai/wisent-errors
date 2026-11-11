@@ -116,6 +116,7 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
     public static func fromUpstream(status: Int) -> Code {
         switch status {
         case 401: .auth
+        case 402: .auth
         case 403: .auth
         case 404: .notFound
         case 407: .auth

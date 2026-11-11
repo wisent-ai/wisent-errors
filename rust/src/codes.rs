@@ -156,6 +156,7 @@ impl Code {
     pub fn from_upstream_status(status: u16) -> Self {
         match status {
             401 => Self::Auth,
+            402 => Self::Auth,
             403 => Self::Auth,
             404 => Self::NotFound,
             407 => Self::Auth,
