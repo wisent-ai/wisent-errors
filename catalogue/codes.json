@@ -136,7 +136,10 @@
       { "text": "unknown error", "reason": "a failure nobody classified: declare its cause instead" },
       { "text": "internal error", "reason": "names no component and no cause" },
       { "text": "please try again", "reason": "advises a retry without saying whether a retry can help" },
-      { "text": "failed for an unknown reason", "reason": "a failure nobody classified: declare its cause instead" }
+      { "text": "failed for an unknown reason", "reason": "a failure nobody classified: declare its cause instead" },
+      { "text": "unknown failure", "reason": "a failure nobody classified: declare its cause instead" },
+      { "text": "try again later", "reason": "advises a later retry without saying when, or what has to change before it can work" },
+      { "text": "could not be completed.", "reason": "ends the sentence at the failure: says a step failed and stops before its cause" }
     ]
   },
   "failure_point": {

@@ -256,4 +256,17 @@ pub const GENERIC_SENTENCES: &[GenericSentence] = &[
         text: "failed for an unknown reason",
         reason: "a failure nobody classified: declare its cause instead",
     },
+    GenericSentence {
+        text: "unknown failure",
+        reason: "a failure nobody classified: declare its cause instead",
+    },
+    GenericSentence {
+        text: "try again later",
+        reason:
+            "advises a later retry without saying when, or what has to change before it can work",
+    },
+    GenericSentence {
+        text: "could not be completed.",
+        reason: "ends the sentence at the failure: says a step failed and stops before its cause",
+    },
 ];
