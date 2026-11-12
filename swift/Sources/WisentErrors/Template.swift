@@ -91,7 +91,7 @@ public func unfilled(_ templates: [String], _ values: [String: String]) -> [Stri
 
 func placeholderSuggestion(_ malformed: String) -> String {
     let inside = String(malformed.unicodeScalars.dropFirst().dropLast())
-    let head = inside.split(whereSeparator: { $0 == ":" || $0 == "!" }, omittingEmptySubsequences: false).first.map(String.init) ?? ""
+    let head = inside.split(omittingEmptySubsequences: false, whereSeparator: { $0 == ":" || $0 == "!" }).first.map(String.init) ?? ""
     let mapped = String(String.UnicodeScalarView(head.lowercased().unicodeScalars.map { scalar in
         ("a"..."z").contains(scalar) || ("0"..."9").contains(scalar) || scalar == "_" ? scalar : "_"
     }))
