@@ -113,8 +113,10 @@ function repoOf(path) {
   while (current.length > 1) {
     try {
       if (statSync(join(current, '.git')).isDirectory() || statSync(join(current, '.git')).isFile()) return current;
-    } catch {
-      // keep walking
+    } catch (error) {
+      // No .git here: the walk goes on to the parent. One that cannot be
+      // read is refused, never taken as no repository.
+      if (error.code !== 'ENOENT') refuse(CENSUS, 'file-unreadable', { path: join(current, '.git'), roots: roots.join(', '), state: stateOf(join(current, '.git')), error: error.message });
     }
     current = dirname(current);
   }
@@ -125,9 +127,10 @@ function walk(path) {
   let entry;
   try {
     entry = statSync(path);
-  } catch {
+  } catch (error) {
     // An entry that vanished between its directory's listing and this read
-    // holds nothing to count.
+    // holds nothing to count; one that cannot be read is refused by name.
+    if (error.code !== 'ENOENT') refuse(CENSUS, 'file-unreadable', { path, roots: roots.join(', '), state: stateOf(path), error: error.message });
     return;
   }
   if (entry.isDirectory()) {
