@@ -50,11 +50,11 @@ test('an_unwritable_generated_file_is_refused', () => {
 
 test('a_stale_generated_module_is_drift_and_generating_removes_it', () => {
   inCopy('stale', (copy, run) => {
-    const retired = join(copy, 'swift', 'Sources', 'WisentErrors', 'OwnFailuresRetired.swift');
+    const retired = join(copy, 'swift', 'Sources', 'WisentErrors', 'Own', 'OwnFailuresRetired.swift');
     writeFileSync(retired, 'extension OwnFailures {}\n');
     const checked = run('codegen/generate.mjs', ['--check']);
     assert.equal(checked.status, 1);
-    assert.match(checked.stdout, /STALE {6}swift\/Sources\/WisentErrors\/OwnFailuresRetired\.swift/);
+    assert.match(checked.stdout, /STALE {6}swift\/Sources\/WisentErrors\/Own\/OwnFailuresRetired\.swift/);
     const generated = run('codegen/generate.mjs');
     assert.equal(generated.status, 0, generated.stderr);
     assert.equal(existsSync(retired), false);

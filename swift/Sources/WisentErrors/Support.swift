@@ -132,7 +132,7 @@ extension WisentTelemetry {
         let session = self.session
         let (data, status, failure): (Data?, Int, String?) = await withCheckedContinuation { answered in
             session.dataTask(with: request) { data, response, error in
-                answered.resume(returning: (data, (response as? HTTPURLResponse)?.statusCode ?? 0, error?.localizedDescription))
+                answered.resume(returning: (data, (response as? HTTPURLResponse)?.statusCode ?? 0, error?.explained))
             }.resume()
         }
         if let failure {

@@ -88,7 +88,7 @@ extension WisentTelemetry {
         let session = self.session
         return await withCheckedContinuation { (answered: CheckedContinuation<Answer, Never>) in
             session.dataTask(with: request) { data, response, error in
-                if let error { return answered.resume(returning: .unreachable(error.localizedDescription)) }
+                if let error { return answered.resume(returning: .unreachable(error.explained)) }
                 let status = (response as? HTTPURLResponse)?.statusCode ?? 0
                 let body = data.map { String(decoding: $0, as: UTF8.self) } ?? ""
                 let object = data.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any]

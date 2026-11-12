@@ -28,7 +28,7 @@ extension WisentTelemetry {
             try data.write(to: path, options: .atomic)
         } catch {
             throw TelemetryError.unwritable(
-                "keeping \(what) in \(path.path): the telemetry directory could not be written: \(error.localizedDescription); observed: directory \(folder.path); fix: make \(folder.path) writable by this user, or name a writable one with WISENT_TELEMETRY_HOME")
+                "keeping \(what) in \(path.path): the telemetry directory could not be written: \(error.explained); observed: directory \(folder.path); fix: make \(folder.path) writable by this user, or name a writable one with WISENT_TELEMETRY_HOME")
         }
     }
 

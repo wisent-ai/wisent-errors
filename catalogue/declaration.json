@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "What a declared cause or warning must be, stated once for every runtime. codegen/generate.mjs writes it into rust/src/declaration.rs, js/declaration.mjs, python/wisent_errors/declaration.py and swift/Sources/WisentErrors/Declaration.swift, so the four runtimes refuse the same declarations with the same sentences. A sentence is a template filled by the runtime's own `fill`; a value holding braces is passed in, never written into the sentence, so no sentence names a placeholder it does not fill.",
+  "note": "What a declared cause or warning must be, stated once for every runtime. codegen/generate.mjs writes it into rust/src/declaration.rs, js/declaration.mjs, python/wisent_errors/declaration.py and swift/Sources/WisentErrors/Catalogue/Declaration.swift, so the four runtimes refuse the same declarations with the same sentences. A sentence is a template filled by the runtime's own `fill`; a value holding braces is passed in, never written into the sentence, so no sentence names a placeholder it does not fill.",
   "placeholder": {
     "grammar": "a lowercase letter, then lowercase letters, digits and '_', between braces, with no format spec",
     "pattern": "^[a-z][a-z0-9_]*$",

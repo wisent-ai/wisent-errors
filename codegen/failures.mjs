@@ -119,7 +119,7 @@ ${out.join('\n\n')}
 `;
 }
 
-/** swift/Sources/WisentErrors/OwnFailures.swift: the namespace each part's file extends. */
+/** swift/Sources/WisentErrors/Own/OwnFailures.swift: the namespace each part's file extends. */
 export function failuresSwiftNamespace(areas, banner) {
   return `${banner('//', 'catalogue/failures/')}
 
@@ -129,7 +129,7 @@ public enum OwnFailures {}
 `;
 }
 
-/** swift/Sources/WisentErrors/OwnFailures<Area>.swift: the causes and operations of one part. */
+/** swift/Sources/WisentErrors/Own/OwnFailures<Area>.swift: the causes and operations of one part. */
 export function failuresSwift({ source, operations }, banner) {
   const out = [];
   for (const operation of operations) {

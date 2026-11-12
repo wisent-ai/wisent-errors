@@ -53,7 +53,9 @@ const areas = (runtime) => byArea(own(runtime).operations, parts);
 
 const at = (...segments) => join(ROOT, ...segments);
 const rustFailures = (name) => at('rust', 'src', 'failures', name);
-const swiftFailures = (name) => at('swift', 'Sources', 'WisentErrors', name);
+// The generated Swift: the catalogue's codes and declaration rules beside the
+// hand-written catalogue types, and every part's own causes in `Own/`.
+const swiftFailures = (name) => at('swift', 'Sources', 'WisentErrors', 'Own', name);
 const rustAreas = areas('rust');
 const swiftAreas = areas('swift');
 const targets = [
@@ -70,8 +72,8 @@ const targets = [
   { path: at('js', 'codes.mjs'), body: javascript(context) },
   { path: at('js', 'declaration.mjs'), body: declarationJs(context) },
   { path: at('js', 'failures.mjs'), body: failuresJs(own('js')) },
-  { path: at('swift', 'Sources', 'WisentErrors', 'Codes.swift'), body: swift(context) },
-  { path: at('swift', 'Sources', 'WisentErrors', 'Declaration.swift'), body: declarationSwift(context) },
+  { path: at('swift', 'Sources', 'WisentErrors', 'Catalogue', 'Codes.swift'), body: swift(context) },
+  { path: at('swift', 'Sources', 'WisentErrors', 'Catalogue', 'Declaration.swift'), body: declarationSwift(context) },
   { path: swiftFailures('OwnFailures.swift'), body: failuresSwiftNamespace(swiftAreas, banner) },
   ...swiftAreas.map((area) => ({ path: swiftFailures(swiftFile(area.area)), body: failuresSwift(area, banner) })),
   ...pages(parts, PARTS).map((page) => ({ path: at('docs', 'errors', `${page.area}.md`), body: page.body })),
@@ -116,7 +118,7 @@ const generatedIn = (directory, pattern) =>
     .map((entry) => join(directory, entry.name));
 const stale = [
   ...generatedIn(at('rust', 'src', 'failures'), /\.rs$/),
-  ...generatedIn(at('swift', 'Sources', 'WisentErrors'), /^OwnFailures.+\.swift$/),
+  ...generatedIn(at('swift', 'Sources', 'WisentErrors', 'Own'), /^OwnFailures.+\.swift$/),
   ...generatedIn(at('docs', 'errors'), /\.md$/),
 ].filter((path) => !named.has(path));
 for (const path of stale) {
