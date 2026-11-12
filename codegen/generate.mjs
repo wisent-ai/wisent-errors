@@ -17,10 +17,10 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { rust } from './rust.mjs';
-import { python } from './python.mjs';
-import { javascript } from './javascript.mjs';
-import { swift } from './swift.mjs';
+import { rust } from './languages/rust.mjs';
+import { python } from './languages/python.mjs';
+import { javascript } from './languages/javascript.mjs';
+import { swift } from './languages/swift.mjs';
 import { declarationJs, declarationPython, declarationRust, declarationSwift } from './declaration.mjs';
 import { byArea, failuresJs, failuresPython, failuresRust, failuresRustModule, failuresSwift, failuresSwiftNamespace, rustModule, swiftFile } from './failures.mjs';
 import { pages } from './pages.mjs';
