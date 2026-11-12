@@ -1,5 +1,6 @@
 #!/bin/sh
-# Scaffold a temporary Cargo consumer of the wisent-errors crate, run it, and
+# Scaffold a temporary Rust consumer of the wisent-errors crate, build it with
+# Stado's kompilator (no Cargo runs), run it, and
 # show the exit code as a companion to the website integration guide:
 #
 #   sh docs/examples/rust-consumer.sh
@@ -23,6 +24,20 @@ edition = "2021"
 [dependencies]
 wisent-errors = { path = "$ROOT/rust" }
 MANIFEST
+
+# kompilator resolves nothing: it builds what a lock pins. The consumer's lock
+# is this checkout's own, which pins wisent-errors and everything it depends
+# on, with the consumer's own entry added.
+cp "$ROOT/Cargo.lock" "$WORK/consumer/Cargo.lock"
+cat >> "$WORK/consumer/Cargo.lock" <<LOCK
+
+[[package]]
+name = "consumer"
+version = "0.0.0"
+dependencies = [
+ "wisent-errors",
+]
+LOCK
 
 cat > "$WORK/consumer/src/main.rs" <<'MAIN'
 use wisent_errors::{trim_detail_at_word_edge, Code, Failure, Invalid};
@@ -70,5 +85,6 @@ fn main() {
 MAIN
 
 status=0
-(cd "$WORK/consumer" && cargo run --quiet) || status=$?
+kompilator build --manifest-path "$WORK/consumer/Cargo.toml" --bin consumer --out "$WORK/out" >/dev/null
+"$WORK/out/consumer" || status=$?
 echo "\$? = $status"
