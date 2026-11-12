@@ -12,9 +12,11 @@
 #![allow(clippy::result_large_err)]
 
 mod causes;
+#[path = "delivery/deliver.rs"]
 mod deliver;
 pub mod events;
 mod signals;
+#[path = "delivery/store.rs"]
 mod store;
 mod support;
 

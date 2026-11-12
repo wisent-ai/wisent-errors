@@ -17,10 +17,13 @@ pub mod declaration;
 pub mod failures;
 mod invalid;
 pub mod operation;
+#[path = "output/render.rs"]
 mod render;
+#[path = "output/warning.rs"]
 pub mod warning;
 
 #[cfg(feature = "cli-output")]
+#[path = "output/cli_output.rs"]
 pub mod cli_output;
 
 #[cfg(feature = "telemetry")]
