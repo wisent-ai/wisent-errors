@@ -71,7 +71,7 @@
   in `context["wisent_errors.unfilled"]`.
 - The rules and every sentence that refuses a declaration are one schema,
   `catalogue/declaration.json`, generated into `rust/src/declaration.rs`,
-  `js/declaring/declaration.mjs`, `python/wisent_errors/declaration.py` and
+  `js/declaration.mjs`, `python/wisent_errors/declaration.py` and
   `swift/Sources/WisentErrors/Declaration.swift`. Python and Swift gain
   `Cause`, `Operation`, `fill`, `placeholders`, `unfilled`,
   `template_problems` / `templateProblems`, `problems` and
@@ -82,7 +82,7 @@
 
 - `catalogue/failures/` declares every way this package's functionalities
   fail, one part per area, read by `codegen/parts.mjs` and generated into each
-  runtime's own catalogue (`rust/src/failures/`, `js/declaring/failures.mjs`,
+  runtime's own catalogue (`rust/src/failures/`, `js/failures.mjs`,
   `python/wisent_errors/failures.py`,
   `swift/Sources/WisentErrors/OwnFailures*.swift`) and onto `docs/errors/`.
   `node ci/error-standard.mjs errors --json` prints it; `node ci/check.mjs`
