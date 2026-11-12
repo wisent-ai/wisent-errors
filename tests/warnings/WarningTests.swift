@@ -19,11 +19,12 @@ final class WarningTests: XCTestCase {
         test: "tests/purge/purge.sh::purge_without_yes_removes_nothing"
     )
 
-    private func purge(_ warnings: [Warning]) -> Operation {
-        Operation(id: "example.item.purge", entries: ["example purge"], uses: [], summary: "remove a trashed item and every saved version for good", docs: "https://example.wisent.com/docs/errors", causes: [], warnings: warnings)
+    // WisentErrors.Operation, not Foundation's (NSOperation), which XCTest imports.
+    private func purge(_ warnings: [Warning]) -> WisentErrors.Operation {
+        WisentErrors.Operation(id: "example.item.purge", entries: ["example purge"], uses: [], summary: "remove a trashed item and every saved version for good", docs: "https://example.wisent.com/docs/errors", causes: [], warnings: warnings)
     }
 
-    private func warningProblems(_ operation: Operation) -> [String] {
+    private func warningProblems(_ operation: WisentErrors.Operation) -> [String] {
         operation.problems().filter { $0.contains("warning") }
     }
 
