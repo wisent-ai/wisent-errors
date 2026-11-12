@@ -27,8 +27,7 @@ export function parentOf(path) {
   const parent = dirname(resolve(path));
   try {
     const names = readdirSync(parent);
-    const shown = names.slice(0, 12).join(', ');
-    return `${parent} exists and holds ${names.length} entr${names.length === 1 ? 'y' : 'ies'}${names.length ? `: ${shown}${names.length > 12 ? ', ...' : ''}` : ''}`;
+    return `${parent} exists and holds ${names.length} entr${names.length === 1 ? 'y' : 'ies'}${names.length ? `: ${names.join(', ')}` : ''}`;
   } catch (error) {
     return `${parent} cannot be listed either: ${error.code ?? error.message}`;
   }
@@ -66,7 +65,7 @@ export function stopOf(text, message) {
   const line = before.length;
   const column = before[line - 1].length + 1;
   const shown = text.split('\n')[line - 1] ?? '';
-  return `line ${line}, column ${column}: ${JSON.stringify(shown.length > 80 ? `${shown.slice(0, 80)}...` : shown)}`;
+  return `line ${line}, column ${column}: ${JSON.stringify(shown)}`;
 }
 
 /**
