@@ -28,7 +28,10 @@ let package = Package(
             name: "WisentErrorsTests",
             dependencies: ["WisentErrors"],
             path: "tests",
-            sources: ["envelope/BuildTests.swift", "declaration/PlaceholderTests.swift", "warnings/WarningTests.swift"]
+            sources: [
+                "envelope/BuildTests.swift", "declaration/PlaceholderTests.swift", "warnings/WarningTests.swift",
+                "explained/ExplainedTests.swift",
+            ]
         ),
         // Telemetry against the real Echo app collector (docs/telemetry.md).
         .testTarget(

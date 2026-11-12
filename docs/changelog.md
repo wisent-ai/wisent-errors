@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Every Swift app says a failure through one `Error.explained`
+
+- `WisentErrors` exports `Error.explained`: a declared description as declared, a
+  `DecodingError` with the coding path it stopped at, a Cocoa error with its domain and
+  code, any other error as its type and value, then each underlying error, read until the
+  chain ends or repeats. Twenty-six apps keep their own `ExplainedError.swift`, copies that
+  drift only in wrapping; an app that depends on this release drops its copy for this one.
+  Real tests:
+  `tests/explained/ExplainedTests.swift` (`swift test --filter ExplainedTests`).
+
 ### The generator writes Rust without rustfmt
 
 - `node codegen/generate.mjs` wrote each Rust module through `rustfmt` so the push gate's
