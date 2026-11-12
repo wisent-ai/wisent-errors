@@ -37,6 +37,7 @@ ok    schema and catalogue name the same codes
 ok    schema and catalogue name the same severities
 ok    the failure point pattern is stated once
 ok    this package's own node failure catalogue holds (12 functionalities)
+ok    the node tests pass (14 files)
 ```
 
 The generated runtimes are written from the catalogue by one generator, so

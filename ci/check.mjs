@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { catalogue as listing } from '../js/index.mjs';
-import { holding, readJsonInput } from './input.mjs';
+import { holding, listDirectory, readJsonInput } from './input.mjs';
 import { guarded, ownOperations, refusalText } from './refuse.mjs';
 import { operationsFor, readParts } from '../codegen/parts.mjs';
 import { checkListing } from './standard/catalogue.mjs';
@@ -58,6 +58,25 @@ for (const runtime of ['node', 'js', 'rust', 'python', 'swift']) {
     refused.map((entry) => `${entry.operation}:\n  ${entry.problems.join('\n  ')}`).join('\n'),
   );
 }
+
+// 4. the package's node tests pass: every tests/<area>/*.mjs, as `node --test`
+// runs them. Nothing else runs them before a push to this repository, which
+// is how six failing ones reached main unseen.
+const testFiles = listDirectory(join(ROOT, 'tests'), 'the tests')
+  .filter((area) => area.isDirectory())
+  .flatMap((area) =>
+    listDirectory(join(ROOT, 'tests', area.name), 'a test area')
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.mjs'))
+      .map((entry) => join('tests', area.name, entry.name)),
+  )
+  .sort();
+const tested = spawnSync(process.execPath, ['--test', ...testFiles], { cwd: ROOT, encoding: 'utf8' });
+const failing = `${tested.stdout}${tested.stderr}`.split('\n').filter((line) => line.startsWith('✖ ') || line.startsWith('test at '));
+report(
+  `the node tests pass (${testFiles.length} files)`,
+  tested.status === 0,
+  failing.length ? [...new Set(failing)].join('\n') : `node --test exited with status ${tested.status}${tested.error ? `: ${tested.error.message}` : ''}`,
+);
 
 console.log(`\n${problems.length === 0 ? 'all checks passed' : `${problems.length} check(s) failed: ${problems.join('; ')}`}`);
 process.exitCode = problems.length === 0 ? 0 : 1;

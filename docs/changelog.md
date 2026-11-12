@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### `ci/check.mjs` runs the node tests
+
+- Nothing ran this package's node tests before a push, which is how six failing
+  ones reached main unseen. `node ci/check.mjs`, what must hold before this package
+  ships, now runs every `tests/<area>/*.mjs` with `node --test` and fails naming each
+  failing test (`the node tests pass (14 files)`).
+
 ### The guards read the trees their own tests make, and every node test passes
 
 - `ci/no-handrolled-envelope.mjs` and `ci/find-implementations.mjs` skipped every
