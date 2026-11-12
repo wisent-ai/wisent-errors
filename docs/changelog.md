@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### The guards read the trees their own tests make, and every node test passes
+
+- `ci/no-handrolled-envelope.mjs` and `ci/find-implementations.mjs` skipped every
+  file under the package's own folder, so the trees their tests write under
+  `target/real-tests` were never read: the guard reported a clean tree and the census
+  found nothing (`a_hand_built_envelope_is_listed` and the three census cases failed),
+  and a sibling folder whose name only began like the package's was skipped too. Both
+  now ask `packageSource` in `ci/input.mjs`: the package's own source, by resolved
+  path, but not what a build or a test writes under `target/` or `.build/`.
+- `node ci/error-standard.mjs catalogue --entries` printed an entry no functionality
+  starts as one bare sentence; it is the declared refusal, `Error:`, `fix:` and
+  `cause:`, like every other refusal the lint lists.
+- `a_use_no_part_declares_is_refused` replaced a uses list `tools.json` no longer
+  holds, so the catalogue stayed valid and the case failed; it edits the census's
+  list and fails at once if its edit changes nothing. `node --test` over `tests/lint`,
+  `tests/tools`, `tests/declaration`, `tests/envelope` and `tests/warnings`: 62 of 62.
+
 ### Every Swift app reads JSON through one described decoding
 
 - `WisentErrors` exports `JSONDecoder.decodeDescribed`, which throws
@@ -54,7 +71,7 @@
   in `context["wisent_errors.unfilled"]`.
 - The rules and every sentence that refuses a declaration are one schema,
   `catalogue/declaration.json`, generated into `rust/src/declaration.rs`,
-  `js/declaration.mjs`, `python/wisent_errors/declaration.py` and
+  `js/declaring/declaration.mjs`, `python/wisent_errors/declaration.py` and
   `swift/Sources/WisentErrors/Declaration.swift`. Python and Swift gain
   `Cause`, `Operation`, `fill`, `placeholders`, `unfilled`,
   `template_problems` / `templateProblems`, `problems` and
@@ -65,7 +82,7 @@
 
 - `catalogue/failures/` declares every way this package's functionalities
   fail, one part per area, read by `codegen/parts.mjs` and generated into each
-  runtime's own catalogue (`rust/src/failures/`, `js/failures.mjs`,
+  runtime's own catalogue (`rust/src/failures/`, `js/declaring/failures.mjs`,
   `python/wisent_errors/failures.py`,
   `swift/Sources/WisentErrors/OwnFailures*.swift`) and onto `docs/errors/`.
   `node ci/error-standard.mjs errors --json` prints it; `node ci/check.mjs`

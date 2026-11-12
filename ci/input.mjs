@@ -5,11 +5,29 @@
 // same sentence and the state it found.
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { refuse } from './refuse.mjs';
 
 const INPUT = 'wisent_errors.lint.input';
 const PATHS = 'wisent_errors.lint.paths';
+
+const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// What a build or a test writes under the package is not its source: a guard
+// that skipped these could not be run on the trees its own tests make.
+const SCRATCH = ['target', '.build'].map((name) => join(PACKAGE_ROOT, name) + sep);
+
+/**
+ * Whether `path` is this package's own source, which the guards a consuming
+ * repository runs never report: matched by resolved path, not by a name in
+ * it, so a relative invocation from the package is recognised too, and a
+ * sibling whose name only begins like the package's is not.
+ */
+export function packageSource(path) {
+  const at = resolve(path);
+  const inside = at === PACKAGE_ROOT || at.startsWith(PACKAGE_ROOT + sep);
+  return inside && !SCRATCH.some((scratch) => at.startsWith(scratch));
+}
 
 /** What is at `path`: its kind, mode and owner, or why it cannot be examined. */
 export function stateOf(path) {

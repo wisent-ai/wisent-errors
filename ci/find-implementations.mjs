@@ -15,7 +15,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Words } from './arguments.mjs';
-import { describe, listDirectory, openDirectory, readJsonInput, stateOf } from './input.mjs';
+import { describe, listDirectory, openDirectory, packageSource, readJsonInput, stateOf } from './input.mjs';
 import { exitOf, guarded, refuse, refusalText } from './refuse.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -141,7 +141,7 @@ function walk(path) {
     return;
   }
   const name = path.slice(path.lastIndexOf('/') + 1);
-  if (MANIFESTS.has(name) && !resolve(path).startsWith(PACKAGE_ROOT)) {
+  if (MANIFESTS.has(name) && !packageSource(path)) {
     const manifest = readCounted(path);
     if (ADOPTED.test(manifest)) {
       const repo = repoOf(path);
@@ -169,7 +169,7 @@ function walk(path) {
     }
   }
   if (!SOURCE.has(extname(path))) return;
-  if (resolve(path).startsWith(PACKAGE_ROOT)) return;
+  if (packageSource(path)) return;
 
   const body = readCounted(path);
   if (!quoted(body, DISCRIMINATOR)) return;

@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { CODES, FAILURE_POINT_PATTERN, RETRY_EXIT, SENTENCES, USAGE_EXIT, anchor, causeProblems, fill, placeholders, refusal, retryable } from '../../js/index.mjs';
 import { absentTest } from '../tests-held.mjs';
 import { describe, openDirectory, readJsonInput } from '../input.mjs';
-import { ownOperations, refuse } from '../refuse.mjs';
+import { ownOperations, refusalText, refuse } from '../refuse.mjs';
 import { passedNames } from './raising.mjs';
 
 const CATALOGUE = 'wisent_errors.lint.catalogue';
@@ -106,7 +106,7 @@ export function checkListing(operations, repository, entriesPath, sources = null
     );
     for (const entry of inventory) {
       if (!report.some((operation) => operation.entries.includes(entry))) {
-        unstarted.push(line('entry-unstarted', { entries: entriesPath, quoted_entry: JSON.stringify(entry), count: String(inventory.length), functionalities: String(report.length) }));
+        unstarted.push(refusalText(CATALOGUE, 'entry-unstarted', { entries: entriesPath, quoted_entry: JSON.stringify(entry), count: String(inventory.length), functionalities: String(report.length) }));
       }
     }
     for (const operation of report) {

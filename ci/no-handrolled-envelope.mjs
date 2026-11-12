@@ -19,19 +19,17 @@
 // wrong" is a guard people learn to skip.
 
 import { statSync } from 'node:fs';
-import { dirname, extname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { extname, join } from 'node:path';
 import { Words } from './arguments.mjs';
-import { listDirectory, openDirectory, parentOf, readTreeFile } from './input.mjs';
+import { listDirectory, openDirectory, packageSource, parentOf, readTreeFile } from './input.mjs';
 import { exitOf, guarded, refuse, refusalText } from './refuse.mjs';
 
 const USAGE = 'node ci/no-handrolled-envelope.mjs <path> [<path>...]';
 const SOURCE = new Set(['.rs', '.py', '.mjs', '.js', '.ts', '.tsx', '.jsx', '.go', '.swift', '.sh']);
 const SKIP = new Set(['node_modules', 'target', '.git', 'dist', 'build', '.venv', '__pycache__', 'vendor']);
-// This package is where these keys belong. Matched by resolved root rather than
-// by name in the path: a relative invocation has no name in it, and a guard that
-// accuses its own source is a guard nobody runs twice.
-const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// This package is where these keys belong, so its own source is never read
+// (packageSource): a guard that accuses its own source is a guard nobody runs
+// twice.
 // Quoted or bare, key or assignment: the copies in this fleet are written both
 // ways, and a guard that only knows one spelling reports a clean tree.
 const KEYS = /(["']?)(failure_point|error_code)\1\s*[:=]/;
@@ -50,7 +48,7 @@ function walk(path) {
 }
 
 function read(path) {
-  if (!SOURCE.has(extname(path)) || resolve(path).startsWith(PACKAGE_ROOT)) return;
+  if (!SOURCE.has(extname(path)) || packageSource(path)) return;
   files += 1;
   readTreeFile(path, 'a source file').split('\n').forEach((line, index) => {
     if (KEYS.test(line)) findings.push(`${path}:${index + 1}  ${line.trim().slice(0, 120)}`);

@@ -71,7 +71,13 @@ test('an_operation_declared_in_two_parts_is_refused', () => {
 });
 
 test('a_use_no_part_declares_is_refused', () => {
-  const result = broken('use', (failures) => edit(failures, 'tools.json', (text) => text.replace('"uses": ["wisent_errors.lint.paths"]', '"uses": ["wisent_errors.lint.gone"]')));
+  // The census's uses list ends with lint.paths; an edit that matched nothing
+  // would leave a valid catalogue and prove nothing, so it must change the part.
+  const result = broken('use', (failures) => edit(failures, 'tools.json', (text) => {
+    const changed = text.replace('"wisent_errors.lint.paths"]', '"wisent_errors.lint.gone"]');
+    assert.notEqual(changed, text, 'tools.json names wisent_errors.lint.paths at the end of no uses list');
+    return changed;
+  }));
   assert.equal(result.status, 1);
   assert.match(result.stderr, /the operation wisent_errors\.census\.implementations uses wisent_errors\.lint\.gone, which no part declares/);
 });
