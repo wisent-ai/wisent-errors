@@ -74,6 +74,6 @@ of reaching a reader as `{fleet}`. The whole repository but its tests is read,
 or the paths `--sources a,b` names. With `--entries`, an entry no
 functionality names is refused. `node ci/error-standard.mjs errors --json`
 prints this package's own catalogue; every refusal of these commands is one
-of its causes, listed on [errors/](errors/).
+of its causes, listed on [errors/](../errors/).
 
-Warnings are declared beside causes: [warnings.md](warnings.md).
+Warnings are declared beside causes: [warnings.md](../guides/warnings.md).

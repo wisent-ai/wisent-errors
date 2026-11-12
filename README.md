@@ -52,7 +52,7 @@ the failure instead of being reconstructed by hand.
 `detail` and `impact` are optional and serialize as `null`; `failure_point` is
 a dotted lowercase path of one segment or more, and a malformed one is refused
 naming the segment and the character that broke it. Why each rule is what it
-is: [docs/history.md](docs/history.md).
+is: [docs/maintaining/history.md](docs/maintaining/history.md).
 
 `remedy` is what would fix it: the command to run, the declaration to change,
 the dependency to bring back. A refusal that names what failed and why but not
@@ -159,8 +159,8 @@ product keeps no copy of these rules of its own.
 refuses a generic error sentence in its source, `catalogue` applies the
 declaration rules to its `errors list --json` and, with `--repository`, reads
 its tests and raising sites; what each refuses is in
-[docs/layout-and-checks.md](docs/layout-and-checks.md#the-lint-a-product-runs).
-Warnings are declared beside causes: [docs/warnings.md](docs/warnings.md).
+[docs/maintaining/layout-and-checks.md](docs/maintaining/layout-and-checks.md#the-lint-a-product-runs).
+Warnings are declared beside causes: [docs/guides/warnings.md](docs/guides/warnings.md).
 
 ## Reporting a failure must never fail
 
@@ -232,7 +232,7 @@ home directory and host name taken out, file a user's support report, and
 count the frustration signals only a client sees; every event they can send is
 declared once in `telemetry::EVENTS`. The contracts are
 [docs/telemetry.md](docs/telemetry.md), [docs/support.md](docs/support.md) and
-[docs/swift-reporter.md](docs/swift-reporter.md); `tests/telemetry/` runs both
+[docs/guides/swift-reporter.md](docs/guides/swift-reporter.md); `tests/telemetry/` runs both
 clients against the real collector and a real `wisent-customer-support`.
 
 The `diagnosis` feature is a product's `doctor`: one `diagnosis::Check` per
@@ -251,7 +251,7 @@ tests/upstream/payment-required.mjs`).
 `render` prints one line: the code's summary, whose the failure is (the
 catalogue's `whose` for that code, the same in every runtime), whether retrying
 helps, then the envelope. What `whose` says per code, and what the package
-leaves to each product: [docs/history.md](docs/history.md).
+leaves to each product: [docs/maintaining/history.md](docs/maintaining/history.md).
 
 ### CLI output, behind `cli-output`
 
@@ -271,7 +271,7 @@ items as `[index]`, `-` for null and for an empty array or object.
 
 What each directory holds, and the checks that keep the catalogue, the
 declaration rules and the four runtimes one thing, are in
-[docs/layout-and-checks.md](docs/layout-and-checks.md). Generated files are
+[docs/maintaining/layout-and-checks.md](docs/maintaining/layout-and-checks.md). Generated files are
 committed, so a consumer needs no build step, and `ci/check.mjs` fails if they
 drift from the catalogue or this package's own failures break its own rules.
 
@@ -286,6 +286,6 @@ Error: reading 41 source file(s) under ../probierz/agent for hand-built envelope
 
 ## More
 
-Who still restates the envelope: [docs/finding-implementations.md](docs/finding-implementations.md).
-Why it is shaped so: [docs/history.md](docs/history.md); pinning a revision:
-[docs/pinning.md](docs/pinning.md); what changed: [docs/changelog.md](docs/changelog.md).
+Who still restates the envelope: [docs/maintaining/finding-implementations.md](docs/maintaining/finding-implementations.md).
+Why it is shaped so: [docs/maintaining/history.md](docs/maintaining/history.md); pinning a revision:
+[docs/maintaining/pinning.md](docs/maintaining/pinning.md); what changed: [docs/changelog.md](docs/changelog.md).

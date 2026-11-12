@@ -4,7 +4,7 @@
 // Two passes: a literal scan for files that restate the vocabulary, and a
 // manifest sweep for repositories that declare a dependency on the package.
 // Why it keys on the codes, what neither pass can find, and how the
-// thresholds below were calibrated are in docs/finding-implementations.md.
+// thresholds below were calibrated are in docs/maintaining/finding-implementations.md.
 //
 // Usage: node ci/find-implementations.mjs [<root>...]     default: the parent of
 //                                                         this repository

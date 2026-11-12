@@ -2,7 +2,7 @@
 
 `WisentFailureReporter` reports an app's failures through its telemetry,
 `WisentTelemetry`: the same contract, files and event shape as the Rust crate's
-`telemetry` feature ([telemetry.md](telemetry.md)), so a product's command line
+`telemetry` feature ([telemetry.md](../telemetry.md)), so a product's command line
 and its app share one consent, one installation id and one queue under
 `$XDG_STATE_HOME/<product>/telemetry` (else `~/.local/state/<product>/telemetry`;
 `WISENT_TELEMETRY_HOME` names another). One rule carries it: reporting never
@@ -38,7 +38,7 @@ An app whose Info.plist lacks either reports nothing and says once on stderr
 `wisent-errors: telemetry: this app's Info.plist declares no <key>, so it
 reports no failure`. Events go to Wisent's public collector unless
 `WISENT_TELEMETRY_COLLECTOR_URL` in the environment names another
-([telemetry.md](telemetry.md#the-collector-address)).
+([telemetry.md](../telemetry.md#the-collector-address)).
 
 ## Consent and settings
 
@@ -74,7 +74,7 @@ case but the first.
 
 A failure with the same failure point as the one before it also queues
 `frustration.repeat_failure`, with `consecutive` and `seconds_since_previous`,
-exactly as the command line does ([telemetry](telemetry.md#frustration-signals)).
+exactly as the command line does ([telemetry](../telemetry.md#frustration-signals)).
 The app and its command line keep one `signals.json`, so a failure in the app
 and the same failure in the CLI count as one run. Usage refusals are a
 command-line signal and are not counted here.
