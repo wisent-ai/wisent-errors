@@ -44,7 +44,7 @@ function readCounted(path) {
 /** git's answer, or null when git answered that it has none; a git that cannot start is refused. */
 function git(repository, words) {
   try {
-    return execFileSync('git', ['-C', repository, ...words], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 8 * 1024 * 1024 });
+    return execFileSync('git', ['-C', repository, ...words], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: Infinity });
   } catch (error) {
     if (error.code === 'ENOENT') refuse(CENSUS, 'git-absent', { repository, path_variable: process.env.PATH ?? '(unset)', error: error.message });
     return null;
