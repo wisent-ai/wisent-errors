@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### The generator writes Rust without rustfmt
+
+- `node codegen/generate.mjs` wrote each Rust module through `rustfmt` so the push gate's
+  `cargo fmt --check` agreed with it; no Wisent repository runs rustfmt or a format gate any
+  more, so the modules are written as the renderers lay them out, and the three refusals that
+  formatting could raise (`edition-undeclared`, `rustfmt-absent`, `rustfmt-refused`) are gone with
+  their tests. The regenerated crate builds with kompilator and `--check` finds no drift.
+
 ### Declarations say everything a reader needs, in every runtime
 
 - `fill` read `{value:?}` as a placeholder named `value:?`, never filled it and

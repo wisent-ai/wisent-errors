@@ -50,36 +50,6 @@
       "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/tools.md",
       "causes": [
         {
-          "id": "edition-undeclared",
-          "code": "config",
-          "usage": false,
-          "failed": "formatting the generated {target} with rustfmt",
-          "cause": "{manifest} declares no edition, and rustfmt formats a module differently under each edition",
-          "observed": "{manifest} holds no line edition = \"...\"",
-          "remedy": "declare edition = \"2021\" under [package] in {manifest}",
-          "tests": {"js": "tests/tools/generate.mjs::a_crate_with_no_edition_is_refused"}
-        },
-        {
-          "id": "rustfmt-absent",
-          "code": "config",
-          "usage": false,
-          "failed": "formatting the generated {target} with rustfmt",
-          "cause": "no rustfmt program could be started, so the Rust module would not match what `cargo fmt --check` expects",
-          "observed": "PATH {path_variable}; starting rustfmt answered {error}",
-          "remedy": "install it with `rustup component add rustfmt`, then generate again",
-          "tests": {"js": "tests/tools/generate.mjs::a_generation_without_rustfmt_is_refused"}
-        },
-        {
-          "id": "rustfmt-refused",
-          "code": "config",
-          "usage": false,
-          "failed": "formatting the generated {target} with rustfmt --edition {edition}",
-          "cause": "rustfmt exited {status} on the generated module, so the generator wrote Rust that does not parse",
-          "observed": "rustfmt said {stderr}",
-          "remedy": "correct the renderer codegen/{renderer} or the catalogue value it quoted, then generate again",
-          "tests": {"js": "tests/tools/generate.mjs::a_module_rustfmt_refuses_is_refused"}
-        },
-        {
           "id": "generated-drifted",
           "code": "config",
           "usage": false,

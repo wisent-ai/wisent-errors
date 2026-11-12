@@ -49,39 +49,6 @@ write the four runtimes' vocabulary, declaration rules and own failure catalogue
 
 Started through: `node codegen/generate.mjs`, `node codegen/generate.mjs --check`. Uses: `wisent_errors.catalogue.parts`, `wisent_errors.lint.input`.
 
-<a id="wisent_errors-codegen-generate-edition-undeclared"></a>
-
-### `wisent_errors.codegen.generate.edition-undeclared`
-
-- **What failed:** formatting the generated {target} with rustfmt
-- **Cause:** {manifest} declares no edition, and rustfmt formats a module differently under each edition
-- **Observed state shown:** {manifest} holds no line edition = "..."
-- **Fix:** declare edition = "2021" under [package] in {manifest}
-- **Code:** `config`, exit 1
-- **Test:** JavaScript `tests/tools/generate.mjs::a_crate_with_no_edition_is_refused`
-
-<a id="wisent_errors-codegen-generate-rustfmt-absent"></a>
-
-### `wisent_errors.codegen.generate.rustfmt-absent`
-
-- **What failed:** formatting the generated {target} with rustfmt
-- **Cause:** no rustfmt program could be started, so the Rust module would not match what `cargo fmt --check` expects
-- **Observed state shown:** PATH {path_variable}; starting rustfmt answered {error}
-- **Fix:** install it with `rustup component add rustfmt`, then generate again
-- **Code:** `config`, exit 1
-- **Test:** JavaScript `tests/tools/generate.mjs::a_generation_without_rustfmt_is_refused`
-
-<a id="wisent_errors-codegen-generate-rustfmt-refused"></a>
-
-### `wisent_errors.codegen.generate.rustfmt-refused`
-
-- **What failed:** formatting the generated {target} with rustfmt --edition {edition}
-- **Cause:** rustfmt exited {status} on the generated module, so the generator wrote Rust that does not parse
-- **Observed state shown:** rustfmt said {stderr}
-- **Fix:** correct the renderer codegen/{renderer} or the catalogue value it quoted, then generate again
-- **Code:** `config`, exit 1
-- **Test:** JavaScript `tests/tools/generate.mjs::a_module_rustfmt_refuses_is_refused`
-
 <a id="wisent_errors-codegen-generate-generated-drifted"></a>
 
 ### `wisent_errors.codegen.generate.generated-drifted`

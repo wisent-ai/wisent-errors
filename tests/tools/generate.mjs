@@ -1,9 +1,8 @@
 // Real tests of `node codegen/generate.mjs` and `node ci/check.mjs`, run in a
 // copy of this repository under the ignored target/ so a broken manifest, a
 // drifted, stale or unwritable generated file, or a schema naming other codes
-// never touches the checkout: a crate with no edition, a generation with no
-// rustfmt, a drifted file, a module no part writes any more, an unwritable
-// file, an unremovable one, and a schema naming other codes.
+// never touches the checkout: a drifted file, a module no part writes any
+// more, an unwritable file, an unremovable one, and a schema naming other codes.
 //
 //   node --test tests/tools/generate.mjs
 import assert from 'node:assert/strict';
@@ -26,25 +25,6 @@ function inCopy(name, body) {
     rmSync(copy, { recursive: true, force: true });
   }
 }
-
-test('a_crate_with_no_edition_is_refused', () => {
-  inCopy('edition', (copy, run) => {
-    const manifest = join(copy, 'rust', 'Cargo.toml');
-    writeFileSync(manifest, readFileSync(manifest, 'utf8').replace(/^edition = .*$/m, ''));
-    const result = run('codegen/generate.mjs', ['--check']);
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /^Error: formatting the generated rust\/src\/codes\.rs with rustfmt: rust\/Cargo\.toml declares no edition, and rustfmt formats a module differently under each edition/);
-  });
-});
-
-test('a_generation_without_rustfmt_is_refused', () => {
-  inCopy('rustfmt', (copy, run) => {
-    const result = run('codegen/generate.mjs', ['--check'], { PATH: '' });
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /no rustfmt program could be started, so the Rust module would not match what `cargo fmt --check` expects; observed: PATH ; starting rustfmt answered /);
-    assert.match(result.stderr, /fix: install it with `rustup component add rustfmt`, then generate again/);
-  });
-});
 
 test('a_drifted_generated_file_is_refused', () => {
   inCopy('drift', (copy, run) => {

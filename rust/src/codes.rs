@@ -50,16 +50,7 @@ impl Code {
     /// The exit code a usage refusal leaves the process with: the clap and click usage code.
     pub const USAGE_EXIT: i32 = 2;
 
-    pub const ALL: &'static [Self] = &[
-        Self::Config,
-        Self::Auth,
-        Self::NotFound,
-        Self::RateLimit,
-        Self::Timeout,
-        Self::InfraDown,
-        Self::Refused,
-        Self::Unknown,
-    ];
+    pub const ALL: &'static [Self] = &[Self::Config, Self::Auth, Self::NotFound, Self::RateLimit, Self::Timeout, Self::InfraDown, Self::Refused, Self::Unknown];
 
     pub fn as_str(self) -> &'static str {
         match self {
@@ -167,9 +158,9 @@ impl Code {
             504 => Self::Timeout,
             505 => Self::Config,
             _ => {
-                if (500..=599).contains(&status) {
-                    return Self::InfraDown;
-                }
+        if (500..=599).contains(&status) {
+            return Self::InfraDown;
+        }
                 Self::Unknown
             }
         }
@@ -263,8 +254,7 @@ pub const GENERIC_SENTENCES: &[GenericSentence] = &[
     },
     GenericSentence {
         text: "try again later",
-        reason:
-            "advises a later retry without saying when, or what has to change before it can work",
+        reason: "advises a later retry without saying when, or what has to change before it can work",
     },
     GenericSentence {
         text: "could not be completed.",
@@ -273,5 +263,4 @@ pub const GENERIC_SENTENCES: &[GenericSentence] = &[
 ];
 
 /// The failure point grammar, as a pattern: a dotted lowercase path.
-pub const FAILURE_POINT_PATTERN: &str =
-    "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$";
+pub const FAILURE_POINT_PATTERN: &str = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$";

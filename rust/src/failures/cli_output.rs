@@ -94,18 +94,9 @@ pub static CLI_OUTPUT_READ_JSON: Operation = Operation {
     id: "wisent_errors.cli_output.read_json",
     entries: &["Rust: cli_output::read_json"],
     uses: &[],
-    summary:
-        "read one JSON input file a command was named and decode it into the type the command reads",
+    summary: "read one JSON input file a command was named and decode it into the type the command reads",
     docs: "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/cli-output.md",
-    causes: &[
-        &CLI_OUTPUT_READ_JSON_INPUT_ABSENT,
-        &CLI_OUTPUT_READ_JSON_INPUT_NOT_PERMITTED,
-        &CLI_OUTPUT_READ_JSON_INPUT_IS_DIRECTORY,
-        &CLI_OUTPUT_READ_JSON_INPUT_READ_INTERRUPTED,
-        &CLI_OUTPUT_READ_JSON_INPUT_NOT_JSON,
-        &CLI_OUTPUT_READ_JSON_INPUT_TRUNCATED,
-        &CLI_OUTPUT_READ_JSON_INPUT_WRONG_SHAPE,
-    ],
+    causes: &[&CLI_OUTPUT_READ_JSON_INPUT_ABSENT, &CLI_OUTPUT_READ_JSON_INPUT_NOT_PERMITTED, &CLI_OUTPUT_READ_JSON_INPUT_IS_DIRECTORY, &CLI_OUTPUT_READ_JSON_INPUT_READ_INTERRUPTED, &CLI_OUTPUT_READ_JSON_INPUT_NOT_JSON, &CLI_OUTPUT_READ_JSON_INPUT_TRUNCATED, &CLI_OUTPUT_READ_JSON_INPUT_WRONG_SHAPE],
     warnings: &[],
 };
 
@@ -117,8 +108,7 @@ pub static CLI_OUTPUT_PRINT_DOCUMENT_UNREPRESENTABLE: Cause = Cause {
     failed: "turning the result of type {type} into JSON",
     cause: "the result holds a value JSON has no form for, such as a map whose keys are not text",
     observed: "the encoder answered {error}",
-    remedy:
-        "give {type} keys that serialize as strings, or a Serialize form that writes them as text",
+    remedy: "give {type} keys that serialize as strings, or a Serialize form that writes them as text",
     test: "tests/cli-output/print.rs::a_result_json_cannot_hold_is_refused",
 };
 

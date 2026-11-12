@@ -7,10 +7,7 @@
 
 pub const PLACEHOLDER_PATTERN: &str = "^[a-z][a-z0-9_]*$";
 pub const PLACEHOLDER_GRAMMAR: &str = "a lowercase letter, then lowercase letters, digits and '_', between braces, with no format spec";
-pub const RAW_MESSAGE_NAMES: &[&str] = &[
-    "error", "err", "e", "problem", "message", "body", "stderr", "stdout", "output", "raw",
-    "response", "detail",
-];
+pub const RAW_MESSAGE_NAMES: &[&str] = &["error","err","e","problem","message","body","stderr","stdout","output","raw","response","detail"];
 pub const CAUSE_ID_PATTERN: &str = "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$";
 pub const TEST_PATH_PATTERN: &str = "^tests/[^/:]+(?:/[^/:]+)+::[a-z0-9_]+$";
 
@@ -38,25 +35,20 @@ pub const PLACEHOLDER_UNOPENED: &str = "{kind} {id}: `{field}` holds a '{close}'
 pub const PLACEHOLDER_RAW_MESSAGE: &str = "{kind} {id}: `{field}` names {placeholder}, the raw text of the layer below; `{field}` is the declaration's own words, so say it in words and move {placeholder} into `observed`";
 pub const CAUSE_ONLY_WRAPPED: &str = "{kind} {id}: `cause` is only {quoted_text}, the text it wraps, so it says nothing of why; state the reason in words (the file is not JSON, the server refused the token) and move the wrapped text into `observed`";
 pub const CODE_UNKNOWN: &str = "cause {id}: a declared cause is never `unknown`, the catch-all a declaration replaces; give it the code that names who must act: {codes}";
-pub const CODE_OFF_CATALOGUE: &str =
-    "cause {id}: code {quoted_code} is not in the catalogue; use one of {codes}";
+pub const CODE_OFF_CATALOGUE: &str = "cause {id}: code {quoted_code} is not in the catalogue; use one of {codes}";
 pub const USAGE_RETRYABLE: &str = "cause {id}: a usage refusal cannot be `{code}`, which is retryable; a usage refusal is refused for its own form, so give it a code retrying cannot help, or set usage to false";
 pub const EXIT_BESIDE_DERIVED: &str = "cause {id}: exit {exit} is declared, but a usage refusal exits {usage_exit} and a retryable code {retry_exit}; drop the exit, or make the cause neither";
 pub const EXIT_NOT_OWN: &str = "cause {id}: exit {exit} is not a status of its own: 0 is success, {usage_exit} usage and {retry_exit} retry; declare the product's documented status, or none";
 pub const TEST_MALFORMED: &str = "{kind} {id}: test {quoted_test} is not tests/<area>/<file>::<test name> (pattern {pattern}); name the real test that provokes it";
 pub const HAZARD_UNKNOWN: &str = "warning {id}: hazard {quoted_hazard} is not one of {hazards}; pick the loss the caller cannot take back";
-pub const DECLARED_TWICE: &str =
-    "operation {operation}: {kind} {id} is declared twice; keep one declaration per id";
+pub const DECLARED_TWICE: &str = "operation {operation}: {kind} {id} is declared twice; keep one declaration per id";
 pub const OPERATION_ID_MALFORMED: &str = "operation {quoted_id}: the id is not a dotted lowercase path (pattern {pattern}); name the functionality by its failure point, as in 'stado.registry.read'";
 pub const ENTRY_EMPTY: &str = "operation {operation}: entry {position} of {count} is empty; name the command, route, screen or routine that starts it, or drop the entry";
-pub const USES_ITSELF: &str =
-    "operation {operation}: it lists itself in `uses`; list only the functionalities it runs";
-pub const SUMMARY_EMPTY: &str =
-    "operation {operation}: `summary` is empty; say in one line what the functionality does";
+pub const USES_ITSELF: &str = "operation {operation}: it lists itself in `uses`; list only the functionalities it runs";
+pub const SUMMARY_EMPTY: &str = "operation {operation}: `summary` is empty; say in one line what the functionality does";
 pub const DOCS_NOT_HTTPS: &str = "operation {operation}: docs {quoted_docs} is not an https page; name the page that lists its causes";
 pub const NO_CAUSE: &str = "operation {operation}: declares no cause and uses no functionality that declares one; declare every way its own steps fail, or list in `uses` the functionalities it runs";
-pub const OPERATION_TWICE: &str =
-    "operation {operation} is declared twice in the catalogue; keep one declaration per id";
+pub const OPERATION_TWICE: &str = "operation {operation} is declared twice in the catalogue; keep one declaration per id";
 pub const USES_UNLISTED: &str = "operation {operation}: it uses {used}, which the catalogue does not list; list every functionality the product runs";
 pub const NOTHING_STARTS: &str = "operation {operation}: nothing starts it: it names no entry and no functionality of the catalogue uses it; name the entry that starts it, or drop it";
 pub const LISTING_USAGE_EXIT: &str = "operation {operation}: cause {id} is a usage refusal, which exits {usage_exit}, but the listing says exit {exit}; print the exit the cause leaves";
@@ -71,35 +63,9 @@ pub const WARNING_DOC_NOT_ANCHOR: &str = "operation {operation}: warning {id} li
 pub const WARNING_TEST_ABSENT: &str = "{operation}.{id} names the test {test}, which the repository does not hold: {why}; write that test, or name the one that shows this warning (repository {repository})";
 pub const WARNING_UNCONFIRMED: &str = "operation {operation}: it declares {count} warning(s), but none of its entries ({entries}) asks for a confirmation in {confirmations}, so the warning is never read before it runs; ask for one, or drop a warning nothing needs (warnings {warnings}; {confirmations} lists {listed})";
 
-pub const PLACEHOLDER_VALID: &[&str] = &["path", "fleet", "exit_status", "a1"];
-pub const PLACEHOLDER_INVALID: &[&str] = &[
-    "value:?",
-    "error:#",
-    "Path",
-    "1st",
-    "host-name",
-    "deal.title",
-    "",
-    " name",
-];
-pub const CAUSE_ID_VALID: &[&str] = &["fleet-undeclared", "input-absent", "exit2"];
-pub const CAUSE_ID_INVALID: &[&str] = &[
-    "",
-    "Fleet",
-    "fleet_undeclared",
-    "fleet--undeclared",
-    "-fleet",
-    "2fleet",
-];
-pub const TEST_PATH_VALID: &[&str] = &[
-    "tests/fleet/enroll.rs::enroll_refuses",
-    "tests/a/b/c.mjs::x_1",
-];
-pub const TEST_PATH_INVALID: &[&str] = &[
-    "purge.sh",
-    "tests/x.rs::t",
-    "tests/a//b.rs::t",
-    "tests/a/b.rs::",
-    "tests/a/b.rs::Bad",
-    "src/a/b.rs::t",
-];
+pub const PLACEHOLDER_VALID: &[&str] = &["path","fleet","exit_status","a1"];
+pub const PLACEHOLDER_INVALID: &[&str] = &["value:?","error:#","Path","1st","host-name","deal.title",""," name"];
+pub const CAUSE_ID_VALID: &[&str] = &["fleet-undeclared","input-absent","exit2"];
+pub const CAUSE_ID_INVALID: &[&str] = &["","Fleet","fleet_undeclared","fleet--undeclared","-fleet","2fleet"];
+pub const TEST_PATH_VALID: &[&str] = &["tests/fleet/enroll.rs::enroll_refuses","tests/a/b/c.mjs::x_1"];
+pub const TEST_PATH_INVALID: &[&str] = &["purge.sh","tests/x.rs::t","tests/a//b.rs::t","tests/a/b.rs::","tests/a/b.rs::Bad","src/a/b.rs::t"];

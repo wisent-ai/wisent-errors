@@ -15,7 +15,6 @@
 // Usage: node codegen/generate.mjs [--check]
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rust } from './rust.mjs';
@@ -27,7 +26,7 @@ import { byArea, failuresJs, failuresPython, failuresRust, failuresRustModule, f
 import { pages } from './pages.mjs';
 import { PARTS, operationsFor, readParts } from './parts.mjs';
 import { guarded, refuse } from '../ci/refuse.mjs';
-import { holding, listDirectory, readJsonInput, readTextInput, stateOf } from '../ci/input.mjs';
+import { holding, listDirectory, readJsonInput, stateOf } from '../ci/input.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -52,41 +51,18 @@ const own = (runtime) => ({ banner, operations: guarded(() => operationsFor(runt
 // Rust and Swift get one module per part (codegen/failures.mjs).
 const areas = (runtime) => byArea(own(runtime).operations, parts);
 
-// The Rust modules are what rustfmt makes of them, run in the crate under the
-// edition rust/Cargo.toml declares, so the push gate's `cargo fmt --check`
-// and this generator agree on the same bytes. It runs in the crate's own
-// directory, which exists before a module's directory (rust/src/failures/) does.
-const CRATE_MANIFEST = join(ROOT, 'rust', 'Cargo.toml');
-function crateEdition(target) {
-  const declared = readTextInput(CRATE_MANIFEST, 'the crate manifest').match(/^edition\s*=\s*"([^"]+)"/m);
-  if (!declared) refuse(GENERATE, 'edition-undeclared', { target, manifest: relative(ROOT, CRATE_MANIFEST) });
-  return declared[1];
-}
-
-function rustfmt(body, path, renderer) {
-  const target = relative(ROOT, path);
-  const edition = crateEdition(target);
-  console.log(`formatting ${target} with rustfmt --edition ${edition}`);
-  try {
-    return execFileSync('rustfmt', ['--edition', edition], { input: body, encoding: 'utf8', cwd: dirname(CRATE_MANIFEST), stdio: ['pipe', 'pipe', 'pipe'] });
-  } catch (error) {
-    if (error.code === 'ENOENT') refuse(GENERATE, 'rustfmt-absent', { target, path_variable: process.env.PATH ?? '(unset)', error: error.message });
-    return refuse(GENERATE, 'rustfmt-refused', { target, edition, status: String(error.status), stderr: String(error.stderr ?? '').trim() || '(nothing)', renderer });
-  }
-}
-
 const at = (...segments) => join(ROOT, ...segments);
 const rustFailures = (name) => at('rust', 'src', 'failures', name);
 const swiftFailures = (name) => at('swift', 'Sources', 'WisentErrors', name);
 const rustAreas = areas('rust');
 const swiftAreas = areas('swift');
 const targets = [
-  { path: at('rust', 'src', 'codes.rs'), body: rustfmt(rust(context), at('rust', 'src', 'codes.rs'), 'rust.mjs') },
-  { path: at('rust', 'src', 'declaration.rs'), body: rustfmt(declarationRust(context), at('rust', 'src', 'declaration.rs'), 'declaration.mjs') },
-  { path: rustFailures('mod.rs'), body: rustfmt(failuresRustModule(rustAreas, banner), rustFailures('mod.rs'), 'failures.mjs') },
+  { path: at('rust', 'src', 'codes.rs'), body: rust(context) },
+  { path: at('rust', 'src', 'declaration.rs'), body: declarationRust(context) },
+  { path: rustFailures('mod.rs'), body: failuresRustModule(rustAreas, banner) },
   ...rustAreas.map((area) => {
     const path = rustFailures(`${rustModule(area.area)}.rs`);
-    return { path, body: rustfmt(failuresRust(area, banner), path, 'failures.mjs') };
+    return { path, body: failuresRust(area, banner) };
   }),
   { path: at('python', 'wisent_errors', 'codes.py'), body: python(context) },
   { path: at('python', 'wisent_errors', 'declaration.py'), body: declarationPython(context) },

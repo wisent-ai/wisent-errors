@@ -12,10 +12,6 @@
     "reason": "standard output refuses a write only behind a full disk or a vanished device, and the test harness holds its own standard output open on neither"
   },
   {
-    "test": "tests/tools/generate.mjs::a_module_rustfmt_refuses_is_refused",
-    "reason": "every catalogue value reaches the Rust module as a JSON-quoted string literal, so only a defect in a renderer under codegen/ makes rustfmt refuse the module; no catalogue input provokes it"
-  },
-  {
     "test": "tests/tools/parts.mjs::a_raised_cause_no_part_declares_is_refused",
     "reason": "a command raises a cause no part declares only through a defect in this repository's own command code; no input, file or state provokes it"
   },
