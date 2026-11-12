@@ -47,7 +47,7 @@ private func codingPath(_ context: DecodingError.Context) -> String {
 }
 
 /// A decoding failure with the coding path it stopped at and the decoder's reason.
-private func decodingReason(_ error: DecodingError) -> String {
+func decodingReason(_ error: DecodingError) -> String {
     switch error {
     case .keyNotFound(let key, let context):
         return "key \"\(key.stringValue)\" is missing at \(codingPath(context))"

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Every Swift app reads JSON through one described decoding
+
+- `WisentErrors` exports `JSONDecoder.decodeDescribed`, which throws
+  `DescribedDecodingError` ("`<Type>` could not be decoded: `<reason>`", the reason
+  `Error.explained` says for the `DecodingError` it carries), and
+  `JSONSerialization.describedObject`, which throws `DescribedJSONError` with the
+  character and position Foundation stopped at. Thirteen apps keep their own
+  `DescribedDecoding.swift`, copies that drift in wording and wrapping; an app that
+  depends on this release drops its copy for this one. Real tests:
+  `tests/explained/DescribedTests.swift` (`swift test --filter DescribedTests`).
+
 ### Every Swift app says a failure through one `Error.explained`
 
 - `WisentErrors` exports `Error.explained`: a declared description as declared, a

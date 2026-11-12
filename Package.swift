@@ -30,7 +30,7 @@ let package = Package(
             path: "tests",
             sources: [
                 "envelope/BuildTests.swift", "declaration/PlaceholderTests.swift", "warnings/WarningTests.swift",
-                "explained/ExplainedTests.swift",
+                "explained/ExplainedTests.swift", "explained/DescribedTests.swift",
             ]
         ),
         // Telemetry against the real Echo app collector (docs/telemetry.md).

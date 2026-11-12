@@ -79,6 +79,24 @@ The app and its command line keep one `signals.json`, so a failure in the app
 and the same failure in the CLI count as one run. Usage refusals are a
 command-line signal and are not counted here.
 
+## Saying a failure to a person
+
+An app shows a failure with `error.explained`, never `localizedDescription`:
+a declared description as declared, a `DecodingError` with the coding path it
+stopped at (`key "name" is missing at the top level`, `items.1 is not Int`), a
+Cocoa error with its domain and code, any other error as its type and value,
+then each underlying error after `": "`, read until the chain ends or repeats.
+
+JSON is read through the described calls, so the failure names what was being
+read:
+
+| call | throws | says |
+|---|---|---|
+| `JSONDecoder().decodeDescribed(T.self, from: data)` | `DescribedDecodingError` | `<T> could not be decoded: <reason>`, the reason `explained` gives |
+| `JSONSerialization.describedObject(with: data)` | `DescribedJSONError` | the character and position where the text stopped being JSON |
+
+`swift test --filter "ExplainedTests|DescribedTests"` runs their tests.
+
 ## Test
 
 `swift test` runs `tests/telemetry/swift` against the real collector named by
