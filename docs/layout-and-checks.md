@@ -47,3 +47,33 @@ the probes catalogue/declaration.json states.
 The second guard, `ci/no-handrolled-envelope.mjs`, is the one a consuming
 repository runs against its own tree; the README shows what it prints when it
 finds a hand-built envelope.
+
+## The lint a product runs
+
+`ci/error-standard.mjs` holds a product's tree to the same standard:
+
+```
+$ node ci/error-standard.mjs scan ../stado/stado-rs/src
+Error: holding ../stado/stado-rs/src/cli/workload/runners/weles/browser.rs to the error standard: line 295 says "did not succeed", ...
+$ node ci/error-standard.mjs catalogue catalogue.json --repository ../stado --entries entries.json
+ok    stado.fleet.enroll: 21 declared cause(s)
+```
+
+`scan` refuses an error message holding one of the catalogue's
+`generic_sentences` inside a string literal; a baseline lets a product adopt
+the rule before every old message is rewritten, and may only shrink.
+`catalogue` applies the declaration rules to the JSON a product's `errors list
+--json` prints, whatever language declares it. With `--repository` it also
+reads the repository: each cause's test is written, or listed in the
+repository's `tests/untested-causes.json` (`[{"test": ..., "reason": ...}]`)
+with why no local state provokes it; and each placeholder is passed by some
+raising site, read from the source (`("name", value)` in Rust, a `name:` key in
+JavaScript, a `"name":` key or `name=` keyword in Python, a `"name":` key in
+Swift), so `{fleet}` that no site passes is refused at the declaration instead
+of reaching a reader as `{fleet}`. The whole repository but its tests is read,
+or the paths `--sources a,b` names. With `--entries`, an entry no
+functionality names is refused. `node ci/error-standard.mjs errors --json`
+prints this package's own catalogue; every refusal of these commands is one
+of its causes, listed on [errors/](errors/).
+
+Warnings are declared beside causes: [warnings.md](warnings.md).
