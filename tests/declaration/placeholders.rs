@@ -4,7 +4,7 @@
 //! catalogue/declaration.json states for every runtime, and the gap a
 //! raising site leaves recorded in the envelope.
 //!
-//!   cargo test --manifest-path rust/Cargo.toml --test declaration
+//!   kompilator test --manifest-path rust/Cargo.toml --test declaration
 
 use wisent_errors::declaration as rules;
 use wisent_errors::operation::{fill, parts, unfilled, Part};

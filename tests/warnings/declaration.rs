@@ -2,7 +2,7 @@
 //! from: the rules `Operation::problems` holds a warning to, the sentence an
 //! unconfirmed caller reads, and the JSON and page entry the product prints.
 //!
-//!   cargo test --manifest-path rust/Cargo.toml --test warnings
+//!   kompilator test --manifest-path rust/Cargo.toml --test warnings
 
 use wisent_errors::{Hazard, Operation, Warning};
 

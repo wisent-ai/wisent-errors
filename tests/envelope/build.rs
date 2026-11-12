@@ -2,7 +2,7 @@
 //! `wisent_errors.envelope.build`: what the refusal says, the cause it names,
 //! and that `Failure::or_fallback` records the same cause instead of refusing.
 //!
-//!   cargo test --manifest-path rust/Cargo.toml --test envelope
+//!   kompilator test --manifest-path rust/Cargo.toml --test envelope
 
 use wisent_errors::{Code, Failure, Invalid};
 

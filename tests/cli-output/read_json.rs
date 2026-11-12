@@ -2,7 +2,7 @@
 //! `wisent_errors.cli_output.read_json`, over files written for each case in
 //! the test's own directory under Cargo's target.
 //!
-//!   cargo test --manifest-path rust/Cargo.toml --test cli-output-read
+//!   kompilator test --manifest-path rust/Cargo.toml --test cli-output-read
 
 use std::path::PathBuf;
 

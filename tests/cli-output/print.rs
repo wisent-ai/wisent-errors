@@ -3,7 +3,7 @@
 //! only be met by a process whose standard output is that, and this crate
 //! ships no program of its own; tests/untested-causes.json lists those two.
 //!
-//!   cargo test --manifest-path rust/Cargo.toml --test cli-output-print
+//!   kompilator test --manifest-path rust/Cargo.toml --test cli-output-print
 
 use std::collections::HashMap;
 
