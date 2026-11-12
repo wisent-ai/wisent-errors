@@ -150,7 +150,7 @@ sending machine is to fix, and it goes out again on the next flush.
 
 ## Test
 
-`cargo test -p wisent-errors --features telemetry --test telemetry` runs
+`kompilator test --manifest-path rust/Cargo.toml --features telemetry --test telemetry` runs
 consent, cleaning, queueing and refusal against the real Echo collector named
 by `WISENT_TELEMETRY_TEST_COLLECTOR`; with `WISENT_TELEMETRY_TEST_APP_ID` set
 to an app the collector declares, it also checks the event is accepted, and

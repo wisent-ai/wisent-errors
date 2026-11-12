@@ -37,7 +37,7 @@ fails until it is tried or its skip is explained.
 
 ## Test
 
-`cargo test --features diagnosis --test diagnosis` runs probes that read a
+`kompilator test --manifest-path rust/Cargo.toml --features diagnosis --test diagnosis` runs probes that read a
 file that is there and one that is not, in a directory of the run's own under
 `.build/diagnosis/`, and holds a set of checks to a catalogue with a
 functionality left out, one checked twice and one undeclared.
