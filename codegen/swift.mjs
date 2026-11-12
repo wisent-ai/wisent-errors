@@ -39,6 +39,9 @@ ${cases}
     /// The exit code a retryable failure leaves the process with.
     public static let retryExit: Int32 = ${catalogue.exit_code.retry}
 
+    /// The exit code a usage refusal leaves the process with: ${catalogue.exit_code.usage_name}.
+    public static let usageExit: Int32 = ${catalogue.exit_code.usage}
+
     public var severity: Severity {
         switch self {
 ${severityArms}
@@ -106,6 +109,19 @@ ${rangeArms}
 
 public let fallbackCode: Code = .${swiftName(fallback)}
 public let failurePointPattern = ${JSON.stringify(catalogue.failure_point.pattern)}
+
+/// Wording that says a failure happened without saying which.
+public struct GenericSentence: Sendable, Equatable {
+    /// Matched case-insensitively inside a string literal.
+    public let text: String
+    /// Why a reader cannot act on it.
+    public let reason: String
+}
+
+/// Every generic sentence the catalogue refuses in an error message.
+public let genericSentences: [GenericSentence] = [
+${catalogue.generic_sentences.sentences.map(({ text, reason }) => `    GenericSentence(text: ${JSON.stringify(text)}, reason: ${JSON.stringify(reason)}),`).join('\n')}
+]
 `;
 }
 

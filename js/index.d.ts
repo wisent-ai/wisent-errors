@@ -223,9 +223,12 @@ export interface Catalogue {
 export declare function fill(template: string, values?: Record<string, unknown>): string;
 export declare function sentence(cause: Cause, values?: Record<string, unknown>): string;
 export declare function fix(cause: Cause, values?: Record<string, unknown>): string;
+/** The sentence and the fix as one line: what a refusal of this package says. */
+export declare function refusal(cause: Cause, values?: Record<string, unknown>): string;
 export declare function causeExit(cause: Cause, failureExit: number): number;
 export declare function anchor(operation: Operation, cause: Cause): string;
 export declare function causeProblems(cause: Cause): string[];
+export declare function textProblems(kind: 'cause' | 'warning', id: string, fields: readonly [string, unknown][]): string[];
 export declare function operationProblems(operation: Operation): string[];
 export declare function catalogueProblems(operations: readonly Operation[]): string[];
 export declare function met(operation: Operation): { owner: string; cause: Cause }[];
@@ -237,3 +240,41 @@ export declare function warningProblems(warning: Warning): string[];
 export declare function warningDeclarationProblems(operation: Operation): string[];
 export declare function warningsCatalogue(operation: Operation, page: string): WarningsCatalogue;
 export declare function warningsMarkdown(operation: Operation): string;
+
+/** One piece of a template as the renderer reads it; exactly one key is set. */
+export type TemplatePart = { text: string } | { placeholder: string } | { malformed: string } | { unclosed: string } | { unopened: '}' };
+/** Whether `name` is one the renderer fills: a lowercase letter, then lowercase letters, digits and '_'. */
+export declare function isPlaceholderName(name: string): boolean;
+export declare function parts(template: string): TemplatePart[];
+/** The names of the placeholders a template fills, in order. */
+export declare function placeholders(template: string): string[];
+/** The placeholders of `templates` that `values` gives no value for, each once. */
+export declare function unfilled(templates: readonly string[], values?: Record<string, unknown>): string[];
+/** What in one field's template the renderer would never fill, or a reader would not be helped by. */
+export declare function templateProblems(kind: 'cause' | 'warning', id: string, field: string, template: string): string[];
+
+/** A refusal of one of this package's own declared causes; still a TypeError. */
+export declare class DeclaredError extends TypeError {
+  readonly name: 'DeclaredError';
+  /** The functionality that refused, `wisent_errors.envelope.build`. */
+  readonly operation: string;
+  /** The declared cause's id. */
+  readonly cause: string;
+  readonly code: Code;
+  /** The values the raising site knew. */
+  readonly values: Record<string, string>;
+}
+/** Why `point` is not a failure point, as the cause it is and the values that cause names; null for a good one. */
+export declare function pointFlaw(point: string): { cause: string; values: Record<string, string> } | null;
+/** This package's own `wisent_errors.envelope.build` and every way it refuses. */
+export declare const ENVELOPE_BUILD: Operation;
+
+export declare const CAUSE_ID_PATTERN: string;
+export declare const TEST_PATH_PATTERN: string;
+export declare const PLACEHOLDER_PATTERN: string;
+export declare const PLACEHOLDER_GRAMMAR: string;
+export declare const RAW_MESSAGE_NAMES: readonly string[];
+export declare const FIELD_MEANINGS: Readonly<Record<string, string>>;
+/** Every sentence a refusal of a declaration says, as a `{name}` template. */
+export declare const SENTENCES: Readonly<Record<string, string>>;
+export declare const PROBES: Readonly<Record<'placeholder' | 'cause_id' | 'test_path', { valid: readonly string[]; invalid: readonly string[] }>>;

@@ -17,88 +17,68 @@
 // never read before it runs. That is also what keeps warnings off ordinary
 // reads and recoverable edits: what asks for no confirmation declares none.
 //
-// Exits 0 when nothing is refused, 1 when something is, 2 on a usage error.
+// Exits 0 when nothing is refused; every refusal is a declared cause of
+// catalogue/failures/ and exits with the status it declares.
 
-import { readFileSync, statSync } from 'node:fs';
-import { FAILURE_POINT_PATTERN, warningProblems } from '../js/index.mjs';
+import { FAILURE_POINT_PATTERN, SENTENCES, fill, warningAnchor, warningProblems } from '../js/index.mjs';
+import { Words } from './arguments.mjs';
+import { describe, openDirectory, readJsonInput } from './input.mjs';
+import { exitOf, guarded, refusalText } from './refuse.mjs';
 import { absentTest } from './tests-held.mjs';
 
-const USAGE = 'usage: node ci/warning-standard.mjs <warnings.json> [--repository <dir>] [--confirmations <file>] [--json]';
+const USAGE = 'node ci/warning-standard.mjs <warnings.json> [--repository <dir>] [--confirmations <file>] [--json]';
 const FAILURE_POINT = new RegExp(FAILURE_POINT_PATTERN);
-
-function usage(message) {
-  console.error(`${message}\n${USAGE}`);
-  process.exit(2);
-}
-
-function readJson(path, what) {
-  try {
-    return JSON.parse(readFileSync(path, 'utf8'));
-  } catch (error) {
-    return usage(`the ${what} ${path} cannot be read as JSON: ${error.message}`);
-  }
-}
-
-// The value after `flag` in `words`, removing both, or null when absent.
-function option(words, flag) {
-  const at = words.indexOf(flag);
-  if (at < 0) return null;
-  const value = words[at + 1];
-  if (!value || value.startsWith('--')) usage(`${flag} needs a value`);
-  words.splice(at, 2);
-  return value;
-}
+const WARNINGS = 'wisent_errors.lint.warnings';
 
 function check(path, repository, confirmationsPath, asJson) {
-  let operations = readJson(path, 'warnings catalogue');
-  if (!Array.isArray(operations)) operations = operations?.functionalities ?? operations?.operations;
-  if (!Array.isArray(operations)) usage(`the warnings catalogue ${path} holds no list of functionalities`);
-  if (repository !== null) {
-    let directory = false;
-    try {
-      directory = statSync(repository).isDirectory();
-    } catch (error) {
-      usage(`the repository ${repository} cannot be read: ${error.message}`);
-    }
-    if (!directory) usage(`the repository ${repository} is not a directory, so no declared warning's test can be read from it`);
-  }
-  const confirmations = confirmationsPath === null ? null : readJson(confirmationsPath, 'confirmations');
-  if (confirmations !== null && (!Array.isArray(confirmations) || confirmations.some((entry) => typeof entry !== 'string'))) {
-    usage(`the confirmations ${confirmationsPath} are not a JSON list of entries`);
-  }
+  let operations = readJsonInput(path, 'the warnings catalogue', 'a list of functionalities, or an object with functionalities', (value) =>
+    Array.isArray(value) || Array.isArray(value?.functionalities) || Array.isArray(value?.operations) ? null : describe(value),
+  );
+  if (!Array.isArray(operations)) operations = operations.functionalities ?? operations.operations;
+  if (repository !== null) openDirectory(repository, 'the repository');
+  const confirmations = confirmationsPath === null
+    ? null
+    : readJsonInput(confirmationsPath, 'the confirmations', 'a list of the entries that ask for a confirmation', (value) =>
+        Array.isArray(value) && value.every((entry) => typeof entry === 'string') ? null : describe(value),
+      );
   const report = operations.map((operation) => {
     const problems = [];
     const id = operation.operation;
-    if (typeof id !== 'string' || !FAILURE_POINT.test(id)) problems.push(`the id ${JSON.stringify(id)} is not a dotted lowercase path`);
+    if (typeof id !== 'string' || !FAILURE_POINT.test(id)) problems.push(fill(SENTENCES['operation-id-malformed'], { quoted_id: JSON.stringify(id), pattern: FAILURE_POINT_PATTERN }));
     const entries = Array.isArray(operation.entries) ? operation.entries : [];
     const warnings = Array.isArray(operation.warnings) ? operation.warnings : [];
-    if (!Array.isArray(operation.warnings)) problems.push('`warnings` is not a list');
+    if (!Array.isArray(operation.warnings)) problems.push(fill(SENTENCES['warnings-not-list'], { operation: id, found: describe(operation.warnings) }));
     warnings.forEach((warning, index) => {
-      if (warnings.slice(0, index).some((earlier) => earlier.id === warning.id)) problems.push(`warning ${warning.id} is declared twice`);
+      if (warnings.slice(0, index).some((earlier) => earlier.id === warning.id)) problems.push(fill(SENTENCES['declared-twice'], { operation: id, kind: 'warning', id: warning.id }));
       problems.push(...warningProblems(warning));
       if (typeof warning.doc !== 'string' || !warning.doc.startsWith('https://') || !warning.doc.includes('#')) {
-        problems.push(`warning ${warning.id}: doc ${JSON.stringify(warning.doc)} is not an anchor on an https warnings page`);
+        const page = typeof warning.doc === 'string' && warning.doc.startsWith('https://') ? warning.doc.split('#')[0] : "the product's https warnings page";
+        problems.push(fill(SENTENCES['warning-doc-not-anchor'], { operation: id, id: warning.id, quoted_doc: JSON.stringify(warning.doc), page, anchor: warningAnchor({ id: String(id) }, warning) }));
       }
       if (repository !== null) {
         const why = absentTest(repository, warning.test);
         if (why !== null) {
-          problems.push(`${id}.${warning.id} names the test ${warning.test}, which the repository does not hold: ${why}; write that test, or name the one that shows this warning`);
+          problems.push(fill(SENTENCES['warning-test-absent'], { operation: id, id: warning.id, test: warning.test, repository, why }));
         }
       }
     });
     if (confirmations !== null && warnings.length > 0 && !entries.some((entry) => confirmations.includes(entry))) {
-      problems.push(
-        `it declares ${warnings.length} warning(s), but none of its entries (${entries.join(', ') || 'none'}) asks for a confirmation in ${confirmationsPath}, so the warning is never read before it runs; ask for one, or drop a warning nothing needs`,
-      );
+      problems.push(fill(SENTENCES['warning-unconfirmed'], {
+        operation: id,
+        count: String(warnings.length),
+        warnings: warnings.map((warning) => warning.id).join(', '),
+        entries: entries.join(', ') || 'none',
+        confirmations: confirmationsPath,
+        listed: confirmations.length ? confirmations.join(', ') : 'no entry',
+      }));
     }
     return { operation: id, entries, warnings: warnings.length, problems };
   });
   const unwarned = [];
   for (const entry of confirmations ?? []) {
     if (!report.some((operation) => operation.warnings > 0 && operation.entries.includes(entry))) {
-      unwarned.push(
-        `entry ${JSON.stringify(entry)} asks for a confirmation, but no functionality it starts declares what the confirmation is for; declare the warning, or stop asking for a confirmation nothing needs`,
-      );
+      const starts = report.filter((operation) => operation.entries.includes(entry)).map((operation) => operation.operation);
+      unwarned.push(refusalText(WARNINGS, 'confirmation-unwarned', { confirmations: confirmationsPath, quoted_entry: JSON.stringify(entry), starts: starts.join(', ') || 'none' }));
     }
   }
   const failing = report.filter((operation) => operation.problems.length > 0);
@@ -108,6 +88,9 @@ function check(path, repository, confirmationsPath, asJson) {
     for (const operation of report) {
       if (operation.warnings === 0 && operation.problems.length === 0) continue;
       console.log(`${operation.problems.length === 0 ? 'ok  ' : 'FAIL'}  ${operation.operation}: ${operation.warnings} declared warning(s)`);
+      if (operation.problems.length > 0) {
+        console.log(`        ${refusalText(WARNINGS, 'warning-refused', { operation: operation.operation, count: String(operation.problems.length), problems: `${operation.problems.length} line(s) below` }).split('\n').join('\n        ')}`);
+      }
       for (const problem of operation.problems) console.log(`        ${problem}`);
     }
     for (const sentence of unwarned) console.log(`FAIL  ${sentence}`);
@@ -116,13 +99,15 @@ function check(path, repository, confirmationsPath, asJson) {
       `${report.length} functionalit${report.length === 1 ? 'y' : 'ies'}, ${warning} declaring warnings, ${failing.length} refused; ${unwarned.length} confirmation${unwarned.length === 1 ? '' : 's'} with no declared warning`,
     );
   }
-  return failing.length === 0 && unwarned.length === 0;
+  if (failing.length > 0) return exitOf(WARNINGS, 'warning-refused');
+  return unwarned.length > 0 ? exitOf(WARNINGS, 'confirmation-unwarned') : 0;
 }
 
-const words = process.argv.slice(2);
-const asJson = words.includes('--json');
-const rest = words.filter((word) => word !== '--json');
-const repository = option(rest, '--repository');
-const confirmationsPath = option(rest, '--confirmations');
-if (rest.length !== 1) usage(rest.length === 0 ? 'no warnings catalogue named' : `exactly one warnings catalogue, not ${rest.join(' ')}`);
-process.exit(check(rest[0], repository, confirmationsPath, asJson) ? 0 : 1);
+const words = new Words('ci/warning-standard.mjs', USAGE, process.argv.slice(2));
+process.exitCode = guarded(() => {
+  const asJson = words.flag('--json');
+  const repository = words.option('--repository');
+  const confirmationsPath = words.option('--confirmations');
+  const [path] = words.operands('exactly one warnings catalogue', (count) => count === 1);
+  return check(path, repository, confirmationsPath, asJson);
+});

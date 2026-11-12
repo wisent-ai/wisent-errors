@@ -11,22 +11,45 @@
 //        node ci/find-implementations.mjs --unadopted-only
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readJsonFile } from './json-file.mjs';
+import { Words } from './arguments.mjs';
+import { describe, listDirectory, openDirectory, readJsonInput, stateOf } from './input.mjs';
+import { exitOf, guarded, refuse, refusalText } from './refuse.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(HERE, '..');
+const CENSUS = 'wisent_errors.census.implementations';
 
-const args = process.argv.slice(2);
-const unadoptedOnly = args.includes('--unadopted-only');
-const roots = args.filter((argument) => !argument.startsWith('--'));
+const words = new Words('ci/find-implementations.mjs', 'node ci/find-implementations.mjs [<root>...] [--unadopted-only]', process.argv.slice(2));
+const unadoptedOnly = words.flag('--unadopted-only');
+const roots = [...words.operands('any number of roots to search', () => true)];
 if (roots.length === 0) roots.push(resolve(PACKAGE_ROOT, '..'));
+guarded(() => roots.forEach((root) => openDirectory(root, 'the root to search')));
 
-const CODES = readJsonFile(join(PACKAGE_ROOT, 'catalogue', 'codes.json')).codes.map(
-  (entry) => entry.code,
-);
+const CODES = readJsonInput(join(PACKAGE_ROOT, 'catalogue', 'codes.json'), 'the vocabulary', 'an object with a list of codes', (value) =>
+  Array.isArray(value?.codes) ? null : describe(value),
+).codes.map((entry) => entry.code);
+
+/** One file of the tree, refused when it cannot be read: unread, it would be counted as neither copy nor adopter. */
+function readCounted(path) {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch (error) {
+    return refuse(CENSUS, 'file-unreadable', { path, roots: roots.join(', '), state: stateOf(path), error: error.message });
+  }
+}
+
+/** git's answer, or null when git answered that it has none; a git that cannot start is refused. */
+function git(repository, words) {
+  try {
+    return execFileSync('git', ['-C', repository, ...words], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 8 * 1024 * 1024 });
+  } catch (error) {
+    if (error.code === 'ENOENT') refuse(CENSUS, 'git-absent', { repository, path_variable: process.env.PATH ?? '(unset)', error: error.message });
+    return null;
+  }
+}
 // Calibration, not taste. A first attempt asked for three of the seven and
 // reported 541 repositories, because `config`, `auth`, `timeout` and `unknown` are
 // ordinary tokens in any codebase -- it matched minified Next.js chunks. The
@@ -103,23 +126,20 @@ function walk(path) {
   try {
     entry = statSync(path);
   } catch {
+    // An entry that vanished between its directory's listing and this read
+    // holds nothing to count.
     return;
   }
   if (entry.isDirectory()) {
-    for (const child of readdirSync(path)) {
-      if (SKIP.has(child)) continue;
-      walk(join(path, child));
+    for (const child of listDirectory(path, 'a directory under the root')) {
+      if (SKIP.has(child.name)) continue;
+      walk(join(path, child.name));
     }
     return;
   }
   const name = path.slice(path.lastIndexOf('/') + 1);
   if (MANIFESTS.has(name) && !resolve(path).startsWith(PACKAGE_ROOT)) {
-    let manifest;
-    try {
-      manifest = readFileSync(path, 'utf8');
-    } catch {
-      manifest = '';
-    }
+    const manifest = readCounted(path);
     if (ADOPTED.test(manifest)) {
       const repo = repoOf(path);
       // Read the sha out of the entry that names this package, not out of the
@@ -148,12 +168,7 @@ function walk(path) {
   if (!SOURCE.has(extname(path))) return;
   if (resolve(path).startsWith(PACKAGE_ROOT)) return;
 
-  let body;
-  try {
-    body = readFileSync(path, 'utf8');
-  } catch {
-    return;
-  }
+  const body = readCounted(path);
   if (!quoted(body, DISCRIMINATOR)) return;
   const named = CODES.filter((code) => quoted(body, code));
   if (named.length < THRESHOLD) return;
@@ -180,33 +195,17 @@ for (const root of roots) walk(resolve(root));
 /// findings about the same bytes.
 function restatesAtRemote(repo, relative_path) {
   for (const ref of ['origin/HEAD', 'origin/main', 'origin/master']) {
-    try {
-      const body = execFileSync('git', ['-C', repo, 'show', `${ref}:${relative_path}`], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-        maxBuffer: 8 * 1024 * 1024,
-      });
-      if (!quoted(body, DISCRIMINATOR)) return false;
-      return CODES.filter((code) => quoted(body, code)).length >= THRESHOLD;
-    } catch {
-      // try the next ref
-    }
+    const body = git(repo, ['show', `${ref}:${relative_path}`]);
+    if (body === null) continue;
+    if (!quoted(body, DISCRIMINATOR)) return false;
+    return CODES.filter((code) => quoted(body, code)).length >= THRESHOLD;
   }
   return null; // no remote, or the path is absent there
 }
 
 function remoteOf(repo) {
-  try {
-    return execFileSync('git', ['-C', repo, 'remote', 'get-url', 'origin'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
-      .trim()
-      .replace(/\.git$/, '')
-      .toLowerCase();
-  } catch {
-    return null;
-  }
+  const url = git(repo, ['remote', 'get-url', 'origin']);
+  return url === null ? null : url.trim().replace(/\.git$/, '').toLowerCase();
 }
 
 const byRemote = new Map();
@@ -273,9 +272,15 @@ if (!unadoptedOnly) {
 
 console.log(
   `\n${declared.length} checkout(s) declare a dependency on the package.` +
-    `\n${rows.length} still quote four or more codes as literals: ` +
+    `\n${rows.length} still quote ${THRESHOLD} or more codes as literals: ` +
     `${live.length} restate the taxonomy, ` +
     `${stale} are stale or detached copies of one that does not, ` +
     `${rows.length - unadopted.length} are part-migrated and name the package too.`,
 );
-process.exit(live.length === 0 ? 0 : 1);
+if (live.length > 0) {
+  const repositories = live
+    .map(([repo, record]) => `${relative(resolve(roots[0], '..'), repo) || repo} (${record.files.map((file) => `${relative(repo, file.path)} names ${file.named}/${CODES.length}`).join(', ')})`)
+    .join('; ');
+  console.log(refusalText(CENSUS, 'vocabulary-restated', { roots: roots.join(', '), count: String(live.length), threshold: String(THRESHOLD), codes: String(CODES.length), repositories }));
+  process.exitCode = exitOf(CENSUS, 'vocabulary-restated');
+}

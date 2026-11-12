@@ -26,6 +26,7 @@ import {
   severity,
   whose as whoseOf,
 } from './codes.mjs';
+import { checkedEnvelopeFields, pointFlaw } from './refusal.mjs';
 
 const FAILURE_POINT = new RegExp(FAILURE_POINT_PATTERN);
 
@@ -75,13 +76,6 @@ export class FailureError extends Error {
   }
 }
 
-const required = (value, field) => {
-  if (typeof value !== 'string' || !value.trim()) {
-    throw new TypeError(`${field} must be a non-empty string`);
-  }
-  return value.trim();
-};
-
 const optional = (value) => {
   const text = String(value ?? '').trim();
   return text || null;
@@ -98,26 +92,22 @@ const optional = (value) => {
  * lie than an absent value. `cause` and `context` are structural and are omitted
  * when there is nothing to put in them.
  *
- * Throws on anything malformed. Inside an error path, where throwing destroys
- * the diagnosis being carried, use `failureOrFallback`.
+ * Throws a DeclaredError (a TypeError) on anything malformed, naming the
+ * declared cause of `wisent_errors.envelope.build` and what it found. Inside
+ * an error path, where throwing destroys the diagnosis being carried, use
+ * `failureOrFallback`.
  */
 export function failure({ failurePoint, code, service, impact, detail, remedy, cause, context }) {
-  const point = required(failurePoint, 'failurePoint');
-  if (!FAILURE_POINT.test(point)) {
-    throw new TypeError(`failurePoint ${JSON.stringify(point)} is not a dotted lowercase path`);
-  }
-  if (!CODES.includes(code)) {
-    throw new TypeError(`code ${JSON.stringify(code)} is not in the catalogue; one of ${CODES.join(', ')}`);
-  }
+  const checked = checkedEnvelopeFields({ failurePoint, code, service, detail });
   const envelope = {
-    failure_point: point,
+    failure_point: checked.point,
     error_code: code,
-    service: required(service, 'service'),
+    service: checked.service,
     impact: optional(impact),
     severity: severity(code),
     retryable: retryable(code),
     outage: outage(code),
-    detail: detail === undefined || detail === null ? null : required(detail, 'detail'),
+    detail: checked.detail,
     remedy: optional(remedy),
   };
   if (cause !== undefined && cause !== null) {
@@ -147,6 +137,8 @@ export function failureOrFallback(fields = {}) {
     notes['wisent_errors.failure_point'] = 'absent';
   } else if (!FAILURE_POINT.test(point)) {
     notes['wisent_errors.failure_point'] = 'malformed';
+    const flaw = pointFlaw(point);
+    if (flaw !== null) notes['wisent_errors.failure_point_cause'] = flaw.cause;
   }
 
   let code = fields.code;
@@ -196,7 +188,9 @@ export function render(envelope) {
   const whose = whoseOf(envelope.error_code);
   return [
     `${operatorSummary(envelope.error_code)} — ${whose}${retry}`,
-    JSON.stringify(envelope),
+    // Rendering a failure must not fail either: a context value JSON has no
+    // form for (a BigInt) is written as its text.
+    JSON.stringify(envelope, (key, value) => (typeof value === 'bigint' ? String(value) : value)),
   ].join(' ');
 }
 
@@ -209,44 +203,7 @@ export function chain(envelope) {
   return rows;
 }
 
-/**
- * The generic sentences inside the string literals of one source line.
- *
- * Comment lines are skipped: a comment explaining why a sentence is generic is
- * not an error message. `singleQuoted` also reads '...' as a literal, which is
- * right for JavaScript and Python and wrong for Rust and Swift. The Rust crate's
- * `operation::generic_sentences_in` applies the same rule.
- */
-export function genericSentencesIn(line, singleQuoted) {
-  const trimmed = line.trimStart();
-  if (['//', '/*', '*', '#', '--'].some((marker) => trimmed.startsWith(marker))) return [];
-  const found = [];
-  for (const literal of literals(line, singleQuoted)) {
-    const lower = literal.toLowerCase();
-    for (const sentence of GENERIC_SENTENCES) {
-      if (lower.includes(sentence.text) && !found.includes(sentence)) found.push(sentence);
-    }
-  }
-  return found;
-}
-
-function literals(line, singleQuoted) {
-  const segments = [];
-  let index = 0;
-  while (index < line.length) {
-    const quote = line[index];
-    if (!(quote === '"' || quote === '`' || (singleQuoted && quote === "'"))) {
-      index += 1;
-      continue;
-    }
-    let end = index + 1;
-    while (end < line.length && line[end] !== quote) end += line[end] === '\\' ? 2 : 1;
-    end = Math.min(end, line.length);
-    segments.push(line.slice(index + 1, end));
-    index = end + 1;
-  }
-  return segments;
-}
+export { genericSentencesIn } from './source.mjs';
 
 export {
   CODES,
@@ -276,12 +233,27 @@ export {
   catalogueProblems,
   causeExit,
   causeProblems,
-  fill,
   fix,
   met,
   operationProblems,
+  refusal,
   sentence,
+  textProblems,
 } from './operation.mjs';
+
+export { fill, isPlaceholderName, parts, placeholders, templateProblems, unfilled } from './template.mjs';
+export { DeclaredError, pointFlaw } from './refusal.mjs';
+export { ENVELOPE_BUILD } from './failures.mjs';
+export {
+  CAUSE_ID_PATTERN,
+  FIELD_MEANINGS,
+  PLACEHOLDER_GRAMMAR,
+  PLACEHOLDER_PATTERN,
+  PROBES,
+  RAW_MESSAGE_NAMES,
+  SENTENCES,
+  TEST_PATH_PATTERN,
+} from './declaration.mjs';
 
 export {
   HAZARDS,

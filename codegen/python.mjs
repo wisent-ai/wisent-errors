@@ -48,6 +48,9 @@ FALLBACK: str = ${JSON.stringify(fallback)}
 # ${catalogue.exit_code.retry_name}. ${catalogue.exit_code.rule}.
 RETRY_EXIT: int = ${catalogue.exit_code.retry}
 
+# ${catalogue.exit_code.usage_name}: a request refused for its own form. Never retryable.
+USAGE_EXIT: int = ${catalogue.exit_code.usage}
+
 _EXACT_STATUS: dict[int, str] = {
 ${exactRows}
 }
@@ -57,6 +60,11 @@ ${rangeRows}
 )
 
 FAILURE_POINT_PATTERN: str = ${JSON.stringify(catalogue.failure_point.pattern)}
+
+# Wording that says a failure happened without saying which; matched case-insensitively in string literals.
+GENERIC_SENTENCES: tuple = (
+${catalogue.generic_sentences.sentences.map(({ text, reason }) => `    {"text": ${JSON.stringify(text)}, "reason": ${JSON.stringify(reason)}},`).join('\n')}
+)
 
 
 def operator_summary(code: str) -> str:

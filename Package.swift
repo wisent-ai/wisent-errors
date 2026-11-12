@@ -22,6 +22,14 @@ let package = Package(
     targets: [
         .target(name: "WisentErrors", path: "swift/Sources/WisentErrors"),
         .target(name: "WisentTelemetryUI", dependencies: ["WisentErrors"], path: "swift/Sources/WisentTelemetryUI"),
+        // The tests live under tests/<area>/ beside the other runtimes' tests
+        // of the same cause; the Swift files are named one by one.
+        .testTarget(
+            name: "WisentErrorsTests",
+            dependencies: ["WisentErrors"],
+            path: "tests",
+            sources: ["envelope/BuildTests.swift", "declaration/PlaceholderTests.swift", "warnings/WarningTests.swift"]
+        ),
         // Telemetry against the real Echo app collector (docs/telemetry.md).
         .testTarget(
             name: "TelemetryTests",

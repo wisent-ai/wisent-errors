@@ -44,40 +44,6 @@ public func trimDetailAtWordEdge(_ text: String?, limit: Int, slack: Int) -> Str
     return String(kept.reversed().drop { $0.isWhitespace }.reversed())
 }
 
-/// Why an envelope could not be built.
-public enum Invalid: Error, Equatable, Sendable {
-    case failurePoint(String)
-    case empty(String)
-
-    public var message: String {
-        switch self {
-        case .failurePoint(let point): "failure_point \"\(point)\" is not a dotted lowercase path"
-        case .empty(let field): "\(field) must not be empty"
-        }
-    }
-}
-
-/// A dotted lowercase path: digits and single separators inside each segment.
-///
-/// The depth carries no meaning. This checked for exactly three segments until the
-/// migrations reached real registries, and a rule that refuses what a product
-/// already emits is the package being wrong.
-public func isValidFailurePoint(_ point: String) -> Bool {
-    if point.isEmpty { return false }
-    for segment in point.split(separator: ".", omittingEmptySubsequences: false) {
-        guard let first = segment.first, first.isASCII, first.isLowercase else { return false }
-        for character in segment {
-            let allowed = (character.isASCII && character.isLowercase)
-                || (character.isASCII && character.isNumber)
-                || character == "-" || character == "_"
-            if !allowed { return false }
-        }
-        if segment.hasSuffix("-") || segment.hasSuffix("_") { return false }
-        if segment.contains("--") || segment.contains("__") { return false }
-    }
-    return true
-}
-
 /// One failure, in the shape every Wisent component reports.
 public struct Failure: Sendable, Equatable {
     public let failurePoint: String
@@ -101,13 +67,16 @@ public struct Failure: Sendable, Equatable {
     /// fleet have no impact axis at all, and a call site that knows its code
     /// exactly may have no layer below to quote.
     ///
-    /// Throws on anything malformed. Inside an error path, where throwing destroys
-    /// the diagnosis being carried, use `Failure.orFallback`.
+    /// Throws `Invalid` on anything malformed, naming the declared cause of
+    /// `wisent_errors.envelope.build` and what it found. Inside an error path,
+    /// where throwing destroys the diagnosis being carried, use
+    /// `Failure.orFallback`.
     public init(failurePoint: String, code: Code, service: String) throws {
         let point = failurePoint.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard isValidFailurePoint(point) else { throw Invalid.failurePoint(point) }
-        let service = service.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !service.isEmpty else { throw Invalid.empty("service") }
+        guard isValidFailurePoint(point) else { throw Invalid.failurePoint(failurePoint, service: service) }
+        let named = service.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !named.isEmpty else { throw Invalid.empty("service", given: service, failurePoint: point) }
+        let service = named
         self.failurePoint = point
         self.code = code
         self.service = service
@@ -141,8 +110,9 @@ public struct Failure: Sendable, Equatable {
         if point.isEmpty {
             point = "unknown"
             notes["wisent_errors.failure_point"] = "absent"
-        } else if !isValidFailurePoint(point) {
+        } else if let flaw = pointFlaw(point) {
             notes["wisent_errors.failure_point"] = "malformed"
+            notes["wisent_errors.failure_point_cause"] = flaw.cause.id
         }
         var resolved = (service ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if resolved.isEmpty {
@@ -237,6 +207,9 @@ public struct Failure: Sendable, Equatable {
 /// JSON string escaping, matching the other three runtimes exactly.
 /// Scalars below the first printable character are written as \uXXXX escapes.
 private let firstPrintableScalar: UInt32 = 0x20
+
+/// JSON quoting of one value, as every runtime quotes a value in a sentence.
+func jsonQuote(_ value: String) -> String { escape(value) }
 
 private func escape(_ value: String) -> String {
     var out = "\""

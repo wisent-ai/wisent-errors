@@ -11,9 +11,11 @@
 //! what the innermost already said.
 
 use std::collections::BTreeMap;
-use std::fmt;
 
 mod codes;
+pub mod declaration;
+pub mod failures;
+mod invalid;
 pub mod operation;
 mod render;
 pub mod warning;
@@ -27,7 +29,8 @@ pub mod telemetry;
 #[cfg(feature = "diagnosis")]
 pub mod diagnosis;
 
-pub use codes::{Code, GenericSentence, Severity, GENERIC_SENTENCES};
+pub use codes::{Code, GenericSentence, Severity, FAILURE_POINT_PATTERN, GENERIC_SENTENCES};
+pub use invalid::Invalid;
 pub use operation::{catalogue_problems, Cause, Operation};
 pub use warning::{Hazard, Warning};
 
@@ -89,29 +92,6 @@ pub fn trim_detail_at_word_edge(text: &str, limit: usize, slack: usize) -> Strin
     }
 }
 
-/// Why an envelope could not be built. Rejecting it here is the point: an
-/// envelope with an unparseable failure point or an empty detail is worse than
-/// none, because it looks like a report.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Invalid {
-    FailurePoint(String),
-    Empty(&'static str),
-}
-
-impl fmt::Display for Invalid {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::FailurePoint(point) => write!(
-                formatter,
-                "failure_point {point:?} is not a dotted lowercase path"
-            ),
-            Self::Empty(field) => write!(formatter, "{field} must not be empty"),
-        }
-    }
-}
-
-impl std::error::Error for Invalid {}
-
 /// One failure, in the shape every Wisent component reports.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Failure {
@@ -128,40 +108,15 @@ pub struct Failure {
     pub context: Context,
 }
 
-/// A dotted lowercase path: digits and single separators inside each segment.
+/// A dotted lowercase path: digits and single separators inside each segment
+/// ([`FAILURE_POINT_PATTERN`]).
 ///
 /// The depth carries no meaning. This checked for exactly three segments until
 /// the migrations reached real registries -- stado's own ids run from `cli` to
 /// `cli.host.user.create` -- and a rule that refuses what five products emit is
 /// this crate being wrong.
 fn valid_failure_point(point: &str) -> bool {
-    let mut segments = 0;
-    for segment in point.split('.') {
-        segments += 1;
-        let bytes = segment.as_bytes();
-        let Some(&first) = bytes.first() else {
-            return false;
-        };
-        if !first.is_ascii_lowercase() {
-            return false;
-        }
-        if !segment.chars().all(|character| {
-            character.is_ascii_lowercase()
-                || character.is_ascii_digit()
-                || character == '-'
-                || character == '_'
-        }) {
-            return false;
-        }
-        if segment.ends_with('-')
-            || segment.ends_with('_')
-            || segment.contains("--")
-            || segment.contains("__")
-        {
-            return false;
-        }
-    }
-    segments >= 1 && !point.is_empty()
+    invalid::point_flaw(point).is_none()
 }
 
 impl Failure {
@@ -180,14 +135,21 @@ impl Failure {
         code: Code,
         service: impl Into<String>,
     ) -> Result<Self, Invalid> {
-        let failure_point = failure_point.into().trim().to_owned();
+        let given = failure_point.into();
+        let service = service.into();
+        let failure_point = given.trim().to_owned();
         if !valid_failure_point(&failure_point) {
-            return Err(Invalid::FailurePoint(failure_point));
+            return Err(Invalid::FailurePoint { given, service });
         }
-        let service = service.into().trim().to_owned();
-        if service.is_empty() {
-            return Err(Invalid::Empty("service"));
+        let named = service.trim().to_owned();
+        if named.is_empty() {
+            return Err(Invalid::Empty {
+                field: "service",
+                given: service,
+                failure_point,
+            });
         }
+        let service = named;
         Ok(Self {
             failure_point,
             code,
@@ -217,8 +179,9 @@ impl Failure {
         if point.is_empty() {
             point = "unknown".to_owned();
             notes.push(("wisent_errors.failure_point", "absent"));
-        } else if !valid_failure_point(&point) {
+        } else if let Some(flaw) = invalid::point_flaw(&point) {
             notes.push(("wisent_errors.failure_point", "malformed"));
+            notes.push(("wisent_errors.failure_point_cause", flaw.cause.id));
         }
         let mut service = service.into().trim().to_owned();
         if service.is_empty() {

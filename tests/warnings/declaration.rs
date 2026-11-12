@@ -47,7 +47,7 @@ fn a_warning_declared_twice_is_a_problem() {
     };
     assert_eq!(
         only_warning_problems(&TWICE),
-        vec!["operation example.item.purge: warning removed-for-good is declared twice".to_owned()]
+        vec!["operation example.item.purge: warning removed-for-good is declared twice; keep one declaration per id".to_owned()]
     );
 }
 
@@ -65,8 +65,8 @@ fn an_empty_safeguard_and_a_malformed_test_are_problems() {
     assert_eq!(
         only_warning_problems(&WITH_BARE),
         vec![
-            "operation example.item.purge: warning removed-for-good: `safeguard` is empty".to_owned(),
-            "operation example.item.purge: warning removed-for-good: test \"purge.sh\" is not tests/<area>/<file>::<test name>".to_owned(),
+            "operation example.item.purge: warning removed-for-good: `safeguard` is empty; write what keeps a way back, done before confirming".to_owned(),
+            "operation example.item.purge: warning removed-for-good: test \"purge.sh\" is not tests/<area>/<file>::<test name> (pattern ^tests/[^/:]+(?:/[^/:]+)+::[a-z0-9_]+$); name the real test that provokes it".to_owned(),
         ]
     );
 }

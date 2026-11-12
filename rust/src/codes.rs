@@ -271,3 +271,7 @@ pub const GENERIC_SENTENCES: &[GenericSentence] = &[
         reason: "ends the sentence at the failure: says a step failed and stops before its cause",
     },
 ];
+
+/// The failure point grammar, as a pattern: a dotted lowercase path.
+pub const FAILURE_POINT_PATTERN: &str =
+    "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$";

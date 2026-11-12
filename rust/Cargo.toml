@@ -26,10 +26,35 @@ serde_json = { version = "1", optional = true }
 ureq = { version = "2.12", optional = true }
 getrandom = { version = "0.2", optional = true }
 
+# The tests of `cli_output`, `telemetry` and `diagnosis` run in every `cargo
+# test`: the crate depends on itself with those features on, so no test target
+# is skipped for a feature nobody turned on. serde_json decodes the documents
+# those tests read.
+[dev-dependencies]
+wisent-errors = { path = ".", features = ["cli-output", "telemetry", "diagnosis"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
 # The fleet's tests live under tests/<area>/ at the repository root.
 [[test]]
 name = "warnings"
 path = "../tests/warnings/declaration.rs"
+
+[[test]]
+name = "declaration"
+path = "../tests/declaration/placeholders.rs"
+
+[[test]]
+name = "envelope"
+path = "../tests/envelope/build.rs"
+
+[[test]]
+name = "cli-output-read"
+path = "../tests/cli-output/read_json.rs"
+
+[[test]]
+name = "cli-output-print"
+path = "../tests/cli-output/print.rs"
 
 [[test]]
 name = "telemetry"

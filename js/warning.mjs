@@ -10,8 +10,11 @@
 // safeguard, confirm, test }`. Most functionalities declare none: a warning on
 // an ordinary read teaches its reader to confirm without reading.
 
-import { GENERIC_SENTENCES } from './codes.mjs';
-import { CAUSE_ID, TEST_PATH, fill } from './operation.mjs';
+import { CAUSE_ID_PATTERN, SENTENCES, TEST_PATH_PATTERN } from './declaration.mjs';
+import { CAUSE_ID, TEST_PATH, textProblems } from './operation.mjs';
+import { fill } from './template.mjs';
+
+const say = (key, values) => fill(SENTENCES[key], values);
 
 /** Every hazard a warning can announce, with what it means. */
 export const HAZARDS = Object.freeze({
@@ -46,23 +49,13 @@ export function warningAnchor(operation, warning) {
 export function warningProblems(warning) {
   const problems = [];
   const id = warning.id;
-  if (typeof id !== 'string' || !CAUSE_ID.test(id)) problems.push(`warning ${JSON.stringify(id)}: the id is not lowercase words joined by '-'`);
+  if (typeof id !== 'string' || !CAUSE_ID.test(id)) problems.push(say('id-malformed', { kind: 'warning', quoted_id: JSON.stringify(id), pattern: CAUSE_ID_PATTERN }));
   if (!Object.hasOwn(HAZARDS, warning.hazard)) {
-    problems.push(`warning ${id}: hazard ${JSON.stringify(warning.hazard)} is not one of ${Object.keys(HAZARDS).join(', ')}`);
+    problems.push(say('hazard-unknown', { id, quoted_hazard: JSON.stringify(warning.hazard), hazards: Object.keys(HAZARDS).join(', ') }));
   }
-  for (const field of ['effect', 'consequence', 'safeguard', 'confirm']) {
-    const text = warning[field];
-    if (typeof text !== 'string' || !text.trim()) {
-      problems.push(`warning ${id}: \`${field}\` is empty`);
-      continue;
-    }
-    const lower = text.toLowerCase();
-    for (const generic of GENERIC_SENTENCES) {
-      if (lower.includes(generic.text)) problems.push(`warning ${id}: \`${field}\` says ${JSON.stringify(generic.text)}, which ${generic.reason}`);
-    }
-  }
+  problems.push(...textProblems('warning', id, ['effect', 'consequence', 'safeguard', 'confirm'].map((field) => [field, warning[field]])));
   if (typeof warning.test !== 'string' || !TEST_PATH.test(warning.test)) {
-    problems.push(`warning ${id}: test ${JSON.stringify(warning.test)} is not tests/<area>/<file>::<test name>`);
+    problems.push(say('test-malformed', { kind: 'warning', id, quoted_test: JSON.stringify(warning.test), pattern: TEST_PATH_PATTERN }));
   }
   return problems;
 }
@@ -72,7 +65,7 @@ export function warningDeclarationProblems(operation) {
   const problems = [];
   const warnings = operation.warnings ?? [];
   warnings.forEach((warning, index) => {
-    if (warnings.slice(0, index).some((earlier) => earlier.id === warning.id)) problems.push(`operation ${operation.id}: warning ${warning.id} is declared twice`);
+    if (warnings.slice(0, index).some((earlier) => earlier.id === warning.id)) problems.push(say('declared-twice', { operation: operation.id, kind: 'warning', id: warning.id }));
     for (const problem of warningProblems(warning)) problems.push(`operation ${operation.id}: ${problem}`);
   });
   return problems;

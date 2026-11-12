@@ -5,10 +5,12 @@
 #   sh docs/examples/rust-consumer.sh
 #
 # A real consumer pins a git revision; this uses a path dependency on the
-# checkout. Everything happens in a temporary directory.
+# checkout. Everything happens under the checkout's ignored .build directory,
+# removed when the script ends.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-WORK=$(mktemp -d "${TMPDIR:-/tmp}/wisent-errors-rust-consumer.XXXXXX")
+WORK="$ROOT/.build/rust-consumer"
+rm -rf "$WORK"
 trap 'rm -rf "$WORK"' EXIT
 
 mkdir -p "$WORK/consumer/src"
@@ -51,7 +53,7 @@ fn main() {
     );
 
     match Failure::new("Not A Point", Code::Auth, "toy") {
-        Err(error @ Invalid::FailurePoint(_)) => println!("strict refusal: {error}"),
+        Err(error @ Invalid::FailurePoint { .. }) => println!("strict refusal ({}): {error}", error.cause().id),
         other => println!("unexpected: {other:?}"),
     }
     match Failure::new("toy.cli", Code::Auth, "   ") {

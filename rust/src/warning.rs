@@ -19,9 +19,9 @@
 //! confirming, the `warnings list|show` listing and the documentation page,
 //! so none of them can say something the others do not.
 
-use crate::operation::{fill, is_cause_id, is_test_path, Operation};
+use crate::declaration as rules;
+use crate::operation::{fill, is_cause_id, is_test_path, text_problems, Operation};
 use crate::render::escape;
-use crate::GENERIC_SENTENCES;
 
 /// What kind of loss a warning announces.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -150,37 +150,30 @@ impl Warning {
 
     /// Everything wrong with this declaration, each as one sentence.
     pub fn problems(&self) -> Vec<String> {
-        let mut problems = Vec::new();
         let id = self.id;
+        let mut problems = Vec::new();
         if !is_cause_id(id) {
-            problems.push(format!(
-                "warning {id:?}: the id is not lowercase words joined by '-'"
+            let quoted = escape(id);
+            problems.push(fill(
+                rules::ID_MALFORMED,
+                &[("kind", "warning"), ("quoted_id", &quoted), ("pattern", rules::CAUSE_ID_PATTERN)],
             ));
         }
-        for (field, text) in [
-            ("effect", self.effect),
-            ("consequence", self.consequence),
-            ("safeguard", self.safeguard),
-            ("confirm", self.confirm),
-        ] {
-            if text.trim().is_empty() {
-                problems.push(format!("warning {id}: `{field}` is empty"));
-                continue;
-            }
-            let lower = text.to_lowercase();
-            for sentence in GENERIC_SENTENCES {
-                if lower.contains(sentence.text) {
-                    problems.push(format!(
-                        "warning {id}: `{field}` says {:?}, which {}",
-                        sentence.text, sentence.reason
-                    ));
-                }
-            }
-        }
+        problems.extend(text_problems(
+            "warning",
+            id,
+            &[
+                ("effect", self.effect),
+                ("consequence", self.consequence),
+                ("safeguard", self.safeguard),
+                ("confirm", self.confirm),
+            ],
+        ));
         if !is_test_path(self.test) {
-            problems.push(format!(
-                "warning {id}: test {:?} is not tests/<area>/<file>::<test name>",
-                self.test
+            let quoted = escape(self.test);
+            problems.push(fill(
+                rules::TEST_MALFORMED,
+                &[("kind", "warning"), ("id", id), ("quoted_test", &quoted), ("pattern", rules::TEST_PATH_PATTERN)],
             ));
         }
         problems
@@ -211,9 +204,9 @@ pub(crate) fn declaration_problems(operation: &Operation) -> Vec<String> {
             .iter()
             .any(|earlier| earlier.id == warning.id)
         {
-            problems.push(format!(
-                "operation {id}: warning {} is declared twice",
-                warning.id
+            problems.push(fill(
+                rules::DECLARED_TWICE,
+                &[("operation", id), ("kind", "warning"), ("id", warning.id)],
             ));
         }
         problems.extend(

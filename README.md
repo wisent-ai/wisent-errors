@@ -14,48 +14,6 @@ One failure envelope for the whole fleet: one vocabulary, one shape, one place t
 look a code up. Four runtimes -- Rust, Python, JavaScript, Swift -- generated from
 one catalogue and proven byte-identical to each other.
 
-## Why this exists
-
-The envelope already existed. It was implemented **six times**, once per product,
-in three languages — and the interesting part is not the duplication, it is which
-half of it drifted.
-
-| implementation | vocabulary | the derived status ladder |
-| --- | --- | --- |
-| `wisent-compute/stado-rs/src/failure.rs` | seven codes, the reference | correct: 407 present, 5xx bounded |
-| `probierz/agent/failure.mjs` | seven codes, agreeing | **no 407 branch, unbounded `>= 500`** |
-| `growth-tactics/api/failure.py` | seven codes, agreeing | **no 407 branch, unbounded `>= 500`** |
-| `wisent-backend-images/app/failure.py` | seven codes, agreeing | **no 407 branch, unbounded `>= 500`** |
-| `wisent-tools/wisent/failure.py` | seven codes, agreeing | **no 407 branch, unbounded `>= 500`** |
-| `wisent-customer-support/src/failure.js` | seven codes, agreeing | **no 407 branch, unbounded `>= 500`** |
-| `brama` | no envelope at all | — |
-
-Five of five copies had drifted, in the same two lines, away from the one
-reference that had them right. A proxy authentication refusal had no code
-anywhere but in `stado`, and every copy called a status of 600 a dependency
-outage. Nobody noticed, because the vocabulary was the part people compared and
-the derived table was the part nobody compared across products.
-
-An earlier version of this file said `wisent-customer-support` held "none of the
-seven" codes. That was wrong. It held all seven, spelled identically, with a
-matching severity map, retryable set, outage set and status map. The claim came
-from a search of mine that found nothing, and I published the absence as a fact
-— a negative search result is a claim, not a fact, and the migration that read
-the file disproved it in its first ten minutes.
-
-The gap that actually cost a day is the last row. `all bounded 'codex'
-credentials unavailable for agent` carries no code, no `failure_point`, and no
-indication that it is transient, so the only way to follow it was to walk the
-layers by hand and read each one's source.
-
-Nothing here is new behaviour. The catalogue is copied verbatim from the
-reference implementation so the first migration cannot change what anything does.
-
-**Everything derivable from the code is derived.** A call site chooses where it
-broke, what the layer below said, and which subject it concerns. It never chooses
-`severity`, `retryable` or `outage`: those come from the catalogue, which is why
-one code cannot come to mean different things in different products.
-
 ## The envelope
 
 ```json
@@ -91,22 +49,10 @@ without the error. `cause` makes the nesting explicit, so the sentence that
 actually explains the outage — here, Anthropic's `invalid_grant` — travels with
 the failure instead of being reconstructed by hand.
 
-`detail` and `impact` are optional, and serialize as `null` rather than
-disappearing: a stable key set is what makes these lines queryable in a log
-store, and `probierz` already indexes `detail` that way. Both were mandatory
-until the migrations reached real call sites. Three products have no impact axis
-at all — `stado`'s failure points come from its subcommand path and it has never
-had one — and two legitimately report a failure with nothing further to say,
-because they already know their code exactly and there was no layer below to
-quote. Requiring either buys `impact: "unknown"` and `detail: "unknown"`, which
-is a worse lie than an absent value. When there **is** a reason from below,
-dropping it is the defect this package exists to prevent.
-
-`failure_point` is a dotted lowercase path of one segment or more. This demanded
-exactly three until the migrations read the registries: `probierz` and
-`growth-tactics` are two-segment, and `stado` runs from `cli` to
-`cli.host.user.create`. The depth carries no meaning and the rule stopped
-pretending it does.
+`detail` and `impact` are optional and serialize as `null`; `failure_point` is
+a dotted lowercase path of one segment or more, and a malformed one is refused
+naming the segment and the character that broke it. Why each rule is what it
+is: [docs/history.md](docs/history.md).
 
 `remedy` is what would fix it: the command to run, the declaration to change,
 the dependency to bring back. A refusal that names what failed and why but not
@@ -156,16 +102,16 @@ meet it. `uses` are the functionalities it runs: their causes are met here
 without being declared again (`Operation::met` lists them all, each with the
 functionality that declares it). A functionality only others run names no
 entry; one made only of what it uses declares no cause of its own.
-```
 
 One declaration gives everything a cause is shown as, so none of them can say
 something the others do not:
 
 - the refusal: `Cause::sentence(values)` is `<what failed>: <cause>; observed:
-  <state>`, and `Cause::fix(values)` the remedy, `{name}` filled from the
-  values the raising code supplies;
+  <state>`, `Cause::fix(values)` the remedy and `Cause::refusal(values)` both
+  as one line, `{name}` filled from the values the raising code supplies;
 - the envelope: `Cause::failure(point, service, values)` with `detail`,
-  `remedy` and `context.cause` set;
+  `remedy` and `context.cause` set, and any placeholder the raising code
+  gave no value for named in `context["wisent_errors.unfilled"]`;
 - the exit status: `Cause::exit_code(product_failure_exit)` is
   `Code::USAGE_EXIT` (2) for a usage refusal, `Code::RETRY_EXIT` (69) for a
   retryable code and the product's own status otherwise;
@@ -174,23 +120,38 @@ something the others do not:
   `causes`) and its documentation page (`Operation::markdown`), one anchored
   entry per cause, so every refusal is on the page verbatim.
 
-`Operation::problems` refuses a declaration that is not one: a cause without
-its test (`tests/<area>/<file>::<name>`), an empty `failed`, `cause`,
-`observed` or `remedy`, a cause declared `unknown` (the catch-all a declaration
-replaces), a retryable usage refusal, a duplicate id, an empty entry, a
-functionality that uses itself, one with no cause and nothing it uses, a page
-that is not https. `catalogue_problems` reads a product's whole catalogue: a
-functionality declared twice, one using a functionality the catalogue does not
-list, and one nothing starts.
+`Operation::problems` refuses a declaration that is not one, in the sentences
+[catalogue/declaration.json](catalogue/declaration.json) states once for every
+runtime: a cause without its test (`tests/<area>/<file>::<name>`), an empty or
+generic `failed`, `cause`, `observed` or `remedy`, a cause declared `unknown`,
+a retryable usage refusal, a duplicate id, an empty entry, a functionality
+that uses itself, one with no cause and nothing it uses, a page that is not
+https, and three that make a refusal say less than it should:
 
-A JavaScript product declares the same thing as plain objects —
-`{ id, entries, uses, summary, docs, causes }`, each cause `{ id, code,
-usage, exit, failed, cause, observed, remedy, test }` — and `@wisent/errors`
-gives it the same rules and the same JSON: `fill`, `sentence`, `fix`,
-`causeExit`, `anchor`, `causeProblems`, `operationProblems`,
-`catalogueProblems`, `met` and `catalogue(operation, failureExit)`, which
-prints exactly what `Operation::to_json` prints. A product keeps no copy of
-these rules of its own.
+- **a placeholder the renderer never fills.** A placeholder is `{name}`: a
+  lowercase letter, then lowercase letters, digits and `_`. `{value:?}`,
+  `{error:#}`, `{Path}`, `{deal.title}`, a `{` nothing closes and a `}`
+  nothing opened are kept as written, so a reader would see them; each is
+  refused, naming the cause, the field, the placeholder and the name to write;
+- **raw text where the declaration's own words belong.** `{error}`, `{problem}`,
+  `{message}`, `{body}`, `{stderr}` and the other names the layer below's
+  answer is passed under belong in `observed`; in `failed`, `cause` or
+  `remedy` they are refused;
+- **a cause that is only what it wraps.** A `cause` with no word outside its
+  placeholders (`{error}`, `{code}: {reason}`) says nothing of why.
+
+`catalogue_problems` reads a product's whole catalogue: a functionality
+declared twice, one using a functionality the catalogue does not list, and one
+nothing starts.
+
+JavaScript (`@wisent/errors`), Python (`wisent_errors`) and Swift
+(`WisentErrors`) declare the same `Operation`s and `Cause`s and hold them to the
+same rules with the same sentences: `fill`, `placeholders`, `unfilled`,
+`templateProblems` / `template_problems`, `causeProblems` / `Cause.problems`,
+`operationProblems` / `Operation.problems`, `catalogueProblems` /
+`catalogue_problems`, and the catalogue JSON `Operation::to_json` prints. The
+four read a template the same way and are tested against the same probes. A
+product keeps no copy of these rules of its own.
 
 ### The lint a product runs
 
@@ -198,7 +159,7 @@ these rules of its own.
 
 ```
 $ node ci/error-standard.mjs scan ../stado/stado-rs/src
-../stado/stado-rs/src/cli/workload/runners/weles/browser.rs:295: "did not succeed" says the operation failed without the step, the cause or the fix (1 in this file, baseline 0); ...
+Error: holding ../stado/stado-rs/src/cli/workload/runners/weles/browser.rs to the error standard: line 295 says "did not succeed", ...
 $ node ci/error-standard.mjs catalogue catalogue.json --repository ../stado --entries entries.json
 ok    stado.fleet.enroll: 21 declared cause(s)
 ```
@@ -207,90 +168,20 @@ ok    stado.fleet.enroll: 21 declared cause(s)
 `generic_sentences` inside a string literal; a baseline lets a product adopt
 the rule before every old message is rewritten, and may only shrink.
 `catalogue` applies the declaration rules to the JSON a product's `errors list
---json` prints, whatever language declares it, and the whole-catalogue rules
-above. With `--repository` it also reads each cause's test: a test file the
-repository does not hold, or one that never names the test, is refused. With
-`--entries`, a JSON list of every entry the product has (each command, route,
-screen and routine, as the product's own inventory reads them), an entry no
-functionality names is refused, so a way into the product with no declared
-failures is visible. `generic_sentences_in` / `genericSentencesIn` are the one
-line rule both runtimes scan with.
+--json` prints, whatever language declares it. With `--repository` it also
+reads the repository: each cause's test is written, or listed in the
+repository's `tests/untested-causes.json` (`[{"test": ..., "reason": ...}]`)
+with why no local state provokes it; and each placeholder is passed by some
+raising site, read from the source (`("name", value)` in Rust, a `name:` key in
+JavaScript, a `"name":` key or `name=` keyword in Python, a `"name":` key in
+Swift), so `{fleet}` that no site passes is refused at the declaration instead
+of reaching a reader as `{fleet}`. The whole repository but its tests is read,
+or the paths `--sources a,b` names. With `--entries`, an entry no
+functionality names is refused. `node ci/error-standard.mjs errors --json`
+prints this package's own catalogue; every refusal of these commands is one
+of its causes, listed on [docs/errors/](docs/errors/).
 
-## Every functionality that loses its caller something declares a warning
-
-A failure catalogue says how a functionality can go wrong. A warning says what
-it does when it goes right and its caller still loses something, so the caller
-reads it before confirming: an item purged for good, every consumer's grant
-withdrawn, a secret written to a plain-text file, a password changed at its
-provider, money spent. It is declared on the same `Operation`, beside the
-causes, in `warnings`:
-
-```rust
-use wisent_errors::{Hazard, Operation, Warning};
-
-pub static REMOVED_FOR_GOOD: Warning = Warning {
-    id: "removed-for-good",
-    hazard: Hazard::Irreversible,
-    effect: "{id} and every saved version of it are removed",
-    consequence: "nothing restores them, not restore and not restore --at",
-    safeguard: "keep a copy with `skarbiec backup <directory>`, which `skarbiec backup restore` puts back",
-    confirm: "rerun with --yes",
-    test: "tests/purge/purge.sh::purge_without_yes_removes_nothing",
-};
-```
-
-`hazard` is one of six, each a loss the caller cannot take back by running
-another command of the same product:
-
-| hazard | the functionality |
-|---|---|
-| `irreversible` | removes or rewrites something nothing in the product restores afterwards |
-| `overwrites` | puts something else in place of the current state; what it replaces is kept only where the warning says |
-| `cuts-off-access` | takes access a person or a program has now |
-| `exposes-secret` | lets a secret value leave the place that protects it: a plain-text file, a screen, another person or system |
-| `external-change` | changes a system outside the product, which the product cannot undo |
-| `costs-money` | spends money |
-
-Most functionalities declare none, and that is the rule, not a gap: a warning
-on an ordinary read or a recoverable edit teaches its reader to confirm
-without reading, which is the one thing a warning exists to prevent. A
-functionality warns exactly when it asks for a confirmation, and asks for one
-exactly when it warns.
-
-One declaration gives everything a warning is shown as:
-
-- before confirming: `Warning::unconfirmed(values)` is `<effect>;
-  <consequence>; nothing was done. Before confirming: <safeguard>. To go
-  ahead: <confirm>`, answered only when the functionality did nothing;
-  `sentence`, `safeguard` and `confirmation` give the parts to a confirming
-  dialog;
-- the listing a product prints from `<product> warnings list|show`
-  (`Operation::warnings_json(page)`: `operation`, `entries`, `summary`,
-  `warnings`, each with its `doc` anchor on the product's warnings page) and
-  that page (`Operation::warnings_markdown`, empty for a functionality that
-  warns of nothing).
-
-`Operation::problems` refuses a warning that is not one: an empty `effect`,
-`consequence`, `safeguard` or `confirm`, a generic sentence in any of them, a
-test that is not `tests/<area>/<file>::<name>`, a malformed or duplicate id.
-A JavaScript product declares the same objects and `@wisent/errors` gives it
-`HAZARDS`, `warningSentence`, `unconfirmed`, `warningAnchor`,
-`warningProblems`, `warningsCatalogue(operation, page)` and
-`warningsMarkdown`, with the same rules and the same JSON.
-
-`ci/warning-standard.mjs` holds a product to it:
-
-```
-$ node ci/warning-standard.mjs warnings.json --repository ../skarbiec --confirmations confirmations.json
-ok    skarbiec.item.purge: 3 declared warning(s)
-```
-
-It applies the declaration rules to the product's `warnings list --json`; with
-`--repository` it reads each warning's test; with `--confirmations`, a JSON
-list of every entry that asks for a confirmation before it acts, it refuses an
-entry that asks while no functionality it starts declares what for, and a
-functionality that warns while none of its entries asks, so the warning is
-never read before it runs.
+Warnings are declared beside causes: [docs/warnings.md](docs/warnings.md).
 
 ## Reporting a failure must never fail
 
@@ -318,30 +209,6 @@ fallback builders strip only the whitespace around it, because a cut detail is a
 cut diagnosis. `trimDetail(text, limit)` / `trim_detail` exists for a product
 that prints a detail into a narrower place; the width is always the caller's
 argument and the package has no width of its own.
-
-It is a **hard cut**, because that is what all four of those products emit.
-`trimDetailAtWordEdge` / `trim_detail_at_word_edge` backs up to a word edge and is
-opt-in, and that split exists because the first version had it the other way
-round. I made the nicer rule the default without checking what the fleet did, and
-five migrations reported the same consequence: it moved the bytes of an
-operator-visible log line for every detail longer than the bound that contains a
-space, which is nearly all of them. `probierz` measured 60 changed lines out of
-930 from that alone.
-
-That is the third time in this package's first day that I wrote a rule from my
-own taste instead of reading the registries — after three-segment failure points
-and a mandatory `detail`. The migrations were what caught all three, which is an
-argument for migrating consumers early rather than for designing more carefully in
-private.
-
-Two defects in the word-edge helper came out of the same reviews and are fixed:
-the edge was found with `rfind`, comparing a **byte** offset against a character
-limit, so 100 CJK characters followed by a space returned 100 characters where the
-bound was 300 — two thirds of the allowed detail discarded on any non-ASCII
-provider text. And `-1` from "no space at all" was treated as a position, so for
-any limit under 24 the last character was silently dropped. Neither was reachable
-at the fleet's widths; both were wrong rather than harmless, and the trim rule is
-now compared across all three runtimes on eleven probes including both cases.
 
 ## Use it
 
@@ -419,101 +286,44 @@ vendor refuses the account the credential belongs to until it pays, and
 repeating the call repeats the refusal (`node --test
 tests/upstream/payment-required.mjs`).
 
-`render` prints one line: the code's summary, then whose the failure is, then
-whether retrying helps, then the envelope. Whose it is comes from the
-catalogue's `whose` field for that code, the same in every runtime (`Code::whose`
-/ `whose` / `whose` / `Code.whose`): `our failure` for `config`, `timeout` and
-`infra_down`; `the credentials the request presented` for `auth`; `what the
-request named` for `not_found`; `the pace of the requests, not their content`
-for `rate_limit`; `a rule we wrote, not the request's credentials` for
-`refused`; and `not yet attributed to either side` for `unknown`. It used to be
-chosen from `outage` alone, so a policy refusal read as a problem with
-credentials.
+`render` prints one line: the code's summary, whose the failure is (the
+catalogue's `whose` for that code, the same in every runtime), whether retrying
+helps, then the envelope. What `whose` says per code, and what the package
+leaves to each product: [docs/history.md](docs/history.md).
 
 ### CLI output, behind `cli-output`
 
 The Rust crate also carries what every Wisent CLI prints and reads, off by
 default so the envelope stays dependency-free. With
 `features = ["cli-output"]`, `wisent_errors::cli_output` gives
-`read_json(path)` (refusing with `failed to read <path>` or
-`invalid JSON in <path>`, the cause attached), `output(&value, text)` (pretty
-JSON, or with `text` one `path: value` line per field from the same document)
-and `text_lines`, the flattening behind it: keys joined with `.`, array items
-as `[index]`, `-` for null and for an empty array or object.
-
-## What is not in here
-
-- **Product messages.** A product declares its own causes with
-  `operation::Cause`, in its own code, beside the operation that raises them;
-  a sentence from the layer below goes in `detail`, verbatim.
-- **Provider text.** It passes through and is truncated, never paraphrased or
-  re-classified. Their words are data.
-- **New codes.** Seven, exactly as the reference had. A case the seven cannot
-  describe is worth adding; nothing found so far is one.
-- **Logging plumbing.** Each product keeps its own emitter; this decides the
-  content, not the transport.
+`read_json(path)` (each refusal a declared cause of
+`wisent_errors.cli_output.read_json`: the file absent, a directory, not
+readable, not JSON with the line and column, cut short, or JSON of the wrong
+shape with the type it was read as), `output(&value, text)` (pretty JSON, or
+with `text` one `path: value` line per field from the same document; a result
+JSON cannot hold and a closed standard output are declared causes too, never a
+panic) and `text_lines`, the flattening behind it: keys joined with `.`, array
+items as `[index]`, `-` for null and for an empty array or object.
 
 ## Layout, and how it stays one thing
 
-What each directory holds, and the check that compares three runtimes against
-the golden envelopes and against each other, are in
+What each directory holds, and the checks that keep the catalogue, the
+declaration rules and the four runtimes one thing, are in
 [docs/layout-and-checks.md](docs/layout-and-checks.md). Generated files are
 committed, so a consumer needs no build step, and `ci/check.mjs` fails if they
-drift from the catalogue.
+drift from the catalogue or this package's own failures break its own rules.
 
 Consumers run the second guard against their own tree:
 
 ```
 $ node ci/no-handrolled-envelope.mjs ../probierz/agent
-hand-built failure envelope in 2 place(s):
-  .../probierz/agent/failure.mjs:258  failure_point: point.id,
-  .../probierz/agent/failure.mjs:259  error_code: classified.code,
+Error: reading 41 source file(s) under ../probierz/agent for hand-built envelopes: 2 line(s) write failure_point or error_code outside the package, ...
+  ../probierz/agent/failure.mjs:258  failure_point: point.id,
+  ../probierz/agent/failure.mjs:259  error_code: classified.code,
 ```
 
-## Adopted
+## More
 
-Every product that restated this envelope by hand consumes the package
-instead. `ci/find-implementations.mjs` answers "who still restates this"
-against the tree as it is now.
-
-## Pin the commit
-
-Every consumer names the exact revision in its own dependency spec, not just in a
-lockfile:
-
-```
-npm    "@wisent/errors": "github:wisent-ai/wisent-errors#<sha>"
-cargo  wisent-errors = { git = "https://github.com/wisent-ai/wisent-errors", rev = "<sha>" }
-pip    wisent-errors @ git+https://github.com/wisent-ai/wisent-errors@<sha>#subdirectory=python
-spm    .package(url: "https://github.com/wisent-ai/wisent-errors", revision: "<sha>")
-```
-
-Upgrading therefore costs thirteen deliberate one-line bumps, which is the price
-of the guarantee.
-
-Consumers may sit on different revisions, and that is stated rather than tidied:
-a consumer bumps when the diff it would pick up touches something it calls, and
-proves that diff before moving. The catalogue, the schema and the derivations
-are what every consumer must agree on; a revision that changes none of them is
-inert for a consumer that never calls what it added. An unpinned spec lets a
-product pick up a rule change and drop it again with no commit anywhere
-recording either move. A lockfile stops a checkout from drifting; it does not
-stop the command a person types.
-
-## The eighth code, decided
-
-`oko-desktop` and `wisent-ios` each invented `offline`: retryable, `warning`, and
-deliberately not an outage, because a device with no signal must not tell its owner
-our infrastructure is down. Two independent inventions clear this package's own bar
-for adding something, and adding it would be additive — no consumer emits it, so no
-behaviour would move, and both clients could delete about six lines each.
-
-It is still not in the catalogue, for one reason. `http_status` and `exit_code` are
-derived for every code, and neither applies to a code no server can observe and no
-command can exit with. Putting invented values there is the exact shape of the four
-rules this package had to withdraw on its first day. Both clients keep `offline`
-beside the seven with the reason written next to it, which costs six lines twice and
-invents nothing.
-
-That changes if a third product needs it, or if the catalogue grows a way to say
-"this derivation does not apply".
+Who still restates the envelope: [docs/finding-implementations.md](docs/finding-implementations.md).
+Why it is shaped so: [docs/history.md](docs/history.md); pinning a revision:
+[docs/pinning.md](docs/pinning.md); what changed: [docs/changelog.md](docs/changelog.md).

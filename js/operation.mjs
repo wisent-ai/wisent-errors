@@ -1,7 +1,8 @@
 // A functionality's failure catalogue, for JavaScript products: the same
 // declaration the Rust crate's `operation` module holds, with the same rules
 // and the same JSON, so a product in either language prints one shape and is
-// held to one standard.
+// held to one standard. The rules and their sentences come from
+// catalogue/declaration.json, generated into js/declaration.mjs.
 //
 // An operation is one functionality, named by its failure point: `entries`
 // are every way a user or a program starts it (a command, a route, a screen,
@@ -11,22 +12,15 @@
 // fixes it, its code, and the real test that provokes it.
 
 import { CODES, FAILURE_POINT_PATTERN, GENERIC_SENTENCES, RETRY_EXIT, USAGE_EXIT, retryable } from './codes.mjs';
+import { CAUSE_ID_PATTERN, FIELD_MEANINGS, SENTENCES, TEST_PATH_PATTERN } from './declaration.mjs';
+import { fill, templateProblems } from './template.mjs';
 import { warningDeclarationProblems } from './warning.mjs';
 
 const FAILURE_POINT = new RegExp(FAILURE_POINT_PATTERN);
-export const CAUSE_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
-export const TEST_PATH = /^tests\/[^/]+\/[^:]+::[a-z0-9_]+$/;
-
-/**
- * `template` with each `{name}` replaced by `values[name]`. A placeholder with
- * no value stays as written, so a value the raising code forgot is visible in
- * the sentence instead of silently becoming nothing.
- */
-export function fill(template, values = {}) {
-  return template.replace(/\{([^{}]*)\}/g, (whole, name) =>
-    Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : whole,
-  );
-}
+export const CAUSE_ID = new RegExp(CAUSE_ID_PATTERN);
+export const TEST_PATH = new RegExp(TEST_PATH_PATTERN);
+export const CAUSE_FIELDS = Object.freeze(['failed', 'cause', 'observed', 'remedy']);
+const say = (key, values) => fill(SENTENCES[key], values);
 
 /** What failed, why, and the state observed, as one sentence. */
 export function sentence(cause, values = {}) {
@@ -36,6 +30,11 @@ export function sentence(cause, values = {}) {
 /** What would fix it, with the values filled in. */
 export function fix(cause, values = {}) {
   return fill(cause.remedy, values);
+}
+
+/** The sentence and the fix as one line: what a thrown refusal says. */
+export function refusal(cause, values = {}) {
+  return `${sentence(cause, values)}; fix: ${fix(cause, values)}`;
 }
 
 /**
@@ -55,33 +54,42 @@ export function anchor(operation, cause) {
   return `${operation.id.replaceAll('.', '-')}-${cause.id}`;
 }
 
+/**
+ * The problems of the texts every declaration kind shares: each field empty,
+ * generic, or holding a placeholder the renderer never fills; `kind` is
+ * `cause` or `warning`.
+ */
+export function textProblems(kind, id, fields) {
+  const problems = [];
+  for (const [field, text] of fields) {
+    if (typeof text !== 'string' || !text.trim()) {
+      problems.push(say('field-empty', { kind, id, field, meaning: FIELD_MEANINGS[field] }));
+      continue;
+    }
+    for (const generic of GENERIC_SENTENCES) {
+      if (text.toLowerCase().includes(generic.text)) problems.push(say('field-generic', { kind, id, field, quoted_text: JSON.stringify(generic.text), reason: generic.reason }));
+    }
+    problems.push(...templateProblems(kind, id, field, text));
+  }
+  return problems;
+}
+
 /** Everything wrong with one cause's declaration, each as one sentence. */
 export function causeProblems(cause) {
   const problems = [];
   const id = cause.id;
-  if (typeof id !== 'string' || !CAUSE_ID.test(id)) problems.push(`cause ${JSON.stringify(id)}: the id is not lowercase words joined by '-'`);
-  for (const field of ['failed', 'cause', 'observed', 'remedy']) {
-    const text = cause[field];
-    if (typeof text !== 'string' || !text.trim()) {
-      problems.push(`cause ${id}: \`${field}\` is empty`);
-      continue;
-    }
-    for (const generic of GENERIC_SENTENCES) {
-      if (text.toLowerCase().includes(generic.text)) problems.push(`cause ${id}: \`${field}\` says ${JSON.stringify(generic.text)}, which ${generic.reason}`);
-    }
-  }
-  if (!CODES.includes(cause.code)) problems.push(`cause ${id}: code ${JSON.stringify(cause.code)} is not in the catalogue`);
-  else if (cause.code === 'unknown') problems.push(`cause ${id}: a declared cause is never \`unknown\`; \`unknown\` is the catch-all a declaration replaces`);
-  else if (cause.usage === true && retryable(cause.code)) problems.push(`cause ${id}: a usage refusal cannot be \`${cause.code}\`, which is retryable`);
+  if (typeof id !== 'string' || !CAUSE_ID.test(id)) problems.push(say('id-malformed', { kind: 'cause', quoted_id: JSON.stringify(id), pattern: CAUSE_ID_PATTERN }));
+  problems.push(...textProblems('cause', id, CAUSE_FIELDS.map((field) => [field, cause[field]])));
+  const codes = CODES.filter((code) => code !== 'unknown').join(', ');
+  if (!CODES.includes(cause.code)) problems.push(say('code-off-catalogue', { id, quoted_code: JSON.stringify(cause.code), codes }));
+  else if (cause.code === 'unknown') problems.push(say('code-unknown', { id, codes }));
+  else if (cause.usage === true && retryable(cause.code)) problems.push(say('usage-retryable', { id, code: cause.code }));
   if (cause.exit !== undefined && cause.exit !== null) {
-    if (cause.usage === true || (CODES.includes(cause.code) && retryable(cause.code))) {
-      problems.push(`cause ${id}: exit ${cause.exit} is declared, but a usage refusal exits ${USAGE_EXIT} and a retryable code ${RETRY_EXIT}`);
-    }
-    if (!Number.isInteger(cause.exit) || cause.exit === 0 || cause.exit === USAGE_EXIT || cause.exit === RETRY_EXIT) {
-      problems.push(`cause ${id}: exit ${cause.exit} is not a status of its own: 0 is success, ${USAGE_EXIT} usage and ${RETRY_EXIT} retry`);
-    }
+    const limits = { id, exit: String(cause.exit), usage_exit: String(USAGE_EXIT), retry_exit: String(RETRY_EXIT) };
+    if (cause.usage === true || (CODES.includes(cause.code) && retryable(cause.code))) problems.push(say('exit-beside-derived', limits));
+    if (!Number.isInteger(cause.exit) || cause.exit === 0 || cause.exit === USAGE_EXIT || cause.exit === RETRY_EXIT) problems.push(say('exit-not-own', limits));
   }
-  if (typeof cause.test !== 'string' || !TEST_PATH.test(cause.test)) problems.push(`cause ${id}: test ${JSON.stringify(cause.test)} is not tests/<area>/<file>::<test name>`);
+  if (typeof cause.test !== 'string' || !TEST_PATH.test(cause.test)) problems.push(say('test-malformed', { kind: 'cause', id, quoted_test: JSON.stringify(cause.test), pattern: TEST_PATH_PATTERN }));
   return problems;
 }
 
@@ -94,17 +102,20 @@ export function causeProblems(cause) {
 export function operationProblems(operation) {
   const problems = [];
   const id = operation.id;
-  if (typeof id !== 'string' || !FAILURE_POINT.test(id)) problems.push(`operation ${JSON.stringify(id)}: the id is not a dotted lowercase path`);
+  const values = { operation: id };
+  if (typeof id !== 'string' || !FAILURE_POINT.test(id)) problems.push(say('operation-id-malformed', { quoted_id: JSON.stringify(id), pattern: FAILURE_POINT_PATTERN }));
   const entries = operation.entries ?? [];
   const uses = operation.uses ?? [];
   const causes = operation.causes ?? [];
-  if (entries.some((entry) => typeof entry !== 'string' || !entry.trim())) problems.push(`operation ${id}: an entry is empty`);
-  if (uses.some((used) => used.id === id)) problems.push(`operation ${id}: it lists itself in \`uses\``);
-  if (typeof operation.summary !== 'string' || !operation.summary.trim()) problems.push(`operation ${id}: \`summary\` is empty`);
-  if (typeof operation.docs !== 'string' || !operation.docs.startsWith('https://')) problems.push(`operation ${id}: docs ${JSON.stringify(operation.docs)} is not an https page`);
-  if (causes.length === 0 && uses.length === 0) problems.push(`operation ${id}: declares no cause and uses no functionality that declares one`);
+  entries.forEach((entry, index) => {
+    if (typeof entry !== 'string' || !entry.trim()) problems.push(say('entry-empty', { ...values, position: String(index + 1), count: String(entries.length) }));
+  });
+  if (uses.some((used) => used.id === id)) problems.push(say('uses-itself', values));
+  if (typeof operation.summary !== 'string' || !operation.summary.trim()) problems.push(say('summary-empty', values));
+  if (typeof operation.docs !== 'string' || !operation.docs.startsWith('https://')) problems.push(say('docs-not-https', { ...values, quoted_docs: JSON.stringify(operation.docs) }));
+  if (causes.length === 0 && uses.length === 0) problems.push(say('no-cause', values));
   causes.forEach((cause, index) => {
-    if (causes.slice(0, index).some((earlier) => earlier.id === cause.id)) problems.push(`operation ${id}: cause ${cause.id} is declared twice`);
+    if (causes.slice(0, index).some((earlier) => earlier.id === cause.id)) problems.push(say('declared-twice', { ...values, kind: 'cause', id: cause.id }));
     for (const problem of causeProblems(cause)) problems.push(`operation ${id}: ${problem}`);
   });
   problems.push(...warningDeclarationProblems(operation));
@@ -119,16 +130,13 @@ export function operationProblems(operation) {
 export function catalogueProblems(operations) {
   const problems = [];
   operations.forEach((operation, index) => {
-    if (operations.slice(0, index).some((earlier) => earlier.id === operation.id)) problems.push(`operation ${operation.id} is declared twice`);
+    const values = { operation: operation.id };
+    if (operations.slice(0, index).some((earlier) => earlier.id === operation.id)) problems.push(say('operation-twice', values));
     for (const used of operation.uses ?? []) {
-      if (!operations.some((listed) => listed.id === used.id)) {
-        problems.push(`operation ${operation.id}: it uses ${used.id}, which the catalogue does not list; list every functionality the product runs`);
-      }
+      if (!operations.some((listed) => listed.id === used.id)) problems.push(say('uses-unlisted', { ...values, used: used.id }));
     }
     const used = operations.some((other) => (other.uses ?? []).some((candidate) => candidate.id === operation.id));
-    if ((operation.entries ?? []).length === 0 && !used) {
-      problems.push(`operation ${operation.id}: nothing starts it: it names no entry and no functionality of the catalogue uses it`);
-    }
+    if ((operation.entries ?? []).length === 0 && !used) problems.push(say('nothing-starts', values));
   });
   return problems;
 }

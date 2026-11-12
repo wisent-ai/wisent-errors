@@ -1,0 +1,165 @@
+{
+  "area": "lint",
+  "operations": [
+    {
+      "id": "wisent_errors.lint.arguments",
+      "runtimes": ["node"],
+      "entries": [],
+      "uses": [],
+      "summary": "read the words a command of this repository was started with: its command, its options and its operands",
+      "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/lint.md",
+      "causes": [
+        {
+          "id": "command-absent",
+          "code": "refused",
+          "usage": true,
+          "failed": "starting {program}",
+          "cause": "no command was named, and {program} does nothing without one",
+          "observed": "commands: {commands}",
+          "remedy": "name one of them: {usage}",
+          "tests": {"js": "tests/lint/arguments.mjs::no_command_is_refused"}
+        },
+        {
+          "id": "command-unknown",
+          "code": "refused",
+          "usage": true,
+          "failed": "starting {program}",
+          "cause": "{quoted_command} is not one of its commands",
+          "observed": "commands: {commands}",
+          "remedy": "name one of them: {usage}",
+          "tests": {"js": "tests/lint/arguments.mjs::an_unknown_command_is_refused"}
+        },
+        {
+          "id": "option-without-value",
+          "code": "refused",
+          "usage": true,
+          "failed": "reading the options of {program}",
+          "cause": "{option} is the last word, or the word after it is another option, so it names nothing",
+          "observed": "the words given: {words}",
+          "remedy": "give {option} its value: {usage}",
+          "tests": {"js": "tests/lint/arguments.mjs::an_option_without_its_value_is_refused"}
+        },
+        {
+          "id": "option-unknown",
+          "code": "refused",
+          "usage": true,
+          "failed": "reading the options of {program}",
+          "cause": "{option} is not one of its options, and nothing it does reads it",
+          "observed": "the words given: {words}",
+          "remedy": "drop {option} or spell it as one of its options: {usage}",
+          "tests": {"js": "tests/lint/arguments.mjs::an_unknown_option_is_refused"}
+        },
+        {
+          "id": "operands-miscounted",
+          "code": "refused",
+          "usage": true,
+          "failed": "reading the operands of {program}",
+          "cause": "it takes {expected} and was given {count}",
+          "observed": "operands given: {operands}",
+          "remedy": "name exactly {expected}: {usage}",
+          "tests": {"js": "tests/lint/arguments.mjs::a_wrong_number_of_operands_is_refused"}
+        }
+      ]
+    },
+    {
+      "id": "wisent_errors.lint.input",
+      "runtimes": ["node"],
+      "entries": [],
+      "uses": [],
+      "summary": "read one JSON file a command of this repository was named: a catalogue, a baseline, an entry list, a list of untested causes",
+      "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/lint.md",
+      "causes": [
+        {
+          "id": "input-absent",
+          "code": "not_found",
+          "usage": true,
+          "failed": "reading {what} {path}",
+          "cause": "no file is at that path",
+          "observed": "{parent}",
+          "remedy": "name the file that holds {what}, or write it first; a relative path is read from {cwd}",
+          "tests": {"js": "tests/lint/input.mjs::an_absent_input_is_refused"}
+        },
+        {
+          "id": "input-is-directory",
+          "code": "refused",
+          "usage": true,
+          "failed": "reading {what} {path}",
+          "cause": "the path names a directory, and {what} is one file",
+          "observed": "{state}",
+          "remedy": "name the JSON file inside it, not the directory",
+          "tests": {"js": "tests/lint/input.mjs::a_directory_input_is_refused"}
+        },
+        {
+          "id": "input-not-permitted",
+          "code": "refused",
+          "usage": false,
+          "failed": "reading {what} {path}",
+          "cause": "the file exists but its permissions refuse this process the read",
+          "observed": "{state}; the operating system answered {error}",
+          "remedy": "let the user running the command read it (chmod u+r {path}), or run the command as its owner",
+          "tests": {"js": "tests/lint/input.mjs::an_input_the_process_may_not_read_is_refused"}
+        },
+        {
+          "id": "input-not-json",
+          "code": "config",
+          "usage": false,
+          "failed": "reading {what} {path}",
+          "cause": "the file is not JSON",
+          "observed": "{bytes} bytes, starting {quoted_start}; the decoder answered {error}, stopping at {stop}",
+          "remedy": "write {what} as JSON ({expected}), correcting {path} at {stop}",
+          "tests": {"js": "tests/lint/input.mjs::an_input_that_is_not_json_is_refused"}
+        },
+        {
+          "id": "input-wrong-shape",
+          "code": "config",
+          "usage": false,
+          "failed": "reading {what} {path}",
+          "cause": "the file is JSON but not {expected}",
+          "observed": "it holds {found}",
+          "remedy": "write {what} as {expected}",
+          "tests": {"js": "tests/lint/input.mjs::an_input_of_the_wrong_shape_is_refused"}
+        }
+      ]
+    },
+    {
+      "id": "wisent_errors.lint.paths",
+      "runtimes": ["node"],
+      "entries": [],
+      "uses": [],
+      "summary": "open a directory or a file a command of this repository was named to read: a source tree, a repository, a root to search",
+      "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/lint.md",
+      "causes": [
+        {
+          "id": "path-absent",
+          "code": "not_found",
+          "usage": true,
+          "failed": "opening {what} {path}",
+          "cause": "nothing is at that path, so there is nothing to read and nothing could be found clean",
+          "observed": "{parent}",
+          "remedy": "name {what} as it exists; a relative path is read from {cwd}",
+          "tests": {"js": "tests/lint/paths.mjs::an_absent_path_is_refused"}
+        },
+        {
+          "id": "path-not-directory",
+          "code": "refused",
+          "usage": true,
+          "failed": "opening {what} {path}",
+          "cause": "the path is a file, and {what} is read as a directory",
+          "observed": "{state}",
+          "remedy": "name the directory that holds it: {directory}",
+          "tests": {"js": "tests/lint/paths.mjs::a_file_named_as_a_directory_is_refused"}
+        },
+        {
+          "id": "path-unreadable",
+          "code": "refused",
+          "usage": false,
+          "failed": "reading {what} {path}",
+          "cause": "the operating system refused to list or read it, so what it holds was never looked at",
+          "observed": "{state}; the operating system answered {error}",
+          "remedy": "let the user running the command read it (chmod u+rx {path}), or leave it out of the paths named",
+          "tests": {"js": "tests/lint/paths.mjs::an_unreadable_path_is_refused"}
+        }
+      ]
+    }
+  ]
+}

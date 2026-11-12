@@ -84,7 +84,7 @@ test('a_confirmation_no_warning_explains_is_refused', () => {
   assert.equal(result.status, 1);
   assert.match(
     result.stdout,
-    /FAIL {2}entry "example purge" asks for a confirmation, but no functionality it starts declares what the confirmation is for; declare the warning, or stop asking for a confirmation nothing needs/,
+    /FAIL {2}Error: matching the confirmations in .*confirmations\.json to the declared warnings: the entry "example purge" asks for a confirmation, but no functionality it starts declares what the confirmation is for; observed: functionalities it starts: example\.item\.purge\nfix: declare the warning, or stop asking for a confirmation nothing needs/,
   );
 });
 

@@ -1,0 +1,185 @@
+{
+  "area": "tools",
+  "operations": [
+    {
+      "id": "wisent_errors.census.implementations",
+      "runtimes": ["node"],
+      "entries": ["node ci/find-implementations.mjs"],
+      "uses": ["wisent_errors.lint.arguments", "wisent_errors.lint.paths"],
+      "summary": "find every repository under a root that restates this envelope's vocabulary instead of depending on the package",
+      "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/tools.md",
+      "causes": [
+        {
+          "id": "vocabulary-restated",
+          "code": "refused",
+          "usage": false,
+          "failed": "counting the implementations of the envelope under {roots}",
+          "cause": "{count} repositories quote a majority of the catalogue's codes, infra_down among them, and depend on no revision of the package",
+          "observed": "each repository with the files that restate it, a file counting when it quotes {threshold} or more of the {codes} codes: {repositories}",
+          "remedy": "adopt the package in each, pinned to a revision, and delete its copy of the vocabulary from the files named; `node ci/find-implementations.mjs --unadopted-only` lists them again",
+          "tests": {"js": "tests/tools/census.mjs::a_repository_restating_the_vocabulary_is_counted"}
+        },
+        {
+          "id": "file-unreadable",
+          "code": "refused",
+          "usage": false,
+          "failed": "reading {path} while counting the implementations under {roots}",
+          "cause": "the operating system refused the read, so whether it restates the vocabulary or declares the package is unknown",
+          "observed": "{state}; the operating system answered {error}",
+          "remedy": "let the user running the census read it (chmod u+r {path}), or name roots that leave it out",
+          "tests": {"js": "tests/tools/census.mjs::an_unreadable_file_is_refused"}
+        },
+        {
+          "id": "git-absent",
+          "code": "config",
+          "usage": false,
+          "failed": "asking git where {repository} came from and what its remote tip holds",
+          "cause": "no git program could be started, so a stale checkout cannot be told from a product that restates the vocabulary",
+          "observed": "PATH {path_variable}; starting git answered {error}",
+          "remedy": "install git or put it on PATH, then count again",
+          "tests": {"js": "tests/tools/census.mjs::a_census_without_git_is_refused"}
+        }
+      ]
+    },
+    {
+      "id": "wisent_errors.codegen.generate",
+      "runtimes": ["node"],
+      "entries": ["node codegen/generate.mjs", "node codegen/generate.mjs --check"],
+      "uses": ["wisent_errors.catalogue.parts", "wisent_errors.lint.input"],
+      "summary": "write the four runtimes' vocabulary, declaration rules and own failure catalogue from catalogue/, or with --check say which of them drifted",
+      "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/tools.md",
+      "causes": [
+        {
+          "id": "edition-undeclared",
+          "code": "config",
+          "usage": false,
+          "failed": "formatting the generated {target} with rustfmt",
+          "cause": "{manifest} declares no edition, and rustfmt formats a module differently under each edition",
+          "observed": "{manifest} holds no line edition = \"...\"",
+          "remedy": "declare edition = \"2021\" under [package] in {manifest}",
+          "tests": {"js": "tests/tools/generate.mjs::a_crate_with_no_edition_is_refused"}
+        },
+        {
+          "id": "rustfmt-absent",
+          "code": "config",
+          "usage": false,
+          "failed": "formatting the generated {target} with rustfmt",
+          "cause": "no rustfmt program could be started, so the Rust module would not match what `cargo fmt --check` expects",
+          "observed": "PATH {path_variable}; starting rustfmt answered {error}",
+          "remedy": "install it with `rustup component add rustfmt`, then generate again",
+          "tests": {"js": "tests/tools/generate.mjs::a_generation_without_rustfmt_is_refused"}
+        },
+        {
+          "id": "rustfmt-refused",
+          "code": "config",
+          "usage": false,
+          "failed": "formatting the generated {target} with rustfmt --edition {edition}",
+          "cause": "rustfmt exited {status} on the generated module, so the generator wrote Rust that does not parse",
+          "observed": "rustfmt said {stderr}",
+          "remedy": "correct the renderer codegen/{renderer} or the catalogue value it quoted, then generate again",
+          "tests": {"js": "tests/tools/generate.mjs::a_module_rustfmt_refuses_is_refused"}
+        },
+        {
+          "id": "generated-drifted",
+          "code": "config",
+          "usage": false,
+          "failed": "comparing the generated files with catalogue/",
+          "cause": "{count} generated file(s) differ from what the catalogue writes, so the runtimes would not say what the catalogue declares",
+          "observed": "{drifted}",
+          "remedy": "run `node codegen/generate.mjs` and commit what it writes",
+          "tests": {"js": "tests/tools/generate.mjs::a_drifted_generated_file_is_refused"}
+        },
+        {
+          "id": "generated-unwritable",
+          "code": "config",
+          "usage": false,
+          "failed": "writing the generated {target}",
+          "cause": "the operating system refused to create or write the file, so the runtime keeps what an older catalogue wrote",
+          "observed": "{state}; the operating system answered {error}",
+          "remedy": "let the user running the generator write {target} and its directory, then generate again",
+          "tests": {"js": "tests/tools/generate.mjs::an_unwritable_generated_file_is_refused"}
+        },
+        {
+          "id": "generated-unremovable",
+          "code": "config",
+          "usage": false,
+          "failed": "removing the generated {target}, which no part of catalogue/failures/ writes any more",
+          "cause": "the operating system refused to remove the file, so the runtime still holds a declaration the catalogue no longer has",
+          "observed": "{state}; its directory: {directory_state}; the operating system answered {error}",
+          "remedy": "let the user running the generator write {directory}, or remove {target} yourself, then generate again",
+          "tests": {"js": "tests/tools/generate.mjs::an_unremovable_stale_module_is_refused"}
+        }
+      ]
+    },
+    {
+      "id": "wisent_errors.ship.check",
+      "runtimes": ["node"],
+      "entries": ["node ci/check.mjs"],
+      "uses": ["wisent_errors.codegen.generate", "wisent_errors.lint.catalogue", "wisent_errors.lint.input"],
+      "summary": "say whether this package may ship: the generated runtimes match catalogue/, the schema names the catalogue's vocabulary, and this package's own failure catalogue holds",
+      "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/tools.md",
+      "causes": [
+        {
+          "id": "vocabulary-differs",
+          "code": "config",
+          "usage": false,
+          "failed": "comparing the {what} of {schema} with catalogue/codes.json",
+          "cause": "the schema names other {what} than the catalogue, so a checked envelope and a generated runtime disagree",
+          "observed": "catalogue {catalogue_says}; schema {schema_says}",
+          "remedy": "change {schema} to name what catalogue/codes.json names",
+          "tests": {"js": "tests/tools/generate.mjs::a_schema_naming_other_codes_is_refused"}
+        }
+      ]
+    },
+    {
+      "id": "wisent_errors.inventory.list",
+      "runtimes": ["node"],
+      "entries": ["node tests/inventory.mjs"],
+      "uses": ["wisent_errors.lint.arguments"],
+      "summary": "list the lines of one committed revision that match a pattern, for a defect register's completion probe",
+      "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/tools.md",
+      "causes": [
+        {
+          "id": "revision-unknown",
+          "code": "not_found",
+          "usage": true,
+          "failed": "listing the lines of {revision} that match {quoted_pattern}",
+          "cause": "git knows no revision {revision} in {repository}",
+          "observed": "git exited {status} and said {stderr}",
+          "remedy": "name a commit, tag or branch the checkout holds; `git -C {repository} fetch` brings one it lacks",
+          "tests": {"js": "tests/tools/inventory.mjs::an_unknown_revision_is_refused"}
+        },
+        {
+          "id": "pattern-refused",
+          "code": "refused",
+          "usage": true,
+          "failed": "listing the lines of {revision} that match {quoted_pattern}",
+          "cause": "git does not read {quoted_pattern} as an extended regular expression",
+          "observed": "git exited {status} and said {stderr}",
+          "remedy": "write the pattern as a POSIX extended regular expression, escaping the characters git names",
+          "tests": {"js": "tests/tools/inventory.mjs::a_pattern_git_refuses_is_refused"}
+        },
+        {
+          "id": "git-absent",
+          "code": "config",
+          "usage": false,
+          "failed": "listing the lines of {revision} that match {quoted_pattern}",
+          "cause": "no git program could be started",
+          "observed": "PATH {path_variable}; starting git answered {error}",
+          "remedy": "install git or put it on PATH, then list again",
+          "tests": {"js": "tests/tools/inventory.mjs::a_listing_without_git_is_refused"}
+        },
+        {
+          "id": "repository-not-git",
+          "code": "config",
+          "usage": false,
+          "failed": "listing the lines of {revision} that match {quoted_pattern}",
+          "cause": "{repository} holds no git repository, as an unpacked archive of the source does not, so no committed revision can be read",
+          "observed": "git exited {status} and said {stderr}",
+          "remedy": "run it in a clone of the repository, where `git -C {repository} log -1` names a commit",
+          "tests": {"js": "tests/tools/inventory.mjs::a_listing_outside_a_repository_is_refused"}
+        }
+      ]
+    }
+  ]
+}

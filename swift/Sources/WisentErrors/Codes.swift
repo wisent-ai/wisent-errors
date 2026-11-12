@@ -23,6 +23,9 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
     /// The exit code a retryable failure leaves the process with.
     public static let retryExit: Int32 = 69
 
+    /// The exit code a usage refusal leaves the process with: the clap and click usage code.
+    public static let usageExit: Int32 = 2
+
     public var severity: Severity {
         switch self {
         case .config: .critical
@@ -142,3 +145,28 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
 
 public let fallbackCode: Code = .unknown
 public let failurePointPattern = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$"
+
+/// Wording that says a failure happened without saying which.
+public struct GenericSentence: Sendable, Equatable {
+    /// Matched case-insensitively inside a string literal.
+    public let text: String
+    /// Why a reader cannot act on it.
+    public let reason: String
+}
+
+/// Every generic sentence the catalogue refuses in an error message.
+public let genericSentences: [GenericSentence] = [
+    GenericSentence(text: "did not succeed", reason: "says the operation failed without the step, the cause or the fix"),
+    GenericSentence(text: "was not successful", reason: "says the operation failed without the step, the cause or the fix"),
+    GenericSentence(text: "operation failed", reason: "names no operation step and no cause"),
+    GenericSentence(text: "something went wrong", reason: "names nothing that went wrong"),
+    GenericSentence(text: "an error occurred", reason: "names no error"),
+    GenericSentence(text: "unexpected error", reason: "a failure nobody declared: declare its cause instead"),
+    GenericSentence(text: "unknown error", reason: "a failure nobody classified: declare its cause instead"),
+    GenericSentence(text: "internal error", reason: "names no component and no cause"),
+    GenericSentence(text: "please try again", reason: "advises a retry without saying whether a retry can help"),
+    GenericSentence(text: "failed for an unknown reason", reason: "a failure nobody classified: declare its cause instead"),
+    GenericSentence(text: "unknown failure", reason: "a failure nobody classified: declare its cause instead"),
+    GenericSentence(text: "try again later", reason: "advises a later retry without saying when, or what has to change before it can work"),
+    GenericSentence(text: "could not be completed.", reason: "ends the sentence at the failure: says a step failed and stops before its cause"),
+]

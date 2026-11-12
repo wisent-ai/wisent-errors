@@ -18,16 +18,14 @@
 // It reports the exact lines, because a guard that says only "something is
 // wrong" is a guard people learn to skip.
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { statSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Words } from './arguments.mjs';
+import { listDirectory, openDirectory, parentOf, readTreeFile } from './input.mjs';
+import { exitOf, guarded, refuse, refusalText } from './refuse.mjs';
 
-const ROOTS = process.argv.slice(2);
-if (ROOTS.length === 0) {
-  console.log('usage: node ci/no-handrolled-envelope.mjs <path> [<path>...]');
-  process.exit(2);
-}
-
+const USAGE = 'node ci/no-handrolled-envelope.mjs <path> [<path>...]';
 const SOURCE = new Set(['.rs', '.py', '.mjs', '.js', '.ts', '.tsx', '.jsx', '.go', '.swift', '.sh']);
 const SKIP = new Set(['node_modules', 'target', '.git', 'dist', 'build', '.venv', '__pycache__', 'vendor']);
 // This package is where these keys belong. Matched by resolved root rather than
@@ -38,43 +36,52 @@ const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // ways, and a guard that only knows one spelling reports a clean tree.
 const KEYS = /(["']?)(failure_point|error_code)\1\s*[:=]/;
 const findings = [];
+let files = 0;
 
 function walk(path) {
-  let entry;
-  try {
-    entry = statSync(path);
-  } catch {
-    return;
-  }
-  if (entry.isDirectory()) {
-    for (const child of readdirSync(path)) {
-      if (SKIP.has(child)) continue;
-      walk(join(path, child));
+  for (const entry of listDirectory(path, 'a directory of the tree')) {
+    const child = join(path, entry.name);
+    if (entry.isDirectory()) {
+      if (!SKIP.has(entry.name)) walk(child);
+    } else if (entry.isFile()) {
+      read(child);
     }
-    return;
   }
-  if (!SOURCE.has(extname(path)) || resolve(path).startsWith(PACKAGE_ROOT)) return;
+}
 
-  const lines = readFileSync(path, 'utf8').split('\n');
-  lines.forEach((line, index) => {
+function read(path) {
+  if (!SOURCE.has(extname(path)) || resolve(path).startsWith(PACKAGE_ROOT)) return;
+  files += 1;
+  readTreeFile(path, 'a source file').split('\n').forEach((line, index) => {
     if (KEYS.test(line)) findings.push(`${path}:${index + 1}  ${line.trim().slice(0, 120)}`);
   });
 }
 
-for (const root of ROOTS) walk(root);
-
-if (findings.length === 0) {
-  console.log(`no hand-built envelope in ${ROOTS.join(', ')}`);
-  process.exit(0);
-}
-
-console.log(`${findings.length} site(s) name an envelope key outside the package:`);
-for (const finding of findings) console.log(`  ${finding}`);
-console.log(
-  '\nEach needs a reason. Building an envelope here means the derived fields can be' +
-    '\nwrong, so build it with wisent-errors instead. Three answers are legitimate and' +
-    '\ncommon: an operator-visible log line whose format is already parsed, a field' +
-    "\ndeclaration, and another API's own `error_code` -- Azure has one, and this guard" +
-    '\ncannot tell it from ours. Read the line before believing the count.',
-);
-process.exit(1);
+process.exitCode = guarded(() => {
+  const roots = new Words('ci/no-handrolled-envelope.mjs', USAGE, process.argv.slice(2)).operands('at least one path', (count) => count > 0);
+  for (const root of roots) {
+    let entry;
+    try {
+      entry = statSync(root);
+    } catch (error) {
+      if (error.code === 'ENOENT') refuse('wisent_errors.lint.paths', 'path-absent', { what: 'the tree', path: root, parent: parentOf(root), cwd: process.cwd() });
+      openDirectory(root, 'the tree');
+    }
+    if (entry.isDirectory()) walk(root);
+    else read(root);
+  }
+  if (findings.length === 0) {
+    console.log(`no hand-built envelope in ${files} source file(s) under ${roots.join(', ')}`);
+    return 0;
+  }
+  console.log(refusalText('wisent_errors.lint.handrolled', 'envelope-key-written', { files: String(files), roots: roots.join(', '), count: String(findings.length), sites: `${findings.length} line(s) below` }));
+  for (const finding of findings) console.log(`  ${finding}`);
+  console.log(
+    '\nEach needs a reason. Building an envelope here means the derived fields can be' +
+      '\nwrong, so build it with wisent-errors instead. Three answers are legitimate and' +
+      '\ncommon: an operator-visible log line whose format is already parsed, a field' +
+      "\ndeclaration, and another API's own `error_code` -- Azure has one, and this guard" +
+      '\ncannot tell it from ours. Read the line before believing the count.',
+  );
+  return exitOf('wisent_errors.lint.handrolled', 'envelope-key-written');
+});

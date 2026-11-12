@@ -1,0 +1,30 @@
+[
+  {
+    "test": "tests/cli-output/read_json.rs::an_interrupted_read_is_refused",
+    "reason": "the operating system stops a read part way only when the device under the file goes away during it (a network share dropping, a disk failing); no file a test can write locally is read that way"
+  },
+  {
+    "test": "tests/cli-output/print.rs::a_closed_standard_output_is_refused",
+    "reason": "output() writes to the standard output of the process that calls it, which the test harness holds open; the crate ships no program a test could start with a closed standard output"
+  },
+  {
+    "test": "tests/cli-output/print.rs::an_unwritable_standard_output_is_refused",
+    "reason": "standard output refuses a write only behind a full disk or a vanished device, and the test harness holds its own standard output open on neither"
+  },
+  {
+    "test": "tests/tools/generate.mjs::a_module_rustfmt_refuses_is_refused",
+    "reason": "every catalogue value reaches the Rust module as a JSON-quoted string literal, so only a defect in a renderer under codegen/ makes rustfmt refuse the module; no catalogue input provokes it"
+  },
+  {
+    "test": "tests/tools/parts.mjs::a_raised_cause_no_part_declares_is_refused",
+    "reason": "a command raises a cause no part declares only through a defect in this repository's own command code; no input, file or state provokes it"
+  },
+  {
+    "test": "tests/telemetry/store.rs::a_system_without_randomness_queues_nothing",
+    "reason": "getrandom fails only when the kernel's random source is unavailable (no getentropy, no /dev/urandom), which no unprivileged test can arrange on a running machine"
+  },
+  {
+    "test": "tests/telemetry/consent.rs::an_answer_the_terminal_cannot_give_records_nothing",
+    "reason": "Telemetry::ask reads only when stdin and stderr are terminals, and a terminal refuses a read only when its device goes away mid-read; a test process has no terminal to take away"
+  }
+]

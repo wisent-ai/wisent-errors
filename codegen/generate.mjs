@@ -1,34 +1,44 @@
 #!/usr/bin/env node
-// Turn the catalogue into one generated module per language.
+// Turn the catalogue into the generated modules of every runtime.
 //
-// The catalogue is the source of truth and this is the only thing allowed to
-// read it at build time. Every runtime gets the same table, so a code's meaning
-// cannot drift between languages -- which is exactly what happened when six
-// products each kept their own copy and one of them quietly lost the vocabulary.
+// catalogue/codes.json is the vocabulary, catalogue/declaration.json the rules
+// a declared cause or warning is held to, and catalogue/failures/ this
+// package's own failures, one part per area. This is the only thing allowed to
+// read them at build time. Every runtime gets the same tables, so a code's
+// meaning, a declaration rule or one of this package's own refusals cannot
+// drift between languages -- which is exactly what happened when six products
+// each kept their own copy and one of them quietly lost the vocabulary.
 //
 // Generated files are committed. A consumer needs no build step, and CI
 // regenerates and fails on any difference, so the copies stay copies.
 //
 // Usage: node codegen/generate.mjs [--check]
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readJsonFile } from '../ci/json-file.mjs';
 import { rust } from './rust.mjs';
 import { python } from './python.mjs';
 import { javascript } from './javascript.mjs';
 import { swift } from './swift.mjs';
+import { declarationJs, declarationPython, declarationRust, declarationSwift } from './declaration.mjs';
+import { byArea, failuresJs, failuresPython, failuresRust, failuresRustModule, failuresSwift, failuresSwiftNamespace, rustModule, swiftFile } from './failures.mjs';
+import { pages } from './pages.mjs';
+import { PARTS, operationsFor, readParts } from './parts.mjs';
+import { guarded, refuse } from '../ci/refuse.mjs';
+import { holding, listDirectory, readJsonInput, readTextInput, stateOf } from '../ci/input.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-const CATALOGUE = join(ROOT, 'catalogue', 'codes.json');
 const CHECK = process.argv.includes('--check');
+const GENERATE = 'wisent_errors.codegen.generate';
 
-const catalogue = readJsonFile(CATALOGUE);
-const banner = (comment) => [
-  `${comment} Generated from catalogue/codes.json by codegen/generate.mjs.`,
+const catalogue = readJsonInput(join(ROOT, 'catalogue', 'codes.json'), 'the vocabulary', 'an object with codes, severities, upstream_status, exit_code, generic_sentences and failure_point', holding('codes', 'severities', 'upstream_status', 'exit_code', 'generic_sentences', 'failure_point'));
+const declaration = readJsonInput(join(ROOT, 'catalogue', 'declaration.json'), 'the declaration rules', 'an object with placeholder, raw_message, cause_id, test_path, fields and sentences', holding('placeholder', 'raw_message', 'cause_id', 'test_path', 'fields', 'sentences'));
+const parts = guarded(() => readParts());
+const banner = (comment, source = 'catalogue/codes.json') => [
+  `${comment} Generated from ${source} by codegen/generate.mjs.`,
   `${comment} Do not edit: change the catalogue and regenerate.`,
   `${comment} catalogue version ${catalogue.version}`,
 ].join('\n');
@@ -37,59 +47,116 @@ const codes = catalogue.codes;
 const exact = Object.entries(catalogue.upstream_status.exact).map(([status, code]) => [Number(status), code]);
 const ranges = catalogue.upstream_status.ranges;
 const fallback = catalogue.upstream_status.default;
-const context = { catalogue, codes, exact, ranges, fallback, banner };
+const context = { catalogue, codes, exact, ranges, fallback, banner, declaration };
+const own = (runtime) => ({ banner, operations: guarded(() => operationsFor(runtime, parts)) });
+// Rust and Swift get one module per part (codegen/failures.mjs).
+const areas = (runtime) => byArea(own(runtime).operations, parts);
 
-// The Rust module is what rustfmt makes of it, run in the crate under the
+// The Rust modules are what rustfmt makes of them, run in the crate under the
 // edition rust/Cargo.toml declares, so the push gate's `cargo fmt --check`
-// and this generator agree on the same bytes. A manifest without an edition,
-// or a rustfmt that cannot run or refuses the module, ends the generation
-// with the cause.
+// and this generator agree on the same bytes. It runs in the crate's own
+// directory, which exists before a module's directory (rust/src/failures/) does.
 const CRATE_MANIFEST = join(ROOT, 'rust', 'Cargo.toml');
-function crateEdition() {
-  const declared = readFileSync(CRATE_MANIFEST, 'utf8').match(/^edition\s*=\s*"([^"]+)"/m);
-  if (!declared) throw new Error(`${CRATE_MANIFEST} declares no edition for rustfmt to format under`);
+function crateEdition(target) {
+  const declared = readTextInput(CRATE_MANIFEST, 'the crate manifest').match(/^edition\s*=\s*"([^"]+)"/m);
+  if (!declared) refuse(GENERATE, 'edition-undeclared', { target, manifest: relative(ROOT, CRATE_MANIFEST) });
   return declared[1];
 }
 
-function rustfmt(body, path) {
-  const edition = crateEdition();
-  console.log(`formatting ${path.slice(ROOT.length + 1)} with rustfmt --edition ${edition}`);
-  return execFileSync('rustfmt', ['--edition', edition], { input: body, encoding: 'utf8', cwd: dirname(path) });
+function rustfmt(body, path, renderer) {
+  const target = relative(ROOT, path);
+  const edition = crateEdition(target);
+  console.log(`formatting ${target} with rustfmt --edition ${edition}`);
+  try {
+    return execFileSync('rustfmt', ['--edition', edition], { input: body, encoding: 'utf8', cwd: dirname(CRATE_MANIFEST), stdio: ['pipe', 'pipe', 'pipe'] });
+  } catch (error) {
+    if (error.code === 'ENOENT') refuse(GENERATE, 'rustfmt-absent', { target, path_variable: process.env.PATH ?? '(unset)', error: error.message });
+    return refuse(GENERATE, 'rustfmt-refused', { target, edition, status: String(error.status), stderr: String(error.stderr ?? '').trim() || '(nothing)', renderer });
+  }
 }
 
-const rustModule = join(ROOT, 'rust', 'src', 'codes.rs');
+const at = (...segments) => join(ROOT, ...segments);
+const rustFailures = (name) => at('rust', 'src', 'failures', name);
+const swiftFailures = (name) => at('swift', 'Sources', 'WisentErrors', name);
+const rustAreas = areas('rust');
+const swiftAreas = areas('swift');
 const targets = [
-  { path: rustModule, body: rustfmt(rust(context), rustModule) },
-  { path: join(ROOT, 'python', 'wisent_errors', 'codes.py'), body: python(context) },
-  { path: join(ROOT, 'js', 'codes.mjs'), body: javascript(context) },
-  { path: join(ROOT, 'swift', 'Sources', 'WisentErrors', 'Codes.swift'), body: swift(context) },
+  { path: at('rust', 'src', 'codes.rs'), body: rustfmt(rust(context), at('rust', 'src', 'codes.rs'), 'rust.mjs') },
+  { path: at('rust', 'src', 'declaration.rs'), body: rustfmt(declarationRust(context), at('rust', 'src', 'declaration.rs'), 'declaration.mjs') },
+  { path: rustFailures('mod.rs'), body: rustfmt(failuresRustModule(rustAreas, banner), rustFailures('mod.rs'), 'failures.mjs') },
+  ...rustAreas.map((area) => {
+    const path = rustFailures(`${rustModule(area.area)}.rs`);
+    return { path, body: rustfmt(failuresRust(area, banner), path, 'failures.mjs') };
+  }),
+  { path: at('python', 'wisent_errors', 'codes.py'), body: python(context) },
+  { path: at('python', 'wisent_errors', 'declaration.py'), body: declarationPython(context) },
+  { path: at('python', 'wisent_errors', 'failures.py'), body: failuresPython(own('python')) },
+  { path: at('js', 'codes.mjs'), body: javascript(context) },
+  { path: at('js', 'declaration.mjs'), body: declarationJs(context) },
+  { path: at('js', 'failures.mjs'), body: failuresJs(own('js')) },
+  { path: at('swift', 'Sources', 'WisentErrors', 'Codes.swift'), body: swift(context) },
+  { path: at('swift', 'Sources', 'WisentErrors', 'Declaration.swift'), body: declarationSwift(context) },
+  { path: swiftFailures('OwnFailures.swift'), body: failuresSwiftNamespace(swiftAreas, banner) },
+  ...swiftAreas.map((area) => ({ path: swiftFailures(swiftFile(area.area)), body: failuresSwift(area, banner) })),
+  ...pages(parts, PARTS).map((page) => ({ path: at('docs', 'errors', `${page.area}.md`), body: page.body })),
 ];
 
-let drifted = false;
+const drifted = [];
 for (const target of targets) {
-  mkdirSync(dirname(target.path), { recursive: true });
+  const name = relative(ROOT, target.path);
   // A target not generated yet is absent; any other read failure ends the
   // generation rather than being overwritten blind.
   let existing = null;
   try {
     existing = readFileSync(target.path, 'utf8');
   } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
+    if (error.code !== 'ENOENT') refuse('wisent_errors.lint.input', error.code === 'EISDIR' ? 'input-is-directory' : 'input-not-permitted', { what: 'the generated file', path: name, state: stateOf(target.path), error: error.message });
   }
   if (existing === target.body) {
-    console.log(`unchanged  ${target.path.slice(ROOT.length + 1)}`);
+    console.log(`unchanged  ${name}`);
     continue;
   }
   if (CHECK) {
-    drifted = true;
-    console.log(`DRIFTED    ${target.path.slice(ROOT.length + 1)}`);
+    drifted.push(name);
+    console.log(`DRIFTED    ${name}`);
     continue;
   }
-  writeFileSync(target.path, target.body);
-  console.log(`written    ${target.path.slice(ROOT.length + 1)}`);
+  try {
+    mkdirSync(dirname(target.path), { recursive: true });
+    writeFileSync(target.path, target.body);
+  } catch (error) {
+    refuse(GENERATE, 'generated-unwritable', { target: name, state: stateOf(target.path), error: error.message });
+  }
+  console.log(`written    ${name}`);
 }
 
-if (CHECK && drifted) {
-  console.log('\ngenerated code does not match the catalogue; run codegen/generate.mjs');
-  process.exit(1);
+// A part taken out of catalogue/failures/ leaves its generated module behind,
+// and Swift compiles every file of its target: a generated module or page no
+// target names any more is drift, and generating removes it.
+const named = new Set(targets.map((target) => target.path));
+const generatedIn = (directory, pattern) =>
+  (existsSync(directory) ? listDirectory(directory, 'a directory of generated modules') : [])
+    .filter((entry) => entry.isFile() && pattern.test(entry.name))
+    .map((entry) => join(directory, entry.name));
+const stale = [
+  ...generatedIn(at('rust', 'src', 'failures'), /\.rs$/),
+  ...generatedIn(at('swift', 'Sources', 'WisentErrors'), /^OwnFailures.+\.swift$/),
+  ...generatedIn(at('docs', 'errors'), /\.md$/),
+].filter((path) => !named.has(path));
+for (const path of stale) {
+  const name = relative(ROOT, path);
+  if (CHECK) {
+    drifted.push(name);
+    console.log(`STALE      ${name}`);
+    continue;
+  }
+  try {
+    unlinkSync(path);
+  } catch (error) {
+    const directory = relative(ROOT, dirname(path));
+    refuse(GENERATE, 'generated-unremovable', { target: name, state: stateOf(path), directory, directory_state: stateOf(dirname(path)), error: error.message });
+  }
+  console.log(`removed    ${name}`);
 }
+
+if (CHECK && drifted.length > 0) refuse(GENERATE, 'generated-drifted', { count: String(drifted.length), drifted: drifted.join(', ') });

@@ -92,6 +92,9 @@ FALLBACK: str = "unknown"
 # EX_UNAVAILABLE. retryable codes exit with `retry`; every other code keeps the exit code the caller already chose.
 RETRY_EXIT: int = 69
 
+# the clap and click usage code: a request refused for its own form. Never retryable.
+USAGE_EXIT: int = 2
+
 _EXACT_STATUS: dict[int, str] = {
     401: "auth",
     402: "auth",
@@ -111,6 +114,23 @@ _STATUS_RANGES: tuple[tuple[int, int, str], ...] = (
 )
 
 FAILURE_POINT_PATTERN: str = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$"
+
+# Wording that says a failure happened without saying which; matched case-insensitively in string literals.
+GENERIC_SENTENCES: tuple = (
+    {"text": "did not succeed", "reason": "says the operation failed without the step, the cause or the fix"},
+    {"text": "was not successful", "reason": "says the operation failed without the step, the cause or the fix"},
+    {"text": "operation failed", "reason": "names no operation step and no cause"},
+    {"text": "something went wrong", "reason": "names nothing that went wrong"},
+    {"text": "an error occurred", "reason": "names no error"},
+    {"text": "unexpected error", "reason": "a failure nobody declared: declare its cause instead"},
+    {"text": "unknown error", "reason": "a failure nobody classified: declare its cause instead"},
+    {"text": "internal error", "reason": "names no component and no cause"},
+    {"text": "please try again", "reason": "advises a retry without saying whether a retry can help"},
+    {"text": "failed for an unknown reason", "reason": "a failure nobody classified: declare its cause instead"},
+    {"text": "unknown failure", "reason": "a failure nobody classified: declare its cause instead"},
+    {"text": "try again later", "reason": "advises a later retry without saying when, or what has to change before it can work"},
+    {"text": "could not be completed.", "reason": "ends the sentence at the failure: says a step failed and stops before its cause"},
+)
 
 
 def operator_summary(code: str) -> str:

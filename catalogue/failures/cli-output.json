@@ -1,0 +1,125 @@
+{
+  "area": "cli-output",
+  "operations": [
+    {
+      "id": "wisent_errors.cli_output.read_json",
+      "runtimes": ["rust"],
+      "entries": ["Rust: cli_output::read_json"],
+      "uses": [],
+      "summary": "read one JSON input file a command was named and decode it into the type the command reads",
+      "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/cli-output.md",
+      "causes": [
+        {
+          "id": "input-absent",
+          "code": "not_found",
+          "usage": true,
+          "failed": "reading the JSON input {path}",
+          "cause": "no file is at that path",
+          "observed": "{parent}; the operating system answered {error}",
+          "remedy": "name a file that exists, or write it first; a relative path is read from {cwd}",
+          "tests": {"rust": "tests/cli-output/read_json.rs::an_absent_input_is_refused"}
+        },
+        {
+          "id": "input-not-permitted",
+          "code": "refused",
+          "usage": false,
+          "failed": "reading the JSON input {path}",
+          "cause": "the file exists but this process may not read it",
+          "observed": "{state}; the operating system answered {error}",
+          "remedy": "let the user running the command read it (chmod u+r {path}), or run the command as its owner",
+          "tests": {"rust": "tests/cli-output/read_json.rs::an_unreadable_input_is_refused"}
+        },
+        {
+          "id": "input-is-directory",
+          "code": "not_found",
+          "usage": true,
+          "failed": "reading the JSON input {path}",
+          "cause": "the path names a directory, not a file",
+          "observed": "{state}; the operating system answered {error}",
+          "remedy": "name the JSON file inside it, not the directory",
+          "tests": {"rust": "tests/cli-output/read_json.rs::a_directory_input_is_refused"}
+        },
+        {
+          "id": "input-read-interrupted",
+          "code": "infra_down",
+          "usage": false,
+          "failed": "reading the JSON input {path}",
+          "cause": "the file opened but the operating system stopped the read part way, so the bytes in hand are not the whole file",
+          "observed": "{state}; the read ended with {kind}: {error}",
+          "remedy": "run the command again once the disk or the network share holding {path} answers; `ls -l {path}` shows whether it is still there",
+          "tests": {"rust": "tests/cli-output/read_json.rs::an_interrupted_read_is_refused"}
+        },
+        {
+          "id": "input-not-json",
+          "code": "config",
+          "usage": false,
+          "failed": "decoding the JSON input {path}",
+          "cause": "the file is not JSON: at line {line}, column {column} it holds a character JSON does not allow there",
+          "observed": "{bytes} bytes, line {line} reads {quoted_line}; the decoder answered {error}",
+          "remedy": "write valid JSON at line {line} of {path}, or name the file the command expects; `jq . {path}` shows the same place",
+          "tests": {"rust": "tests/cli-output/read_json.rs::an_input_that_is_not_json_is_refused"}
+        },
+        {
+          "id": "input-truncated",
+          "code": "config",
+          "usage": false,
+          "failed": "decoding the JSON input {path}",
+          "cause": "the JSON ends before its last value closes, so the file is cut short or still being written",
+          "observed": "{bytes} bytes, ending at line {line}, column {column}; the decoder answered {error}",
+          "remedy": "finish writing {path}, or write it again whole, before running the command",
+          "tests": {"rust": "tests/cli-output/read_json.rs::a_truncated_input_is_refused"}
+        },
+        {
+          "id": "input-wrong-shape",
+          "code": "config",
+          "usage": false,
+          "failed": "decoding the JSON input {path} as {expected}",
+          "cause": "the file is JSON but not the document the command reads: a field is missing, extra, or of another type",
+          "observed": "at line {line}, column {column}; the decoder answered {error}",
+          "remedy": "give the document the fields {expected} declares, or name the file meant for this command",
+          "tests": {"rust": "tests/cli-output/read_json.rs::an_input_of_the_wrong_shape_is_refused"}
+        }
+      ]
+    },
+    {
+      "id": "wisent_errors.cli_output.print",
+      "runtimes": ["rust"],
+      "entries": ["Rust: cli_output::output"],
+      "uses": [],
+      "summary": "print a command's result as pretty JSON, or with --text as one path: value line per field, from the same document",
+      "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/cli-output.md",
+      "causes": [
+        {
+          "id": "document-unrepresentable",
+          "code": "config",
+          "usage": false,
+          "failed": "turning the result of type {type} into JSON",
+          "cause": "the result holds a value JSON has no form for, such as a map whose keys are not text",
+          "observed": "the encoder answered {error}",
+          "remedy": "give {type} keys that serialize as strings, or a Serialize form that writes them as text",
+          "tests": {"rust": "tests/cli-output/print.rs::a_result_json_cannot_hold_is_refused"}
+        },
+        {
+          "id": "output-closed",
+          "code": "infra_down",
+          "usage": false,
+          "failed": "writing {bytes} bytes of the result to standard output",
+          "cause": "whatever read standard output closed it before the result was written",
+          "observed": "the write ended with {kind}: {error}",
+          "remedy": "keep the reading end open until the command ends, as in `command | jq .` rather than a reader that stops early",
+          "tests": {"rust": "tests/cli-output/print.rs::a_closed_standard_output_is_refused"}
+        },
+        {
+          "id": "output-unwritable",
+          "code": "infra_down",
+          "usage": false,
+          "failed": "writing {bytes} bytes of the result to standard output",
+          "cause": "the operating system refused the write for a reason other than a closed reader: a full disk behind a redirect, or a device gone",
+          "observed": "the write ended with {kind}: {error}",
+          "remedy": "free space on the disk standard output is redirected to, or redirect it elsewhere, and run the command again",
+          "tests": {"rust": "tests/cli-output/print.rs::an_unwritable_standard_output_is_refused"}
+        }
+      ]
+    }
+  ]
+}

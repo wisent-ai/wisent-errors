@@ -11,6 +11,9 @@ from __future__ import annotations
 import re
 from typing import Any, Mapping, Optional
 
+from .refusal import DeclaredError, checked_envelope_fields, point_flaw
+from .operation import Cause, Operation, Warning, catalogue_problems
+from .template import fill, placeholders, template_problems, unfilled
 from .codes import (
     CODES,
     FAILURE_POINT_PATTERN,
@@ -36,7 +39,17 @@ __all__ = [
     "MEANINGS",
     "RETRY_EXIT",
     "SEVERITIES",
+    "Cause",
+    "DeclaredError",
     "FailureError",
+    "Operation",
+    "Warning",
+    "catalogue_problems",
+    "fill",
+    "placeholders",
+    "point_flaw",
+    "template_problems",
+    "unfilled",
     "chain",
     "code_or_fallback",
     "code_or_none",
@@ -105,12 +118,6 @@ class FailureError(Exception):
         self.envelope = dict(envelope)
 
 
-def _required(value: Any, field: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise TypeError(f"{field} must be a non-empty string")
-    return value.strip()
-
-
 def _optional(value: Any) -> Optional[str]:
     text = ("" if value is None else str(value)).strip()
     return text or None
@@ -137,24 +144,21 @@ def failure(
     ``detail: "unknown"``, which is a worse lie than an absent value. ``cause``
     and ``context`` are structural and are omitted when there is nothing in them.
 
-    Raises on anything malformed. Inside an error path, where raising destroys
-    the diagnosis being carried, use :func:`failure_or_fallback`.
+    Raises a DeclaredError (a TypeError) on anything malformed, naming the
+    declared cause of ``wisent_errors.envelope.build`` and what it found.
+    Inside an error path, where raising destroys the diagnosis being carried,
+    use :func:`failure_or_fallback`.
     """
-    point = _required(failure_point, "failure_point")
-    if not _FAILURE_POINT.match(point):
-        raise TypeError(f"failure_point {point!r} is not a dotted lowercase path")
-    if code not in MEANINGS:
-        raise TypeError(f"code {code!r} is not in the catalogue; one of {', '.join(CODES)}")
-
+    point, named, text = checked_envelope_fields(failure_point, code, service, detail)
     envelope: dict = {
         "failure_point": point,
         "error_code": code,
-        "service": _required(service, "service"),
+        "service": named,
         "impact": _optional(impact),
         "severity": severity(code),
         "retryable": retryable(code),
         "outage": outage(code),
-        "detail": None if detail is None else _required(detail, "detail"),
+        "detail": text,
         "remedy": _optional(remedy),
     }
     if cause is not None:
@@ -181,6 +185,9 @@ def failure_or_fallback(**fields: Any) -> dict:
         notes["wisent_errors.failure_point"] = "absent"
     elif not _FAILURE_POINT.match(point):
         notes["wisent_errors.failure_point"] = "malformed"
+        flaw = point_flaw(point)
+        if flaw is not None:
+            notes["wisent_errors.failure_point_cause"] = flaw[0]
 
     code = fields.get("code")
     if not isinstance(code, str) or code not in MEANINGS:
@@ -229,7 +236,9 @@ def render(envelope: Mapping[str, Any]) -> str:
     retry = "; retry later" if envelope["retryable"] else "; retrying will not help"
     # Whose it is comes from the catalogue, per code: chosen from outage
     # alone, a policy refusal read as a problem with credentials.
-    body = json.dumps(envelope, separators=(",", ":"), ensure_ascii=False)
+    # Rendering a failure must not fail either: a context value JSON has no
+    # form for is written as its text.
+    body = json.dumps(envelope, separators=(",", ":"), ensure_ascii=False, default=str)
     code = envelope["error_code"]
     return f"{operator_summary(code)} \u2014 {whose(code)}{retry} {body}"
 

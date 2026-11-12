@@ -169,6 +169,9 @@ pub struct GenericSentence {
 pub const GENERIC_SENTENCES: &[GenericSentence] = &[
 ${generic}
 ];
+
+/// The failure point grammar, as a pattern: a dotted lowercase path.
+pub const FAILURE_POINT_PATTERN: &str = ${JSON.stringify(catalogue.failure_point.pattern)};
 `;
 }
 
