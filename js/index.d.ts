@@ -78,12 +78,6 @@ export declare function render(envelope: Envelope): string;
 /** Flatten a cause chain, outermost first. */
 export declare function chain(envelope: Envelope): string[];
 
-/** A hard cut, which is what the fleet emits. The width is yours. */
-export declare function trimDetail(text: unknown, limit: number): string;
-
-/** Cut back to a word edge when one falls within `slack`. Opt-in: it moves bytes. */
-export declare function trimDetailAtWordEdge(text: unknown, limit: number, slack: number): string;
-
 /** The code when the catalogue knows it, otherwise the fallback. Never throws. */
 export declare function codeOrFallback(text: unknown): Code;
 

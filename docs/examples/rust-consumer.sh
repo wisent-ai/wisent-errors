@@ -40,7 +40,7 @@ dependencies = [
 LOCK
 
 cat > "$WORK/consumer/src/main.rs" <<'MAIN'
-use wisent_errors::{trim_detail_at_word_edge, Code, Failure, Invalid};
+use wisent_errors::{Code, Failure, Invalid};
 
 fn main() {
     let refused = Failure::new("toy.store.read", Code::InfraDown, "toy")
@@ -62,10 +62,6 @@ fn main() {
     println!("http_status(rate_limit): {}", Code::RateLimit.http_status());
     println!("parse(\"panic\"): {:?}", Code::parse("panic"));
     println!("or_fallback(\"panic\"): {}", Code::or_fallback("panic"));
-    println!(
-        "word-edge trim: {:?}",
-        trim_detail_at_word_edge("one detail that runs past its bound", 22, 8)
-    );
 
     match Failure::new("Not A Point", Code::Auth, "toy") {
         Err(error @ Invalid::FailurePoint { .. }) => println!("strict refusal ({}): {error}", error.cause().id),

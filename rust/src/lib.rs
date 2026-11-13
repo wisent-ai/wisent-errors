@@ -40,61 +40,6 @@ pub use warning::{Hazard, Warning};
 /// Identifiers a reader needs to find the subject: a host, a subscription, a job.
 pub type Context = BTreeMap<String, String>;
 
-/// Trim a detail to a bound. A hard cut, which is what the fleet emits.
-///
-/// The limit is an argument because the width is a product's own decision --
-/// stado and probierz keep 300, wisent-customer-support 400, wisent-tools 500 --
-/// while the rule for how to cut is the thing that was written six times.
-///
-/// An earlier version backed up to the last word edge within 24 characters of the
-/// bound. Nothing in the fleet did that: four products cut hard, and the nicer
-/// rule silently moved the bytes of an operator-visible line for every detail
-/// longer than the bound that contains a space. Ends are still stripped, because
-/// whitespace around a detail is never information.
-pub fn trim_detail(text: &str, limit: usize) -> String {
-    let value = text.trim();
-    if value.chars().count() <= limit {
-        return value.to_owned();
-    }
-    value.chars().take(limit).collect()
-}
-
-/// The same, cut back to a word edge when one falls within `slack` of the bound.
-///
-/// Separate and opt-in, because it changes emitted bytes.
-///
-/// The edge is found in characters, not bytes. The first version compared a byte
-/// offset from `rfind` against a character limit, so on multibyte text the guard
-/// passed for a space nowhere near the cut: 100 CJK characters followed by a space
-/// returned 100 characters where the bound was 300. Provider text in this fleet is
-/// not ASCII.
-pub fn trim_detail_at_word_edge(text: &str, limit: usize, slack: usize) -> String {
-    let value = text.trim();
-    let cut = trim_detail(value, limit);
-    if cut.chars().count() < limit {
-        return cut;
-    }
-    if value.chars().nth(limit).is_some_and(char::is_whitespace) {
-        return cut.trim_end().to_owned();
-    }
-    let edge = cut
-        .char_indices()
-        .filter(|(_, character)| *character == ' ')
-        .map(|(index, _)| index)
-        .next_back();
-    match edge {
-        Some(byte_index) => {
-            let chars_before = cut[..byte_index].chars().count();
-            if chars_before > limit.saturating_sub(slack) {
-                cut[..byte_index].trim_end().to_owned()
-            } else {
-                cut.trim_end().to_owned()
-            }
-        }
-        None => cut.trim_end().to_owned(),
-    }
-}
-
 /// One failure, in the shape every Wisent component reports.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Failure {
