@@ -159,7 +159,7 @@ pub fn read_json<T: DeserializeOwned>(path: impl AsRef<Path>) -> Result<T, ReadJ
         let line_text = String::from_utf8_lossy(&input)
             .lines()
             .nth(source.line().saturating_sub(1))
-            .map_or_else(String::new, |line| line.chars().take(120).collect());
+            .map_or_else(String::new, str::to_owned);
         ReadJsonError::Parse {
             path: path.to_path_buf(),
             expected: std::any::type_name::<T>(),
