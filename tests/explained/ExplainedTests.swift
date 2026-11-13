@@ -1,8 +1,9 @@
 // Real tests of `Error.explained`, the sentence every Wisent app shows a person
 // for a failure instead of `localizedDescription`: a declared description as
-// declared, a decoding failure with the coding path it stopped at, a Cocoa
-// error with its domain and code, any other error as its type and value, and
-// the underlying errors after it, read until the chain ends or repeats.
+// declared, a decoding failure with the coding path it stopped at, an encoding
+// failure with the value, path and reason the encoder gave, a Cocoa error with
+// its domain and code, any other error as its type and value, and the
+// underlying errors after it, read until the chain ends or repeats.
 //
 //   swift test --filter ExplainedTests
 
@@ -45,6 +46,15 @@ final class ExplainedTests: XCTestCase {
         let data = Data(#"{"name": "a", "items": [1, "two"]}"#.utf8)
         XCTAssertThrowsError(try JSONDecoder().decode(Shape.self, from: data)) { error in
             XCTAssertTrue(error.explained.hasPrefix("items.1 is not Int"), error.explained)
+        }
+    }
+
+    func testAnEncodingFailureNamesTheValueThePathAndTheEncodersReason() throws {
+        let value = ["prices": [1.5, Double.infinity]]
+        XCTAssertThrowsError(try JSONEncoder().encode(value)) { error in
+            let said = error.explained
+            XCTAssertTrue(said.hasPrefix("Double inf cannot be encoded at prices.1: "), said)
+            XCTAssertFalse(said.contains("NSCocoaErrorDomain"), said)
         }
     }
 

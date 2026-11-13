@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### `Error.explained` says an encoding failure
+
+- An `EncodingError` bridged to "The data couldn't be written because it isn't in
+  the correct format. (NSCocoaErrorDomain 4866)", without the value refused or the
+  field it stood at, so apps dumped it with `String(describing:)` instead. It is
+  said as `<type> <value> cannot be encoded at <coding path>: <encoder's reason>`
+  (`swift test --filter ExplainedTests`,
+  `testAnEncodingFailureNamesTheValueThePathAndTheEncodersReason`).
+
 ### `ci/check.mjs` runs the node tests
 
 - Nothing ran this package's node tests before a push, which is how six failing

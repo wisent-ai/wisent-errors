@@ -83,8 +83,11 @@ command-line signal and are not counted here.
 
 An app shows a failure with `error.explained`, never `localizedDescription`:
 a declared description as declared, a `DecodingError` with the coding path it
-stopped at (`key "name" is missing at the top level`, `items.1 is not Int`), a
-Cocoa error with its domain and code, any other error as its type and value,
+stopped at (`key "name" is missing at the top level`, `items.1 is not Int`), an
+`EncodingError` with the value the encoder refused, its coding path and the
+encoder's reason (`Double inf cannot be encoded at prices.1: Unable to encode
+Double.infinity directly in JSON.`), a Cocoa error with its domain and code,
+any other error as its type and value,
 then each underlying error after `": "`, read until the chain ends or repeats.
 
 JSON is read through the described calls, so the failure names what was being

@@ -29,6 +29,7 @@ extension Error {
 /// One error's own sentence, without the errors under it.
 private func errorSentence(_ error: Error) -> String {
     if let decoding = error as? DecodingError { return decodingReason(decoding) }
+    if let encoding = error as? EncodingError { return encodingReason(encoding) }
     if let localized = error as? LocalizedError, let description = localized.errorDescription {
         return description
     }
@@ -40,10 +41,26 @@ private func errorSentence(_ error: Error) -> String {
     return String(reflecting: error)
 }
 
-/// The coding path a decoding failure stopped at, or "the top level".
-private func codingPath(_ context: DecodingError.Context) -> String {
-    let keys = context.codingPath.map { $0.intValue.map(String.init) ?? $0.stringValue }
+/// The coding path a decoding or encoding failure stopped at, or "the top level".
+private func codingPath(_ path: [CodingKey]) -> String {
+    let keys = path.map { $0.intValue.map(String.init) ?? $0.stringValue }
     return keys.isEmpty ? "the top level" : keys.joined(separator: ".")
+}
+
+private func codingPath(_ context: DecodingError.Context) -> String {
+    codingPath(context.codingPath)
+}
+
+/// An encoding failure with the value the encoder refused, the coding path it
+/// stood at and the encoder's reason. Bridged, it says only "The data couldn't
+/// be written because it isn't in the correct format".
+func encodingReason(_ error: EncodingError) -> String {
+    switch error {
+    case .invalidValue(let value, let context):
+        return "\(type(of: value)) \(value) cannot be encoded at \(codingPath(context.codingPath)): \(context.debugDescription)"
+    @unknown default:
+        return String(reflecting: error)
+    }
 }
 
 /// A decoding failure with the coding path it stopped at and the decoder's reason.
