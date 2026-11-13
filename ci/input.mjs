@@ -96,7 +96,9 @@ export function readJsonInput(path, what, expected, accept = () => null) {
   try {
     value = JSON.parse(text);
   } catch (error) {
-    return refuse(INPUT, 'input-not-json', { what, path, expected, bytes: String(Buffer.byteLength(text)), stop: stopOf(text, error.message), quoted_start: JSON.stringify(text.slice(0, 40)), error: error.message });
+    // The start shown is the file's first line, where a reader looks first,
+    // not a chosen number of characters.
+    return refuse(INPUT, 'input-not-json', { what, path, expected, bytes: String(Buffer.byteLength(text)), stop: stopOf(text, error.message), quoted_start: JSON.stringify(text.split('\n')[0]), error: error.message });
   }
   const found = accept(value);
   if (found !== null) refuse(INPUT, 'input-wrong-shape', { what, path, expected, found });
