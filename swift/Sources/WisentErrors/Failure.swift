@@ -12,38 +12,6 @@
 
 import Foundation
 
-/// Trim a detail to a bound. A hard cut, which is what the fleet emits.
-///
-/// The limit is an argument because the width is a product's own decision --
-/// stado and probierz keep 300, wisent-customer-support 400, wisent-tools 500 --
-/// while the rule for how to cut is the thing that was written six times.
-public func trimDetail(_ text: String?, limit: Int) -> String {
-    let value = (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-    if value.count <= limit { return value }
-    return String(value.prefix(limit))
-}
-
-/// The same, cut back to a word edge when one falls within `slack` of the bound.
-///
-/// Separate and opt-in, because it changes emitted bytes. The edge is measured in
-/// characters: an earlier Rust version compared a byte offset against a character
-/// limit and discarded two thirds of a non-ASCII detail.
-public func trimDetailAtWordEdge(_ text: String?, limit: Int, slack: Int) -> String {
-    let value = (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-    let cut = trimDetail(value, limit: limit)
-    if cut.count < limit { return cut }
-    let characters = Array(value)
-    if characters.count > limit, characters[limit].isWhitespace {
-        return String(cut.reversed().drop { $0.isWhitespace }.reversed())
-    }
-    guard let edge = cut.lastIndex(of: " ") else {
-        return String(cut.reversed().drop { $0.isWhitespace }.reversed())
-    }
-    let charactersBefore = cut.distance(from: cut.startIndex, to: edge)
-    let kept = charactersBefore > limit - slack ? String(cut[cut.startIndex..<edge]) : cut
-    return String(kept.reversed().drop { $0.isWhitespace }.reversed())
-}
-
 /// One failure, in the shape every Wisent component reports.
 public struct Failure: Sendable, Equatable {
     public let failurePoint: String

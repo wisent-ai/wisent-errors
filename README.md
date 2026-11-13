@@ -185,9 +185,8 @@ migration, which is the duplication this package exists to remove.
 
 An envelope carries its `detail` whole: `failure()`, `Failure::detail` and the
 fallback builders strip only the whitespace around it, because a cut detail is a
-cut diagnosis. `trimDetail(text, limit)` / `trim_detail` exists for a product
-that prints a detail into a narrower place; the width is always the caller's
-argument and the package has no width of its own.
+cut diagnosis. The package has no trim and no width: a product that printed a
+detail into a narrower place cut off the part that said why.
 
 ## Use it
 

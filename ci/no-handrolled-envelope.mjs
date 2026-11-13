@@ -51,7 +51,7 @@ function read(path) {
   if (!SOURCE.has(extname(path)) || packageSource(path)) return;
   files += 1;
   readTreeFile(path, 'a source file').split('\n').forEach((line, index) => {
-    if (KEYS.test(line)) findings.push(`${path}:${index + 1}  ${line.trim().slice(0, 120)}`);
+    if (KEYS.test(line)) findings.push(`${path}:${index + 1}  ${line.trim()}`);
   });
 }
 
