@@ -51,11 +51,14 @@ extension WisentTelemetry {
             let waiting = events.count - index
             switch await post(event, to: target) {
             case .accepted:
-                if let path = file("queue")?.appendingPathComponent("\(eventID).json") {
-                    try? FileManager.default.removeItem(at: path)
-                }
                 sent += 1
-                continue
+                guard let path = file("queue")?.appendingPathComponent("\(eventID).json") else { continue }
+                do {
+                    try remove(path, what: "the sent event \(eventID)", left: "the collector accepted it, so the next flush sends it again")
+                    continue
+                } catch {
+                    stopped = "\(error)"
+                }
             case .refused(let status, let answer):
                 stopped = "sending event \(eventID) to \(target.absoluteString): the collector refused HTTP \(status): \(answer); observed: \(waiting) event(s) stay queued; fix: the answer names what the collector refuses; when it is Unknown mobile analytics app, declare app \(product.appID) in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON; the events are sent again on the next flush"
             case .failed(let status, let answer):

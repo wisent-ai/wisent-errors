@@ -113,7 +113,7 @@ public final class WisentTelemetry: @unchecked Sendable {
         guard let path = file("consent.json") else { throw TelemetryError.noHome }
         try writeObject(["level": level.rawValue, "answered_at": Self.now()], to: path, what: "the telemetry consent")
         if level == .off, let queue = file("queue") {
-            try? FileManager.default.removeItem(at: queue)
+            try remove(queue, what: "the event queue", left: "the events queued before telemetry was turned off are still kept, and are sent if it is turned on again")
         }
     }
 

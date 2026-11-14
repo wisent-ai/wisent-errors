@@ -18,7 +18,10 @@ struct Human {
 /// One case's own directory, removed and made again.
 fn place(case: &str) -> PathBuf {
     let directory = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("cli-output").join(case);
-    let _ = std::fs::remove_dir_all(&directory);
+    match std::fs::remove_dir_all(&directory) {
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => panic!("{} is there before the case and cannot be removed: {error}", directory.display()),
+        _ => {}
+    }
     std::fs::create_dir_all(&directory).expect("the test's own directory under the target can be made");
     directory
 }

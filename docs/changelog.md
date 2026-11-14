@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Turning Swift telemetry off drops the queue, or says it could not
+
+- `setLevel(.off)` promises that turning telemetry off drops what waits, but
+  removed the queue with `try?`, so a refused removal kept the events, which
+  went out if telemetry was turned on again. A sent event's removal was
+  dropped the same way, so the next flush sent it again with nothing said.
+  Both now remove through `remove(_:what:left:)` (`Telemetry/Files.swift`):
+  a missing file is what removal wanted, any other failure throws
+  `TelemetryError.unwritable` from `setLevel`, and stops `flush` naming the
+  event, as the Rust port already did (`telemetry/mod.rs`,
+  `delivery/deliver.rs`). Written and read; nothing was built or run.
+
 ### Telemetry's own causes pass the template rules they enforce
 
 - Five telemetry causes (`store-unwritable`, `file-unreadable`,

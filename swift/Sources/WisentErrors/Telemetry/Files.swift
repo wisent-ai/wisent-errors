@@ -32,6 +32,19 @@ extension WisentTelemetry {
         }
     }
 
+    /// Remove a file or directory telemetry keeps; one already gone is what
+    /// removal wanted, any other failure says what stays because of it.
+    func remove(_ path: URL, what: String, left: String) throws {
+        do {
+            try FileManager.default.removeItem(at: path)
+        } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError {
+            return
+        } catch {
+            throw TelemetryError.unwritable(
+                "removing \(what) at \(path.path): the telemetry directory refused it: \(error.explained); observed: \(left); fix: make \(path.deletingLastPathComponent().path) writable by this user, then try again")
+        }
+    }
+
     // MARK: Facts about this machine
 
     static var platform: String {

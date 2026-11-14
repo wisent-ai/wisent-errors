@@ -37,7 +37,10 @@ impl Case {
         let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
             .join("telemetry")
             .join(format!("{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
+        match std::fs::remove_dir_all(&root) {
+            Err(error) if error.kind() != std::io::ErrorKind::NotFound => panic!("{} is there before the case and cannot be removed: {error}", root.display()),
+            _ => {}
+        }
         std::fs::create_dir_all(&root).expect("the case directory");
         for variable in [
             "WISENT_TELEMETRY_COLLECTOR_URL",
@@ -82,7 +85,10 @@ impl Drop for Case {
             "queued_at_end": state,
             "delivery_at_end": delivery,
         }));
-        let _ = std::fs::remove_dir_all(&self.root);
+        // A panic here, while a failed test unwinds, would abort the run.
+        if let Err(error) = std::fs::remove_dir_all(&self.root) {
+            eprintln!("the case directory {} could not be removed: {error}", self.root.display());
+        }
         std::env::remove_var("WISENT_TELEMETRY_HOME");
     }
 }
@@ -149,8 +155,14 @@ fn record(entry: Value) {
     if let Some(cases) = report["cases"].as_array_mut() {
         cases.push(entry);
     }
-    let _ = std::fs::write(
-        file,
-        serde_json::to_string_pretty(&report).unwrap_or_default(),
-    );
+    // Called while a case ends, where a panic would abort the run: a report
+    // that cannot be kept is said instead.
+    match serde_json::to_string_pretty(&report) {
+        Ok(text) => {
+            if let Err(error) = std::fs::write(file, text) {
+                eprintln!("the telemetry test report {} could not be written: {error}", file.display());
+            }
+        }
+        Err(error) => eprintln!("the telemetry test report could not be serialised: {error}"),
+    }
 }
