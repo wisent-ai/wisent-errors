@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### `causeOf`: the one line a caught value says about why it failed
+
+- `causeOf(error)` (`js/cause.mjs`): an Error's message followed by each
+  `cause` under it, said once, or a value that is no Error as text, an
+  object as its JSON. Twenty-odd Wisent programs (competitors-cli,
+  googleads-cli, metaads-cli, seo-cli, deep-analytics, entitlements-rotator,
+  people-rotator, ssh-auth-router, las, kronika, weles-web, wisent-trade, …)
+  each kept the same function as a file of their own; the products that
+  depend on `@wisent/errors` import it from here (`tests/cause/of.mjs`).
+  Written and read; nothing was built or run.
+
 ### `Declared`: the raised cause products kept a copy of
 
 - Kupiec, most-core, probierz, skryba, skrzynka, spis, ster, stado and

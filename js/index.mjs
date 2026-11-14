@@ -205,6 +205,7 @@ export {
 
 export { fill, isPlaceholderName, parts, placeholders, templateProblems, unfilled } from './template.mjs';
 export { DeclaredError, pointFlaw } from './refusal.mjs';
+export { causeOf } from './cause.mjs';
 export { ENVELOPE_BUILD } from './failures.mjs';
 export {
   CAUSE_ID_PATTERN,

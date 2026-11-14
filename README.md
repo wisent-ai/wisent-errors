@@ -157,6 +157,12 @@ same rules with the same sentences: `fill`, `placeholders`, `unfilled`,
 four read a template the same way and are tested against the same probes. A
 product keeps no copy of these rules of its own.
 
+JavaScript also says why a caught value failed, as one line a refusal's
+observed state or a log carries: `causeOf(error)` is the message followed by
+each `cause` under it, said once, or a value that is no Error as text (an
+object as its JSON), so a failed `fetch` names the refused connection instead
+of only "fetch failed".
+
 ### The lint a product runs
 
 `ci/error-standard.mjs` holds a product's tree to the same standard: `scan`

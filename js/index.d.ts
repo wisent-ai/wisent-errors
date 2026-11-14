@@ -78,6 +78,13 @@ export declare function render(envelope: Envelope): string;
 /** Flatten a cause chain, outermost first. */
 export declare function chain(envelope: Envelope): string[];
 
+/**
+ * Why a caught value failed, as one line: an Error's message followed by each
+ * `cause` under it, said once, or the value itself as text (an object as its
+ * JSON).
+ */
+export declare function causeOf(error: unknown): string;
+
 /** The code when the catalogue knows it, otherwise the fallback. Never throws. */
 export declare function codeOrFallback(text: unknown): Code;
 
