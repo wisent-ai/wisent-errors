@@ -250,7 +250,7 @@ fn exchange(
         Err(ureq::Error::Transport(transport)) => {
             let error = transport.to_string();
             let mut values = common.to_vec();
-            values.push(("error", error.as_str()));
+            values.push(("why", error.as_str()));
             Err(SUPPORT_UNREACHABLE.failure(point, product, &values))
         }
     }

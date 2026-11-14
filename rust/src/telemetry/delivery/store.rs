@@ -48,7 +48,7 @@ pub(super) fn write_json(
             &[
                 ("what", what),
                 ("path", &path.display().to_string()),
-                ("error", &error.to_string()),
+                ("why", &error.to_string()),
                 ("directory", &directory.display().to_string()),
             ],
         )
@@ -121,7 +121,7 @@ fn unreadable(
         &[
             ("what", what),
             ("path", &path.display().to_string()),
-            ("error", error),
+            ("why", error),
             ("bytes", &bytes.to_string()),
             ("product", product),
         ],

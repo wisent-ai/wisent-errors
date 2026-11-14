@@ -37,7 +37,7 @@ impl Telemetry {
             self.product.id,
             &[
                 ("program", &program.display().to_string()),
-                ("error", &error.to_string()),
+                ("why", &error.to_string()),
                 ("queued", &queued.to_string()),
                 ("product", self.product.id),
             ],
@@ -156,7 +156,7 @@ impl Telemetry {
                 ("what", what),
                 ("path", "(none)"),
                 (
-                    "error",
+                    "why",
                     "neither WISENT_TELEMETRY_HOME, XDG_STATE_HOME nor HOME is set",
                 ),
                 ("directory", "(none)"),
@@ -171,7 +171,7 @@ impl Telemetry {
             &[
                 ("what", "an event"),
                 ("path", "(none)"),
-                ("error", "the system gave no randomness for its id"),
+                ("why", "the system gave no randomness for its id"),
                 (
                     "directory",
                     &self
@@ -191,7 +191,7 @@ impl Telemetry {
             &[
                 ("what", what),
                 ("path", &path.display().to_string()),
-                ("error", &error.to_string()),
+                ("why", &error.to_string()),
                 (
                     "directory",
                     &self

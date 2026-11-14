@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Telemetry's own causes pass the template rules they enforce
+
+- Five telemetry causes (`store-unwritable`, `file-unreadable`,
+  `collector-unreachable`, `flush-unstarted`, `support-unreachable`) put the
+  raw `{error}` in their cause, which `template_problems` refuses outside
+  `observed`, and `collector-answer-unreadable` wrote the collector's
+  `{"ok": true}` as literal braces, which it reads as a malformed
+  placeholder; `tests/telemetry/delivery.rs::every_declared_cause_has_its_test_here`
+  checks `operation.problems()` over all of them. The causes name the
+  reason `{why}` and the accepted answer `{accepted}`, passed at every raise
+  site in `rust/src/telemetry`, so every sentence reads as before. Written
+  and read; nothing was built or run.
+
 ### `Error.explained` says an encoding failure
 
 - An `EncodingError` bridged to "The data couldn't be written because it isn't in

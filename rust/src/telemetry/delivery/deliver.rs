@@ -91,6 +91,7 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
                 ("queued", waiting.clone()),
                 ("app", app.to_owned()),
                 ("product", product.to_owned()),
+                ("accepted", r#"{"ok": true}"#.to_owned()),
             ];
             values.extend(extra.iter().map(|(key, value)| (*key, value.clone())));
             values
@@ -137,7 +138,7 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
                 cause.failure(DELIVER_POINT, product, &borrowed(&values))
             }
             Err(ureq::Error::Transport(transport)) => {
-                let values = values(&[("error", transport.to_string())]);
+                let values = values(&[("why", transport.to_string())]);
                 COLLECTOR_UNREACHABLE.failure(DELIVER_POINT, product, &borrowed(&values))
             }
         };

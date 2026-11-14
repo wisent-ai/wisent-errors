@@ -160,7 +160,7 @@ impl Telemetry {
                     ("what", "the telemetry consent"),
                     ("path", &path.display().to_string()),
                     (
-                        "error",
+                        "why",
                         &format!("level {level:?} is not off, errors or usage"),
                     ),
                     ("bytes", &consent.to_string().len().to_string()),
