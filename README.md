@@ -276,6 +276,17 @@ JSON cannot hold and a closed standard output are declared causes too, never a
 panic) and `text_lines`, the flattening behind it: keys joined with `.`, array
 items as `[index]`, `-` for null and for an empty array or object.
 
+### The installed CLI, from a Mac app: `WisentProgram`
+
+The Swift package's `WisentProgram` library is how a macOS app that drives its
+product through the CLI finds it and runs it once:
+`InstalledProgram(name: "para", variable: "PARA", leading: ["--json"])` looks
+in the path `PARA` names, then `PATH`, then `~/.stado/bin/para`, refuses with
+`Failure.missing(searched:)` naming every place, and `run` hands back both
+streams whole with the exit status; cancelling the caller sends SIGTERM. A
+product says the two failures in its own words
+(`tests/program/InstalledProgramTests.swift`).
+
 ## Layout, and how it stays one thing
 
 What each directory holds, and the checks that keep the catalogue, the

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### `WisentProgram`: the installed CLI a Mac app runs
+
+- `InstalledProgram` (`swift/Sources/WisentProgram`, macOS only): the places
+  a product's CLI is looked for (its variable, `PATH`, `~/.stado/bin`), the
+  first executable one or `Failure.missing(searched:)`, and one run of it
+  with both streams read whole and SIGTERM on cancellation. para-, prawo-,
+  rachuba-, trends- and zdrowie-desktop each kept the same 195 lines as
+  `<Product>Program.swift`; they declare one `InstalledProgram` instead
+  (`tests/program/InstalledProgramTests.swift`). Written and read; nothing
+  was built or run.
+
 ### `causeOf`: the one line a caught value says about why it failed
 
 - `causeOf(error)` (`js/cause.mjs`): an Error's message followed by each
