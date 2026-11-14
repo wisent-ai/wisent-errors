@@ -87,12 +87,17 @@ public struct InstalledProgram: Sendable {
     }
 
     /// Run `executable` with ``leading`` and `arguments` to completion, its
-    /// standard input empty. Cancelling the calling task stops the run: the
-    /// program is sent SIGTERM, and the run ends with `signalled` set once it
-    /// has exited and its pipes closed. A program that cannot start is
-    /// ``Failure/failedToStart(path:reason:)``; one cancelled before it
-    /// started is `CancellationError`.
-    public func run(_ arguments: [String], executable: URL) async throws -> Outcome {
+    /// standard input empty, handing each chunk it writes to `onOutput` with
+    /// the stream it came from, in arrival order. Cancelling the calling task
+    /// stops the run: the program is sent SIGTERM, and the run ends with
+    /// `signalled` set once it has exited and its pipes closed. A program that
+    /// cannot start is ``Failure/failedToStart(path:reason:)``; one cancelled
+    /// before it started is `CancellationError`.
+    public func run(
+        _ arguments: [String],
+        executable: URL,
+        onOutput: @escaping @Sendable (Stream, String) -> Void = { _, _ in }
+    ) async throws -> Outcome {
         let process = Process()
         let stdout = Pipe()
         let stderr = Pipe()
@@ -113,7 +118,9 @@ public struct InstalledProgram: Sendable {
                             run.closed(stream)
                             return
                         }
-                        run.append(String(decoding: data, as: UTF8.self), to: stream)
+                        let text = String(decoding: data, as: UTF8.self)
+                        run.append(text, to: stream)
+                        onOutput(stream, text)
                     }
                 }
                 process.terminationHandler = { finished in

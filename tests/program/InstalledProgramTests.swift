@@ -39,6 +39,21 @@ final class InstalledProgramTests: XCTestCase {
         XCTAssertEqual(outcome, InstalledProgram.Outcome(status: 3, signalled: false, stdout: "out", stderr: "err"))
     }
 
+    func testEachChunkIsHandedOnWithItsStreamAsItArrives() async throws {
+        final class Chunks: @unchecked Sendable {
+            private let lock = NSLock()
+            private var held: [String] = []
+            func add(_ text: String) { lock.withLock { held.append(text) } }
+            var all: String { lock.withLock { held.joined() } }
+        }
+        let seen = Chunks()
+        let outcome = try await program.run(["printf one; printf two >&2"], executable: URL(fileURLWithPath: "/bin/sh")) {
+            stream, text in seen.add(stream == .stdout ? "out:\(text);" : "err:\(text);")
+        }
+        XCTAssertTrue(seen.all.contains("out:one;") && seen.all.contains("err:two;"), seen.all)
+        XCTAssertEqual(outcome.stdout, "one")
+    }
+
     func testCancellingTheCallerStopsTheProgram() async throws {
         let run = Task { try await program.run(["exec sleep 30"], executable: URL(fileURLWithPath: "/bin/sh")) }
         try await Task.sleep(nanoseconds: 200_000_000)
