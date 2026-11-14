@@ -109,6 +109,10 @@ something the others do not:
 - the refusal: `Cause::sentence(values)` is `<what failed>: <cause>; observed:
   <state>`, `Cause::fix(values)` the remedy and `Cause::refusal(values)` both
   as one line, `{name}` filled from the values the raising code supplies;
+- the error a product raises: `Declared::new(cause, values)` keeps the cause
+  and the values, displays `Cause::refusal`, and `Declared::in_chain(error)`
+  finds it beneath the errors that wrap it, `Declared::code(operations)` its
+  full id `<functionality>.<cause>` (JavaScript: `DeclaredError`);
 - the envelope: `Cause::failure(point, service, values)` with `detail`,
   `remedy` and `context.cause` set, and any placeholder the raising code
   gave no value for named in `context["wisent_errors.unfilled"]`;

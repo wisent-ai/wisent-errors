@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### `Declared`: the raised cause products kept a copy of
+
+- Kupiec, most-core, probierz, skryba, skrzynka, spis, ster, stado and
+  stado-product each kept a type holding a `&'static Cause` and the values
+  its sentences are filled with, displayed as its refusal, and found beneath
+  wrapping errors by walking the chain. `wisent_errors::Declared`
+  (`rust/src/operation/declared.rs`) is that type once, the Rust form of the
+  JS `DeclaredError`: `new(cause, values)`, `values()`, `sentence()`,
+  `fix()`, `exit_code(failure_exit)`, `code(operations)` (the full id) and
+  `in_chain(error)`; `Display` is `Cause::refusal`. A product keeps only what
+  is its own (an HTTP status, an operation, a context) beside it
+  (`tests/declared/raise.rs`). Written and read; nothing was built or run.
+
 ### Turning Swift telemetry off drops the queue, or says it could not
 
 - `setLevel(.off)` promises that turning telemetry off drops what waits, but

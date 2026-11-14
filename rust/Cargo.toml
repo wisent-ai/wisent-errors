@@ -49,6 +49,10 @@ name = "envelope"
 path = "../tests/envelope/build.rs"
 
 [[test]]
+name = "declared"
+path = "../tests/declared/raise.rs"
+
+[[test]]
 name = "cli-output-read"
 path = "../tests/cli-output/read_json.rs"
 

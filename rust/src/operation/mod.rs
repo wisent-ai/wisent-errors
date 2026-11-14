@@ -25,11 +25,13 @@
 
 mod catalogue;
 mod cause;
+mod declared;
 mod source;
 pub mod template;
 
 pub use catalogue::catalogue_problems;
 pub use cause::Cause;
+pub use declared::Declared;
 pub(crate) use cause::{is_cause_id, is_test_path, text_problems};
 pub use source::generic_sentences_in;
 pub use template::{fill, parts, placeholders, template_problems, unfilled, Part};
