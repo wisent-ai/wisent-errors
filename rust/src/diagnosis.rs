@@ -67,18 +67,18 @@ pub fn problems(operations: &[&'static Operation], checks: &[Check]) -> Vec<Stri
         .iter()
         .filter(|operation| !operation.entries.is_empty())
     {
-        match checks
+        let checked: Vec<_> = checks
             .iter()
             .filter(|check| check.operation.id == operation.id)
-            .count()
-        {
-            0 => problems.push(format!(
+            .collect();
+        match checked.as_slice() {
+            [] => problems.push(format!(
                 "{} has an entry point and no diagnosis check: give it a Probe::Run, or a \
                  Probe::Skipped saying why it is not tried",
                 operation.id
             )),
-            1 => {}
-            count => problems.push(format!("{} is checked {count} times", operation.id)),
+            [_] => {}
+            many => problems.push(format!("{} is checked {} times", operation.id, many.len())),
         }
     }
     for check in checks {

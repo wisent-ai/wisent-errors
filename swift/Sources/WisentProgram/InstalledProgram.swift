@@ -5,7 +5,8 @@ import WisentErrors
 /// An installed Wisent command line program and one finite run of it, as a
 /// desktop app that drives its product through the CLI runs it: the program
 /// is the one the product's variable names, else the first on `PATH`, else
-/// the one `stado product install <name> --surface cli` places in
+/// the one the <name> release installer at
+/// `stado://releases/<name>/<version>/<platform>/install.sh` places in
 /// `~/.stado/bin`.
 ///
 /// A product declares it once (`InstalledProgram(name: "para", variable:

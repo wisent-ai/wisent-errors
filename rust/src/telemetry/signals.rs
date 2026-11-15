@@ -87,7 +87,7 @@ impl Telemetry {
     /// refused as usage and the previous usage refusal was the same command.
     /// A command that was not refused as usage ends the loop.
     pub(super) fn note_command(&self, command: &str, exit_status: i32) {
-        let refused = exit_status == 2;
+        let refused = exit_status == crate::Code::USAGE_EXIT;
         self.note(
             &events::USAGE_LOOP,
             "last_usage_refusal",

@@ -64,10 +64,12 @@ pub(crate) fn point_flaw(point: &str) -> Option<Flaw> {
             return Some(flaw(&own::ENVELOPE_BUILD_FAILURE_POINT_CHARACTER, Some(outside)));
         }
         let separator = |c: char| c == '-' || c == '_';
-        let doubled = segment
-            .chars()
-            .zip(segment.chars().skip(1))
-            .any(|(left, right)| separator(left) && separator(right));
+        let chars: Vec<char> = segment.chars().collect();
+        let following = chars.split_first().map_or(&[][..], |(_, rest)| rest);
+        let doubled = chars
+            .iter()
+            .zip(following)
+            .any(|(left, right)| separator(*left) && separator(*right));
         if segment.ends_with(separator) || doubled {
             return Some(flaw(&own::ENVELOPE_BUILD_FAILURE_POINT_SEPARATOR, None));
         }
