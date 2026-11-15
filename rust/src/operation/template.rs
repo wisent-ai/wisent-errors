@@ -37,8 +37,8 @@ pub fn is_placeholder_name(name: &str) -> bool {
 /// The template's parts, in order.
 pub fn parts(template: &str) -> Vec<Part<'_>> {
     let mut found = Vec::new();
-    let mut text_start = 0;
-    let mut index = 0;
+    let mut text_start: usize = Default::default();
+    let mut index: usize = Default::default();
     while index < template.len() {
         let byte = template.as_bytes()[index];
         if byte != b'{' && byte != b'}' {

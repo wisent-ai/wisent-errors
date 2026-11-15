@@ -57,7 +57,7 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
     };
     if let Some(skipped) = skipped {
         return Ok(Delivered {
-            sent: 0,
+            sent: Default::default(),
             remaining: queued.len(),
             stopped: None,
             skipped: Some(skipped),
@@ -67,7 +67,7 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
         Ok(Collector { url, .. }) => url,
         Err(failure) => {
             let delivered = Delivered {
-                sent: 0,
+                sent: Default::default(),
                 remaining: queued.len(),
                 stopped: Some(failure),
                 skipped: None,
@@ -79,7 +79,7 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
     let agent = ureq::AgentBuilder::new().build();
     let product = telemetry.product().id;
     let app = telemetry.product().app_id;
-    let mut sent = 0;
+    let mut sent: usize = Default::default();
     let mut stopped = None;
     for (index, (path, event)) in queued.iter().enumerate() {
         let event_id = event.get("eventId").and_then(Value::as_str).unwrap_or("");

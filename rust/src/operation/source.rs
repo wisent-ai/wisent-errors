@@ -33,7 +33,7 @@ pub fn generic_sentences_in(line: &str, single_quoted: bool) -> Vec<&'static Gen
 fn literals(line: &str, single_quoted: bool) -> Vec<&str> {
     let mut segments = Vec::new();
     let bytes = line.as_bytes();
-    let mut index = 0;
+    let mut index: usize = Default::default();
     while index < bytes.len() {
         let quote = bytes[index];
         let opens = quote == b'"' || quote == b'`' || (single_quoted && quote == b'\'');

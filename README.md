@@ -91,7 +91,7 @@ pub static ENROLL: Operation = Operation {
     entries: &["stado fleet enroll", "Desktop: Hosts → Enroll a machine"],
     uses: &[&REGISTRY_WRITE, &HOST_CONNECT],
     summary: "register a machine verified over SSH",
-    docs: "https://stado.wisent.com/docs/cli/fleet-enrollment",
+    docs: "https://stado.wisent.com/docs/cli/fleet",
     causes: &[&FLEET_UNDECLARED /* , every cause of its own steps */],
     warnings: &[],
 };

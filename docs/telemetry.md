@@ -143,6 +143,12 @@ answer of HTTP 500 and above, the collector's own failure (`the collector failed
 on its own side, HTTP 500: …`): such an event is not refused, nothing on the
 sending machine is to fix, and it goes out again on the next flush.
 
+`installation` and `last_delivery` are `null` when their file is not there, and
+`level` is `"unanswered"`. Any of `level`, `queued`, `installation` and
+`last_delivery` whose file is there and cannot be read, or is not what
+telemetry wrote, is `{"unreadable": "<the reader's sentence>"}`, never shown as
+no file.
+
 ## How each operation fails
 
 `telemetry::operations()` declares every cause in the crate's own

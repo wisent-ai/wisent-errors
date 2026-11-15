@@ -108,32 +108,29 @@ impl Telemetry {
             Ok(collector) => (json!(collector.url), json!(collector.source)),
             Err(failure) => (Value::Null, json!({ "refused": failure.detail })),
         };
-        let installation = self
-            .file("installation.json")
-            .and_then(|path| {
-                store::read_json(
-                    &path,
-                    "the installation id",
-                    self.product.id,
-                    self.product.id,
-                )
-                .ok()
-                .flatten()
-            })
-            .and_then(|value| value.get("id").cloned())
-            .unwrap_or(Value::Null);
+        // A file that is there and cannot be read is said as `level` and
+        // `queued` say theirs, never shown as no file.
+        let read = |name: &str, what: &str| {
+            self.file(name)
+                .map(|path| store::read_json(&path, what, self.product.id, self.product.id))
+        };
+        let installation = match read("installation.json", "the installation id") {
+            Some(Ok(Some(value))) => match value.get("id") {
+                Some(id) => id.clone(),
+                None => Value::Null,
+            },
+            None | Some(Ok(None)) => Value::Null,
+            Some(Err(failure)) => json!({ "unreadable": failure.detail }),
+        };
         let queued = match self.queued() {
             Ok(queued) => json!(queued.len()),
             Err(failure) => json!({ "unreadable": failure.detail }),
         };
-        let last_delivery = self
-            .file("delivery.json")
-            .and_then(|path| {
-                store::read_json(&path, "the last delivery", self.product.id, self.product.id)
-                    .ok()
-                    .flatten()
-            })
-            .unwrap_or(Value::Null);
+        let last_delivery = match read("delivery.json", "the last delivery") {
+            Some(Ok(Some(value))) => value,
+            None | Some(Ok(None)) => Value::Null,
+            Some(Err(failure)) => json!({ "unreadable": failure.detail }),
+        };
         json!({
             "product": self.product.id,
             "app_id": self.product.app_id,

@@ -13,6 +13,16 @@
   when it moves its pin and writes its warnings page again. Written and read;
   nothing was built or run.
 
+### Telemetry status says an installation or delivery file it cannot read
+
+- `status()` (Rust `telemetry/asked/mod.rs`, Swift `Telemetry/Status.swift`)
+  read `installation.json` and `delivery.json` through `.ok()` / `try?`, so a
+  file that was there and could not be read showed `installation: null` and
+  `last_delivery: null`, as if nothing had been written. Each is now
+  `{"unreadable": …}` with the reader's sentence, as `level` and `queued`
+  already were (`docs/telemetry.md`, Status). Written and read; nothing was
+  built or run.
+
 ### `WisentProgram`: the installed CLI a Mac app runs
 
 - `InstalledProgram` (`swift/Sources/WisentProgram`, macOS only): the places

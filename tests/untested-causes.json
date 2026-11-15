@@ -14,13 +14,5 @@
   {
     "test": "tests/tools/parts.mjs::a_raised_cause_no_part_declares_is_refused",
     "reason": "a command raises a cause no part declares only through a defect in this repository's own command code; no input, file or state provokes it"
-  },
-  {
-    "test": "tests/telemetry/store.rs::a_system_without_randomness_queues_nothing",
-    "reason": "getrandom fails only when the kernel's random source is unavailable (no getentropy, no /dev/urandom), which no unprivileged test can arrange on a running machine"
-  },
-  {
-    "test": "tests/telemetry/consent.rs::an_answer_the_terminal_cannot_give_records_nothing",
-    "reason": "Telemetry::ask reads only when stdin and stderr are terminals, and a terminal refuses a read only when its device goes away mid-read; a test process has no terminal to take away"
   }
 ]

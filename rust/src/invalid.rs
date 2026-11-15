@@ -41,7 +41,7 @@ pub(crate) fn point_flaw(point: &str) -> Option<Flaw> {
     if point.is_empty() {
         return Some(Flaw {
             cause: &own::ENVELOPE_BUILD_FAILURE_POINT_ABSENT,
-            position: 0,
+            position: Default::default(),
             segment: String::new(),
             character: None,
         });

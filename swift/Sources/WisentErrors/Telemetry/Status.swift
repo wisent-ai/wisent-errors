@@ -17,10 +17,18 @@ extension WisentTelemetry {
         } catch {
             (collector, source) = (NSNull(), ["refused": "\(error)"])
         }
-        let installation = file("installation.json").flatMap { try? readObject($0, what: "the installation id") }?["id"]
+        // A file that is there and cannot be read is said as `level` and
+        // `queued` say theirs, never shown as no file.
+        let installation: Any
+        do {
+            installation = try file("installation.json").flatMap { try readObject($0, what: "the installation id") }?["id"] ?? NSNull()
+        } catch { installation = ["unreadable": "\(error)"] }
         let queued: Any
         do { queued = try self.queued().count } catch { queued = ["unreadable": "\(error)"] }
-        let lastDelivery = file("delivery.json").flatMap { try? readObject($0, what: "the last delivery") }
+        let lastDelivery: Any
+        do {
+            lastDelivery = try file("delivery.json").flatMap { try readObject($0, what: "the last delivery") }.map { $0 as Any } ?? NSNull()
+        } catch { lastDelivery = ["unreadable": "\(error)"] }
         return [
             "product": product.id,
             "app_id": product.appID,
@@ -28,9 +36,9 @@ extension WisentTelemetry {
             "do_not_track": Self.doNotTrack,
             "collector": collector,
             "collector_source": source,
-            "installation": installation ?? NSNull(),
+            "installation": installation,
             "queued": queued,
-            "last_delivery": lastDelivery as Any? ?? NSNull(),
+            "last_delivery": lastDelivery,
             "directory": directory.map { Cleaner().clean($0.path) } as Any? ?? NSNull(),
         ]
     }
