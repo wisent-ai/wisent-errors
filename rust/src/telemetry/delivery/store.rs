@@ -133,18 +133,21 @@ pub(super) const RECORD_POINT: &str = "wisent-errors.telemetry.record";
 /// A random version-4 UUID, or `None` when the system has no randomness to
 /// give, in which case nothing is queued under a made-up id.
 pub(super) fn random_id() -> Option<String> {
-    let mut bytes = [0u8; 16];
+    let mut bytes = u128::to_be_bytes(Default::default());
     getrandom::getrandom(&mut bytes).ok()?;
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    let hex: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; /* https://www.rfc-editor.org/rfc/rfc9562.html#section-5.4 */
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; /* https://www.rfc-editor.org/rfc/rfc9562.html#section-4.1 */
+    let (time_low, rest) = bytes.split_first_chunk()?;
+    let (time_mid, rest) = rest.split_first_chunk()?;
+    let (version, rest) = rest.split_first_chunk()?;
+    let (variant, node) = rest.split_first_chunk()?;
+    let node: String = node.iter().map(|byte| format!("{byte:02x}")).collect();
     Some(format!(
-        "{}-{}-{}-{}-{}",
-        &hex[0..8],
-        &hex[8..12],
-        &hex[12..16],
-        &hex[16..20],
-        &hex[20..32]
+        "{:08x}-{:04x}-{:04x}-{:04x}-{node}",
+        u32::from_be_bytes(*time_low),
+        u16::from_be_bytes(*time_mid),
+        u16::from_be_bytes(*version),
+        u16::from_be_bytes(*variant),
     ))
 }
 
@@ -154,13 +157,11 @@ pub(super) fn now() -> String {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default();
     let seconds = elapsed.as_secs();
-    let (year, month, day) = civil_from_days((seconds / 86_400) as i64);
-    let of_day = seconds % 86_400;
+    let (year, month, day) = civil_from_days((seconds / 86_400) as i64); /* https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap04.html#tag_04_19 */
+    let of_day = seconds % 86_400; /* https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap04.html#tag_04_19 */
+    let (hour, minute, second) = (of_day / 3600, (of_day % 3600) / 60, of_day % 60); /* https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap04.html#tag_04_19 */
     format!(
-        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{:03}Z",
-        of_day / 3600,
-        (of_day % 3600) / 60,
-        of_day % 60,
+        "{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{:03}Z",
         elapsed.subsec_millis()
     )
 }
@@ -168,15 +169,15 @@ pub(super) fn now() -> String {
 /// The proleptic Gregorian date of a day count since 1970-01-01, by Howard
 /// Hinnant's `civil_from_days`.
 fn civil_from_days(days: i64) -> (i64, u32, u32) {
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097);
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let day = (doy - (153 * mp + 2) / 5 + 1) as u32;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
-    let year = yoe + era * 400 + i64::from(month <= 2);
+    let z = days + 719_468; /* https://howardhinnant.github.io/date_algorithms.html */
+    let era = z.div_euclid(146_097); /* https://howardhinnant.github.io/date_algorithms.html */
+    let doe = z.rem_euclid(146_097); /* https://howardhinnant.github.io/date_algorithms.html */
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365; /* https://howardhinnant.github.io/date_algorithms.html */
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); /* https://howardhinnant.github.io/date_algorithms.html */
+    let mp = (5 * doy + 2) / 153; /* https://howardhinnant.github.io/date_algorithms.html */
+    let day = (doy - (153 * mp + 2) / 5 + 1) as u32; /* https://howardhinnant.github.io/date_algorithms.html */
+    let month = if mp < 10 { mp + 3 } else { mp - 9 } as u32; /* https://howardhinnant.github.io/date_algorithms.html */
+    let year = yoe + era * 400 + i64::from(month <= 2); /* https://howardhinnant.github.io/date_algorithms.html */
     (year, month, day)
 }
 
