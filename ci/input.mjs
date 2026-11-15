@@ -76,8 +76,8 @@ export function describe(value) {
  * short; a decoder that names neither is said as such.
  */
 export function stopOf(text, message) {
-  const named = /position (\d+)/.exec(message);
-  const at = named ? Number(named[1]) : /end of (JSON )?input/i.test(message) ? text.length : null;
+  const named = /position (?<position>\d+)/.exec(message);
+  const at = named ? Number(named.groups.position) : /end of (JSON )?input/i.test(message) ? text.length : null;
   if (at === null) return 'a place the decoder did not name';
   const before = text.slice(0, at).split('\n');
   const line = before.length;

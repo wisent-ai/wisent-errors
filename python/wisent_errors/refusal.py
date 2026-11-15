@@ -93,7 +93,8 @@ def checked_envelope_fields(failure_point: Any, code: Any, service: Any, detail:
         raise DeclaredError(ENVELOPE_BUILD, "failure-point-absent", {"service": str(service), "quoted_point": _quote(failure_point), "fallback": _FALLBACK})
     flaw = point_flaw(point)
     if flaw is not None:
-        raise DeclaredError(ENVELOPE_BUILD, flaw[0], {**flaw[1], "service": str(service), "fallback": _FALLBACK})
+        cause, values = flaw
+        raise DeclaredError(ENVELOPE_BUILD, cause, {**values, "service": str(service), "fallback": _FALLBACK})
     if code not in CODES:
         raise DeclaredError(ENVELOPE_BUILD, "code-off-catalogue", {"point": where, "quoted_code": _shown(code), "codes": ", ".join(CODES), "coerce": "code_or_fallback"})
     named = _text(service, "service", where)

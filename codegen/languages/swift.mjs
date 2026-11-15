@@ -4,8 +4,9 @@
 // wisent-ios. Cases are camelCase with the catalogue's string as the raw value,
 // which is the spelling both already use, so neither has to rename anything.
 export function swift({ catalogue, codes, exact, ranges, fallback, banner }) {
+  const capitalized = ([first, ...rest]) => first.toUpperCase() + rest.join('');
   const swiftName = (code) =>
-    code.split('_').map((part, index) => (index === 0 ? part : part[0].toUpperCase() + part.slice(1))).join('');
+    code.split('_').map((part, index) => (index === 0 ? part : capitalized(part))).join('');
   const cases = codes
     .map((entry) =>
       swiftName(entry.code) === entry.code

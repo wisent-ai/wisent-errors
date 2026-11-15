@@ -8,25 +8,27 @@ import { spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { EXIT_FAILURE } from '../../ci/refuse.mjs';
+import { USAGE_EXIT } from '../../js/index.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const list = (words, options = {}) => spawnSync(process.execPath, [join(options.root ?? root, 'tests', 'inventory.mjs'), ...words], { encoding: 'utf8', env: options.env ?? process.env });
 
 test('an_unknown_revision_is_refused', () => {
   const result = list(['no-such-revision', 'x', 'README.md']);
-  assert.equal(result.status, 2);
+  assert.equal(result.status, USAGE_EXIT);
   assert.match(result.stderr, /^Error: listing the lines of no-such-revision that match "x": git knows no revision no-such-revision in .*; observed: git exited 128 and said fatal: /);
 });
 
 test('a_pattern_git_refuses_is_refused', () => {
   const result = list(['HEAD', 'a(', 'README.md']);
-  assert.equal(result.status, 2);
+  assert.equal(result.status, USAGE_EXIT);
   assert.match(result.stderr, /git does not read "a\(" as an extended regular expression; observed: git exited 128/);
 });
 
 test('a_listing_without_git_is_refused', () => {
   const result = list(['HEAD', 'x', 'README.md'], { env: { PATH: '' } });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /no git program could be started; observed: PATH ; starting git answered spawnSync git ENOENT/);
 });
 
@@ -37,7 +39,7 @@ test('a_listing_outside_a_repository_is_refused', () => {
   try {
     for (const part of ['tests', 'ci', 'codegen', 'js', 'catalogue']) cpSync(join(root, part), join(copy, part), { recursive: true });
     const result = list(['HEAD', 'x', 'README.md'], { root: copy, env: { ...process.env, GIT_CEILING_DIRECTORIES: resolve(copy, '..') } });
-    assert.equal(result.status, 1);
+    assert.equal(result.status, EXIT_FAILURE);
     assert.match(result.stderr, /holds no git repository, as an unpacked archive of the source does not/);
   } finally {
     rmSync(copy, { recursive: true, force: true });

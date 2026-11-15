@@ -10,6 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { EXIT_FAILURE } from '../../ci/refuse.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 
@@ -33,7 +34,7 @@ const edit = (failures, file, change) => writeFileSync(join(failures, file), cha
 
 test('an_unlisted_parts_directory_is_refused', () => {
   const result = broken('unlisted', (failures) => chmodSync(failures, 0o000));
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /^Error: listing the failure catalogue parts in .*failures: the directory cannot be listed, so no part of the catalogue can be read; observed: .*mode 0.*EACCES/);
 });
 
@@ -42,31 +43,31 @@ test('a_parts_directory_with_no_part_is_refused', () => {
     for (const file of ['cli-output.json', 'envelope.json', 'lint-commands.json', 'lint-layers.json', 'tools.json']) rmSync(join(failures, file));
     writeFileSync(join(failures, 'notes.txt'), 'nothing');
   });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /the directory holds no \.json part, so this package would declare none of its own failures; observed: it holds .*notes\.txt/);
 });
 
 test('an_unreadable_part_is_refused', () => {
   const result = broken('unreadable', (failures) => chmodSync(join(failures, 'envelope.json'), 0o000));
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /reading the failure catalogue part .*envelope\.json: the part is listed but cannot be read; observed: .*mode 0/);
 });
 
 test('a_part_that_is_not_json_is_refused', () => {
   const result = broken('syntax', (failures) => edit(failures, 'envelope.json', (text) => text.slice(0, 40)));
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /reading the failure catalogue part .*envelope\.json: the part is not JSON; observed: 40 bytes; the decoder answered /);
 });
 
 test('a_part_of_the_wrong_shape_is_refused', () => {
   const result = broken('shape', (failures) => edit(failures, 'envelope.json', (text) => text.replaceAll('"tests": {', '"checks": {')));
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /the part is JSON but not an object with an area and a list of operations.*observed: at operations\[0\]\.causes\[0\]\.tests it holds nothing/);
 });
 
 test('an_operation_declared_in_two_parts_is_refused', () => {
   const result = broken('twice', (failures) => writeFileSync(join(failures, 'zz-copy.json'), readFileSync(join(failures, 'tools.json'))));
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /the operation wisent_errors\.census\.implementations is declared in both .*tools\.json and .*zz-copy\.json/);
 });
 
@@ -78,6 +79,6 @@ test('a_use_no_part_declares_is_refused', () => {
     assert.notEqual(changed, text, 'tools.json names wisent_errors.lint.paths at the end of no uses list');
     return changed;
   }));
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /the operation wisent_errors\.census\.implementations uses wisent_errors\.lint\.gone, which no part declares/);
 });

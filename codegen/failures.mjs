@@ -10,7 +10,8 @@
 import { constant } from './declaration.mjs';
 
 const json = (value) => JSON.stringify(value);
-const rustCode = (code) => code.split('_').map((part) => part[0].toUpperCase() + part.slice(1)).join('');
+const capitalized = ([first, ...rest]) => first.toUpperCase() + rest.join('');
+const rustCode = (code) => code.split('_').map(capitalized).join('');
 const swiftCode = (code) => code.replace(/_([a-z])/g, (_, next) => next.toUpperCase());
 // The package prefix is every operation's, so it names nothing:
 // `wisent_errors.envelope.build` is ENVELOPE_BUILD, and

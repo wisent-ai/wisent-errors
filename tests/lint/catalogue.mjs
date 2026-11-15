@@ -10,6 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { EXIT_FAILURE } from '../../ci/refuse.mjs';
 import { catalogue } from '../../js/index.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
@@ -47,7 +48,7 @@ test('a_complete_catalogue_passes', () => {
 
 test('a_cause_with_an_unfilled_placeholder_is_refused', () => {
   const result = check('format-spec', { cause: { ...CAUSE, observed: 'value {value:?}', cause: '{error}' } });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stdout, /FAIL {2}example\.engine\.check: 1 declared cause\(s\)\n {8}Error: holding example\.engine\.check to the declaration rules: 4 of its declarations break a rule/);
   assert.match(result.stdout, /cause value-unsafe: `observed` holds the placeholder \{value:\?\}, which the renderer never fills/);
   assert.match(result.stdout, /cause value-unsafe: `cause` names \{error\}, the raw text of the layer below/);
@@ -56,13 +57,13 @@ test('a_cause_with_an_unfilled_placeholder_is_refused', () => {
 
 test('a_placeholder_no_raising_site_passes_is_refused', () => {
   const result = check('unpassed', { cause: { ...CAUSE, remedy: 'quote {name} for the engine {engine}' } });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stdout, /holding example\.engine\.check\.value-unsafe to the values its raising sites pass: `remedy` names \{engine\}, and no raising site in .* passes a value of that name, so every reader would see \{engine\} as written; observed: 1 source file\(s\) read; value names passed: name, value; fix: pass engine where the cause is raised, or take \{engine\} out of `remedy`/);
 });
 
 test('a_cause_whose_test_is_absent_is_refused', () => {
   const result = check('untested', { files: { 'tests/engine/values.rs': '// nothing here\n' } });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stdout, /reading the test example\.engine\.check\.value-unsafe names: .*values\.rs never names an_unsafe_value_is_refused, and .*untested-causes\.json does not list it/);
   const listed = check('listed', { files: { 'tests/engine/values.rs': '// nothing here\n', 'tests/untested-causes.json': JSON.stringify([{ test: CAUSE.test, reason: 'only the engine refuses it' }]) } });
   assert.equal(listed.status, 0, listed.stdout + listed.stderr);
@@ -70,12 +71,12 @@ test('a_cause_whose_test_is_absent_is_refused', () => {
 
 test('a_malformed_untested_listing_is_refused', () => {
   const result = check('listing', { files: { 'tests/untested-causes.json': JSON.stringify([{ test: CAUSE.test }]) } });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /reading the untested causes .*untested-causes\.json: entry 1 is not a test path with a reason: it holds an object with test; observed: 1 entries/);
 });
 
 test('an_entry_no_functionality_names_is_refused', () => {
   const result = check('entries', { entries: ['example check', 'example purge'] });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stdout, /FAIL {2}Error: matching the entries in .*entries\.json to the declared functionalities: the entry "example purge" starts no declared functionality/);
 });

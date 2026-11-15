@@ -148,7 +148,8 @@ def failure_or_fallback(**fields: Any) -> dict:
         notes["wisent_errors.failure_point"] = "malformed"
         flaw = point_flaw(point)
         if flaw is not None:
-            notes["wisent_errors.failure_point_cause"] = flaw[0]
+            cause, _values = flaw
+            notes["wisent_errors.failure_point_cause"] = cause
 
     code = fields.get("code")
     if not isinstance(code, str) or code not in MEANINGS:

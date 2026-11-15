@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { catalogue as listing } from '../js/index.mjs';
 import { holding, listDirectory, readJsonInput } from './input.mjs';
-import { guarded, ownOperations, refusalText } from './refuse.mjs';
+import { EXIT_FAILURE, EXIT_SUCCESS, guarded, ownOperations, refusalText } from './refuse.mjs';
 import { operationsFor, readParts } from '../codegen/parts.mjs';
 import { checkListing } from './standard/catalogue.mjs';
 
@@ -50,7 +50,7 @@ report('the failure point pattern is stated once', catalogue.failure_point.patte
 const SOURCES = ['js', 'rust/src', 'python/wisent_errors', 'swift/Sources', 'ci', 'codegen', 'tests/inventory.mjs'];
 for (const runtime of ['node', 'js', 'rust', 'python', 'swift']) {
   const operations = guarded(() => (runtime === 'node' ? ownOperations() : operationsFor(runtime, readParts())));
-  const own = guarded(() => checkListing(operations.map((operation) => listing(operation, 1)), ROOT, null, SOURCES));
+  const own = guarded(() => checkListing(operations.map((operation) => listing(operation, EXIT_FAILURE)), ROOT, null, SOURCES));
   const refused = own.report.filter((entry) => entry.problems.length > 0);
   report(
     `this package's own ${runtime} failure catalogue holds (${own.report.length} functionalities)`,
@@ -79,4 +79,4 @@ report(
 );
 
 console.log(`\n${problems.length === 0 ? 'all checks passed' : `${problems.length} check(s) failed: ${problems.join('; ')}`}`);
-process.exitCode = problems.length === 0 ? 0 : 1;
+process.exitCode = problems.length === 0 ? EXIT_SUCCESS : EXIT_FAILURE;

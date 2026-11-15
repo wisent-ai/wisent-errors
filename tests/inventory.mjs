@@ -19,7 +19,8 @@ const root = resolve(import.meta.dirname, '..');
 const LIST = 'wisent_errors.inventory.list';
 
 guarded(() => {
-  const words = new Words('tests/inventory.mjs', 'node tests/inventory.mjs <revision> <extended-regex> <path>...', process.argv.slice(2));
+  const [, , ...args] = process.argv;
+  const words = new Words('tests/inventory.mjs', 'node tests/inventory.mjs <revision> <extended-regex> <path>...', args);
   const [revision, pattern, ...paths] = words.operands('a revision, a pattern and at least one path', (count) => count >= 3);
   // git's answer goes straight to this process's standard output, so an
   // inventory of any size is passed on whole instead of filling a buffer that

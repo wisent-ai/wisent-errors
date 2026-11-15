@@ -22,7 +22,7 @@ import { statSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { Words } from './arguments.mjs';
 import { listDirectory, openDirectory, packageSource, parentOf, readTreeFile } from './input.mjs';
-import { exitOf, guarded, refuse, refusalText } from './refuse.mjs';
+import { EXIT_SUCCESS, exitOf, guarded, refuse, refusalText } from './refuse.mjs';
 
 const USAGE = 'node ci/no-handrolled-envelope.mjs <path> [<path>...]';
 const SOURCE = new Set(['.rs', '.py', '.mjs', '.js', '.ts', '.tsx', '.jsx', '.go', '.swift', '.sh']);
@@ -56,7 +56,8 @@ function read(path) {
 }
 
 process.exitCode = guarded(() => {
-  const roots = new Words('ci/no-handrolled-envelope.mjs', USAGE, process.argv.slice(2)).operands('at least one path', (count) => count > 0);
+  const [, , ...args] = process.argv;
+  const roots = new Words('ci/no-handrolled-envelope.mjs', USAGE, args).operands('at least one path', (count) => count > 0);
   for (const root of roots) {
     let entry;
     try {
@@ -70,7 +71,7 @@ process.exitCode = guarded(() => {
   }
   if (findings.length === 0) {
     console.log(`no hand-built envelope in ${files} source file(s) under ${roots.join(', ')}`);
-    return 0;
+    return EXIT_SUCCESS;
   }
   console.log(refusalText('wisent_errors.lint.handrolled', 'envelope-key-written', { files: String(files), roots: roots.join(', '), count: String(findings.length), sites: `${findings.length} line(s) below` }));
   for (const finding of findings) console.log(`  ${finding}`);

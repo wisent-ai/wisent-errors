@@ -1,6 +1,7 @@
 // Render the Rust vocabulary from the generator's prepared catalogue.
 
-const rustName = (code) => code.split('_').map((part) => part[0].toUpperCase() + part.slice(1)).join('');
+const capitalized = ([first, ...rest]) => first.toUpperCase() + rest.join('');
+const rustName = (code) => code.split('_').map(capitalized).join('');
 
 export function rust({ catalogue, codes, exact, ranges, fallback, banner }) {
   const variants = codes.map((entry) => `    ${rustName(entry.code)},`).join('\n');
@@ -10,7 +11,7 @@ export function rust({ catalogue, codes, exact, ranges, fallback, banner }) {
   const whose = codes.map((entry) => `            Self::${rustName(entry.code)} => "${entry.whose}",`).join('\n');
   const retryable = codes.filter((entry) => entry.retryable).map((entry) => `Self::${rustName(entry.code)}`).join(' | ');
   const outage = codes.filter((entry) => entry.outage).map((entry) => `Self::${rustName(entry.code)}`).join(' | ');
-  const severity = codes.map((entry) => `            Self::${rustName(entry.code)} => Severity::${entry.severity[0].toUpperCase() + entry.severity.slice(1)},`).join('\n');
+  const severity = codes.map((entry) => `            Self::${rustName(entry.code)} => Severity::${capitalized(entry.severity)},`).join('\n');
   const statusArms = exact.map(([status, code]) => `            ${status} => Self::${rustName(code)},`).join('\n');
   const httpStatus = codes.map((entry) => `            Self::${rustName(entry.code)} => ${entry.http_status},`).join('\n');
   const rangeArms = ranges

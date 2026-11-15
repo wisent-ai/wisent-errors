@@ -22,7 +22,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(HERE, '..');
 const CENSUS = 'wisent_errors.census.implementations';
 
-const words = new Words('ci/find-implementations.mjs', 'node ci/find-implementations.mjs [<root>...] [--unadopted-only]', process.argv.slice(2));
+const [, , ...args] = process.argv;
+const words = new Words('ci/find-implementations.mjs', 'node ci/find-implementations.mjs [<root>...] [--unadopted-only]', args);
 const unadoptedOnly = words.flag('--unadopted-only');
 const roots = [...words.operands('any number of roots to search', () => true)];
 if (roots.length === 0) roots.push(resolve(PACKAGE_ROOT, '..'));

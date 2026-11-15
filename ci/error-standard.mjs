@@ -29,7 +29,7 @@
 
 import { catalogue as listing } from '../js/index.mjs';
 import { Words } from './arguments.mjs';
-import { exitOf, guarded, ownOperations, refusalText } from './refuse.mjs';
+import { EXIT_FAILURE, EXIT_SUCCESS, exitOf, guarded, ownOperations, refusalText } from './refuse.mjs';
 import { checkCatalogue } from './standard/catalogue.mjs';
 import { scanSources } from './standard/scan.mjs';
 
@@ -53,7 +53,7 @@ function scan(words, asJson) {
     console.log(`${files} source file(s), ${findings.length} generic sentence(s), ${refused.length} refused, ${stale.length} stale baseline entr${stale.length === 1 ? 'y' : 'ies'}`);
   }
   if (refused.length > 0) return exitOf('wisent_errors.lint.scan', 'generic-sentence-held');
-  return stale.length > 0 ? exitOf('wisent_errors.lint.scan', 'baseline-stale') : 0;
+  return stale.length > 0 ? exitOf('wisent_errors.lint.scan', 'baseline-stale') : EXIT_SUCCESS;
 }
 
 function catalogue(words, asJson) {
@@ -79,21 +79,22 @@ function catalogue(words, asJson) {
     );
   }
   if (failing.length > 0) return exitOf('wisent_errors.lint.catalogue', 'declaration-refused');
-  return unstarted.length > 0 ? exitOf('wisent_errors.lint.catalogue', 'entry-unstarted') : 0;
+  return unstarted.length > 0 ? exitOf('wisent_errors.lint.catalogue', 'entry-unstarted') : EXIT_SUCCESS;
 }
 
 function errors(words, asJson) {
   words.operands('no operand', (count) => count === 0);
-  const operations = ownOperations().map((operation) => listing(operation, 1));
+  const operations = ownOperations().map((operation) => listing(operation, EXIT_FAILURE));
   if (asJson) {
     console.log(JSON.stringify(operations, null, 2));
   } else {
     for (const operation of operations) console.log(`${operation.operation}: ${operation.causes.map((cause) => cause.id).join(', ') || 'uses ' + operation.uses.join(', ')}`);
   }
-  return 0;
+  return EXIT_SUCCESS;
 }
 
-const words = new Words('ci/error-standard.mjs', USAGE, process.argv.slice(2), ['scan', 'catalogue', 'errors']);
+const [, , ...args] = process.argv;
+const words = new Words('ci/error-standard.mjs', USAGE, args, ['scan', 'catalogue', 'errors']);
 process.exitCode = guarded(() => {
   const command = words.command();
   const asJson = words.flag('--json');

@@ -23,7 +23,7 @@
 import { FAILURE_POINT_PATTERN, SENTENCES, fill, warningAnchor, warningProblems } from '../js/index.mjs';
 import { Words } from './arguments.mjs';
 import { describe, openDirectory, readJsonInput } from './input.mjs';
-import { exitOf, guarded, refusalText } from './refuse.mjs';
+import { EXIT_SUCCESS, exitOf, guarded, refusalText } from './refuse.mjs';
 import { absentTest } from './tests-held.mjs';
 
 const USAGE = 'node ci/warning-standard.mjs <warnings.json> [--repository <dir>] [--confirmations <file>] [--json]';
@@ -100,10 +100,11 @@ function check(path, repository, confirmationsPath, asJson) {
     );
   }
   if (failing.length > 0) return exitOf(WARNINGS, 'warning-refused');
-  return unwarned.length > 0 ? exitOf(WARNINGS, 'confirmation-unwarned') : 0;
+  return unwarned.length > 0 ? exitOf(WARNINGS, 'confirmation-unwarned') : EXIT_SUCCESS;
 }
 
-const words = new Words('ci/warning-standard.mjs', USAGE, process.argv.slice(2));
+const [, , ...args] = process.argv;
+const words = new Words('ci/warning-standard.mjs', USAGE, args);
 process.exitCode = guarded(() => {
   const asJson = words.flag('--json');
   const repository = words.option('--repository');

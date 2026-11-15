@@ -11,6 +11,13 @@
 import { anchor, causeExit, fix, sentence, unfilled } from '../js/index.mjs';
 import { PARTS, PartsError, operationsFor, readParts } from '../codegen/parts.mjs';
 
+// The status a command fails with when its cause declares none, C's
+// EXIT_FAILURE: https://pubs.opengroup.org/onlinepubs/9799919799/functions/exit.html
+export const EXIT_FAILURE = 1;
+// The status a command that found nothing to refuse exits with, C's
+// EXIT_SUCCESS: https://pubs.opengroup.org/onlinepubs/9799919799/functions/exit.html
+export const EXIT_SUCCESS = 0;
+
 let loaded = null;
 
 /** This repository's own commands' functionalities, the parts loader's among them. */
@@ -50,7 +57,7 @@ export function refuse(operationId, causeId, values) {
     values = error.values;
   }
   console.error(refusal(found.operation, found.cause, values));
-  process.exit(causeExit(found.cause, 1));
+  process.exit(causeExit(found.cause, EXIT_FAILURE));
 }
 
 /** The refusal of a cause, as text, for a command that lists several before it exits. */
@@ -60,7 +67,7 @@ export function refusalText(operationId, causeId, values) {
 }
 
 /** The exit status a cause declares. */
-export const exitOf = (operationId, causeId) => causeExit(guarded(() => declared(operationId, causeId)).cause, 1);
+export const exitOf = (operationId, causeId) => causeExit(guarded(() => declared(operationId, causeId)).cause, EXIT_FAILURE);
 
 /** Run `body`, turning a refusal of the parts loader into its declared refusal. */
 export function guarded(body) {
@@ -69,6 +76,6 @@ export function guarded(body) {
   } catch (error) {
     if (!(error instanceof PartsError)) throw error;
     console.error(refusal(error.operation, error.declared, error.values));
-    return process.exit(causeExit(error.declared, 1));
+    return process.exit(causeExit(error.declared, EXIT_FAILURE));
   }
 }

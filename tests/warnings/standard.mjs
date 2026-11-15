@@ -9,6 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { EXIT_FAILURE } from '../../ci/refuse.mjs';
 import { unconfirmed, warningsCatalogue } from '../../js/index.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
@@ -81,7 +82,7 @@ test('a_declared_warning_with_its_confirmation_and_test_passes', () => {
 test('a_confirmation_no_warning_explains_is_refused', () => {
   const unwarned = { ...PURGE, warnings: [] };
   const result = run('unwarned', { operations: [unwarned, LIST], confirmations: ['example purge'], tests: HELD });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(
     result.stdout,
     /FAIL {2}Error: matching the confirmations in .*confirmations\.json to the declared warnings: the entry "example purge" asks for a confirmation, but no functionality it starts declares what the confirmation is for; observed: functionalities it starts: example\.item\.purge\nfix: declare the warning, or stop asking for a confirmation nothing needs/,
@@ -90,7 +91,7 @@ test('a_confirmation_no_warning_explains_is_refused', () => {
 
 test('a_warning_no_confirmation_puts_before_its_caller_is_refused', () => {
   const result = run('unconfirmed', { operations: [PURGE, LIST], confirmations: [], tests: HELD });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(
     result.stdout,
     /it declares 1 warning\(s\), but none of its entries \(example purge\) asks for a confirmation in .*confirmations\.json, so the warning is never read before it runs; ask for one, or drop a warning nothing needs/,
@@ -100,13 +101,13 @@ test('a_warning_no_confirmation_puts_before_its_caller_is_refused', () => {
 test('a_warning_of_an_unknown_hazard_is_refused', () => {
   const odd = { ...PURGE, warnings: [{ ...PURGE_WARNING, hazard: 'scary' }] };
   const result = run('hazard', { operations: [odd], confirmations: ['example purge'], tests: HELD });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stdout, /warning removed-for-good: hazard "scary" is not one of irreversible, overwrites, cuts-off-access, exposes-secret, external-change, costs-money/);
 });
 
 test('a_warning_whose_test_the_repository_lacks_is_refused', () => {
   const result = run('untested', { operations: [PURGE], confirmations: ['example purge'], tests: {} });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(
     result.stdout,
     /example\.item\.purge\.removed-for-good names the test tests\/purge\/purge\.sh::purge_without_yes_removes_nothing, which the repository does not hold: .*tests\/purge\/purge\.sh is absent; write that test, or name the one that shows this warning/,
@@ -116,7 +117,7 @@ test('a_warning_whose_test_the_repository_lacks_is_refused', () => {
 test('a_warning_with_an_empty_safeguard_is_refused', () => {
   const bare = { ...PURGE, warnings: [{ ...PURGE_WARNING, safeguard: ' ' }] };
   const result = run('bare', { operations: [bare], confirmations: ['example purge'], tests: HELD });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stdout, /warning removed-for-good: `safeguard` is empty/);
 });
 

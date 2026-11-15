@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { test } from 'node:test';
+import { EXIT_FAILURE } from '../../ci/refuse.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 
@@ -26,7 +27,7 @@ function scan(name, baseline) {
 
 test('a_generic_sentence_beyond_the_baseline_is_refused', () => {
   const { file, result } = scan('held', () => ({}));
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.ok(
     result.stdout.includes(`Error: holding ${file} to the error standard: line 2 says "did not succeed", which says the operation failed without the step, the cause or the fix, and the baseline allows 0 of it in this file while it holds 1; observed: eprintln!("the push did not succeed");`),
     result.stdout,
@@ -36,6 +37,6 @@ test('a_generic_sentence_beyond_the_baseline_is_refused', () => {
 
 test('a_baseline_above_what_a_file_holds_is_refused', () => {
   const { file, result } = scan('stale', (path) => ({ [path]: { 'did not succeed': 3 } }));
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.ok(result.stdout.includes(`the baseline allows 3 of "did not succeed" in the file while it holds 1, and a baseline only shrinks; observed: 1 held, 3 allowed\nfix: lower the entry for ${file} in `), result.stdout);
 });

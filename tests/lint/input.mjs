@@ -9,6 +9,8 @@ import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { EXIT_FAILURE } from '../../ci/refuse.mjs';
+import { USAGE_EXIT } from '../../js/index.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const lint = join(root, 'ci', 'error-standard.mjs');
@@ -31,7 +33,7 @@ const catalogue = (path) => spawnSync(process.execPath, [lint, 'catalogue', path
 test('an_absent_input_is_refused', () => {
   inCase('absent', {}, (dir) => {
     const result = catalogue(join(dir, 'errors.json'));
-    assert.equal(result.status, 2);
+    assert.equal(result.status, USAGE_EXIT);
     assert.match(result.stderr, /^Error: reading the catalogue .*errors\.json: no file is at that path; observed: .* exists and holds 0 entries\nfix: name the file that holds the catalogue, or write it first/);
   });
 });
@@ -39,7 +41,7 @@ test('an_absent_input_is_refused', () => {
 test('a_directory_input_is_refused', () => {
   inCase('directory', {}, (dir) => {
     const result = catalogue(dir);
-    assert.equal(result.status, 2);
+    assert.equal(result.status, USAGE_EXIT);
     assert.match(result.stderr, /the path names a directory, and the catalogue is one file; observed: .* is a directory, mode 7\d\d/);
   });
 });
@@ -49,7 +51,7 @@ test('an_input_the_process_may_not_read_is_refused', () => {
     chmodSync(join(dir, 'errors.json'), 0o000);
     const result = catalogue(join(dir, 'errors.json'));
     chmodSync(join(dir, 'errors.json'), 0o600);
-    assert.equal(result.status, 1);
+    assert.equal(result.status, EXIT_FAILURE);
     assert.match(result.stderr, /the file exists but its permissions refuse this process the read; observed: .* is a file of 2 bytes, mode 0, owner uid \d+; the operating system answered EACCES/);
   });
 });
@@ -57,7 +59,7 @@ test('an_input_the_process_may_not_read_is_refused', () => {
 test('an_input_that_is_not_json_is_refused', () => {
   inCase('syntax', { 'errors.json': '[{"operation": ' }, (dir) => {
     const result = catalogue(join(dir, 'errors.json'));
-    assert.equal(result.status, 1);
+    assert.equal(result.status, EXIT_FAILURE);
     assert.match(result.stderr, /reading the catalogue .*: the file is not JSON; observed: 15 bytes, starting "\[\{\\"operation\\": "; the decoder answered /);
   });
 });
@@ -65,7 +67,7 @@ test('an_input_that_is_not_json_is_refused', () => {
 test('an_input_of_the_wrong_shape_is_refused', () => {
   inCase('shape', { 'errors.json': '{"functionalities": []}' }, (dir) => {
     const result = catalogue(join(dir, 'errors.json'));
-    assert.equal(result.status, 1);
+    assert.equal(result.status, EXIT_FAILURE);
     assert.match(result.stderr, /the file is JSON but not a list of functionalities, or an object with operations; observed: it holds an object with functionalities/);
   });
 });

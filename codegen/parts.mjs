@@ -111,7 +111,10 @@ export function readParts(directory = FAILURES) {
       throw new PartsError('part-not-json', { path, bytes: String(Buffer.byteLength(text)), error: error.message });
     }
     const wrong = shapeProblem(part);
-    if (wrong !== null) throw new PartsError('part-wrong-shape', { path, where: wrong[0], found: wrong[1] });
+    if (wrong !== null) {
+      const [where, found] = wrong;
+      throw new PartsError('part-wrong-shape', { path, where, found });
+    }
     for (const operation of part.operations) {
       if (seen.has(operation.id)) {
         throw new PartsError('operation-declared-twice', { directory, operation: operation.id, first: seen.get(operation.id), second: path, parts: String(files.length) });

@@ -14,7 +14,7 @@
 import { extname, join } from 'node:path';
 import { listDirectory, readTreeFile } from '../input.mjs';
 
-const NAME = '([a-z][a-z0-9_]*)';
+const NAME = '(?<name>[a-z][a-z\\d_]*)';
 const PATTERNS = {
   rust: [new RegExp(`\\(\\s*"${NAME}"\\s*,`, 'g')],
   js: [new RegExp(`["']?\\b${NAME}["']?\\s*:(?!:)`, 'g'), new RegExp(`[{,]\\s*${NAME}\\s*(?=[,}])`, 'g')],
@@ -57,7 +57,7 @@ export function passedNames(repository, sources = null) {
     read += 1;
     const text = readTreeFile(path, 'a source file of the repository');
     for (const pattern of PATTERNS[LANGUAGE.get(extname(path))]) {
-      for (const found of text.matchAll(pattern)) names.add(found[1]);
+      for (const found of text.matchAll(pattern)) names.add(found.groups.name);
     }
   }
   return { names, files: read };

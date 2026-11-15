@@ -32,10 +32,12 @@ test('every_placeholder_the_renderer_will_not_fill_is_refused', () => {
   const texts = { failed: 'checking {Path} and {deal.title}', remedy: 'quote {name before passing it' };
   const problems = causeProblems({ ...CAUSE, ...texts });
   assert.equal(problems.length, 3, problems.join('\n'));
-  assert.match(problems[0], /`failed` holds the placeholder \{Path\}, .* write \{path\}/);
-  assert.match(problems[1], /`failed` holds the placeholder \{deal\.title\}, .* write \{deal_title\}/);
-  assert.match(problems[2], /`remedy` opens a placeholder at "\{name before passing it" that no '\}' closes; close it as \{name\} or drop the '\{'/);
-  assert.match(causeProblems({ ...CAUSE, failed: 'checking a} value' })[0], /`failed` holds a '\}' at "checking a\} value" that no '\{' opened/);
+  const [pathProblem, dealProblem, remedyProblem] = problems;
+  assert.match(pathProblem, /`failed` holds the placeholder \{Path\}, .* write \{path\}/);
+  assert.match(dealProblem, /`failed` holds the placeholder \{deal\.title\}, .* write \{deal_title\}/);
+  assert.match(remedyProblem, /`remedy` opens a placeholder at "\{name before passing it" that no '\}' closes; close it as \{name\} or drop the '\{'/);
+  const [unopened] = causeProblems({ ...CAUSE, failed: 'checking a} value' });
+  assert.match(unopened, /`failed` holds a '\}' at "checking a\} value" that no '\{' opened/);
 });
 
 test('a_cause_whose_why_is_only_the_raw_message_is_refused', () => {

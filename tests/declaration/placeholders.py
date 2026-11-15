@@ -40,9 +40,10 @@ class Placeholders(unittest.TestCase):
     def test_every_placeholder_the_renderer_will_not_fill_is_refused(self):
         problems = replace(CAUSE, failed="checking {Path} and {deal.title}", remedy="quote {name before passing it").problems()
         self.assertEqual(len(problems), 3, problems)
-        self.assertIn("write {path}", problems[0])
-        self.assertIn("write {deal_title}", problems[1])
-        self.assertIn("`remedy` opens a placeholder at \"{name before passing it\" that no '}' closes", problems[2])
+        path_problem, deal_problem, remedy_problem = problems
+        self.assertIn("write {path}", path_problem)
+        self.assertIn("write {deal_title}", deal_problem)
+        self.assertIn("`remedy` opens a placeholder at \"{name before passing it\" that no '}' closes", remedy_problem)
         self.assertIn("`failed` holds a '}' at \"checking a} value\" that no '{' opened", replace(CAUSE, failed="checking a} value").problems()[0])
 
     def test_a_cause_whose_why_is_only_the_raw_message_is_refused(self):

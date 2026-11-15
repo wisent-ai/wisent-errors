@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { EXIT_FAILURE } from '../../ci/refuse.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 
@@ -19,7 +20,7 @@ test('a_hand_built_envelope_is_listed', () => {
     writeFileSync(join(dir, 'failure.mjs'), "export const report = { failure_point: point, error_code: code };\n");
     writeFileSync(join(dir, 'clean.mjs'), 'export const nothing = 1;\n');
     const result = spawnSync(process.execPath, [join(root, 'ci', 'no-handrolled-envelope.mjs'), dir], { encoding: 'utf8' });
-    assert.equal(result.status, 1);
+    assert.equal(result.status, EXIT_FAILURE);
     assert.match(result.stdout, /^Error: reading 2 source file\(s\) under .* for hand-built envelopes: 1 line\(s\) write failure_point or error_code outside the package/);
     assert.match(result.stdout, /\n {2}.*failure\.mjs:1 {2}export const report = \{ failure_point: point, error_code: code \};/);
     rmSync(join(dir, 'failure.mjs'));

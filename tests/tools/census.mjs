@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { EXIT_FAILURE } from '../../ci/refuse.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const COPY = "export const CODES = ['config', 'auth', 'not_found', 'rate_limit', 'timeout', 'infra_down'];\n";
@@ -39,18 +40,18 @@ function census(name, setup, env = null) {
 
 test('a_repository_restating_the_vocabulary_is_counted', () => {
   const result = census('restated', () => {});
-  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.equal(result.status, EXIT_FAILURE, result.stdout + result.stderr);
   assert.match(result.stdout, /Error: counting the implementations of the envelope under .*: 1 repositories quote a majority of the catalogue's codes, infra_down among them, and depend on no revision of the package; observed: .*product/);
 });
 
 test('an_unreadable_file_is_refused', () => {
   const result = census('unreadable', (dir) => chmodSync(join(dir, 'product', 'failure.mjs'), 0o000));
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /reading .*failure\.mjs while counting the implementations under .*: the operating system refused the read, so whether it restates the vocabulary or declares the package is unknown; observed: .*mode 0, .*EACCES/);
 });
 
 test('a_census_without_git_is_refused', () => {
   const result = census('no-git', () => {}, { PATH: '' });
-  assert.equal(result.status, 1);
+  assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /asking git where .*product came from and what its remote tip holds: no git program could be started/);
 });
