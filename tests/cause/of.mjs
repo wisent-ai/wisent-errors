@@ -22,6 +22,7 @@ test('a_value_that_is_no_error_is_said_as_text', () => {
   assert.equal(causeOf({ message: 'JWT expired', code: 'PGRST301' }), '{"message":"JWT expired","code":"PGRST301"}');
   assert.equal(causeOf('timeout'), 'timeout');
   assert.equal(causeOf(undefined), 'undefined');
+  // https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.4
   assert.equal(causeOf(new Error('refused', { cause: { status: 503 } })), 'refused: {"status":503}');
 });
 
