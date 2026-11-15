@@ -96,7 +96,7 @@ export function warningsCatalogue(operation, page) {
 /**
  * The functionality's section of the warnings page, one anchored entry per
  * warning; empty for one that declares none, because the page lists only what
- * warns.
+ * warns. Each entry's heading spells its anchor, as the Rust page does.
  */
 export function warningsMarkdown(operation) {
   const warnings = operation.warnings ?? [];
@@ -107,7 +107,7 @@ export function warningsMarkdown(operation) {
   let page = `## \`${operation.id}\`\n\n${operation.summary}\n\nStarted through: ${entries}. ${warnings.length} declared warning(s).\n`;
   for (const warning of warnings) {
     page +=
-      `\n<a id="${warningAnchor(operation, warning)}"></a>\n\n### \`${operation.id}.${warning.id}\`\n\n` +
+      `\n<a id="${warningAnchor(operation, warning)}"></a>\n\n### \`${operation.id}\` warning \`${warning.id}\`\n\n` +
       `- **Kind:** \`${warning.hazard}\`: ${HAZARDS[warning.hazard]}\n` +
       `- **What it does:** ${warning.effect}\n` +
       `- **What cannot be had back:** ${warning.consequence}\n` +

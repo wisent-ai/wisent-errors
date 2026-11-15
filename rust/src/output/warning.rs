@@ -245,7 +245,10 @@ impl Operation {
 
     /// The functionality's section of the warnings page, one anchored entry
     /// per warning; empty for a functionality that declares none, because
-    /// the page lists only what warns.
+    /// the page lists only what warns. Each entry's heading spells its anchor
+    /// (`` `op.id` warning `warning-id` `` is `op-id-warning-warning-id`), so a
+    /// site that gives a heading the id its words spell lands every warning's
+    /// link on it.
     pub fn warnings_markdown(&self) -> String {
         if self.warnings.is_empty() {
             return String::new();
@@ -267,7 +270,7 @@ impl Operation {
         );
         for warning in self.warnings {
             page.push_str(&format!(
-                "\n<a id=\"{anchor}\"></a>\n\n### `{operation}.{id}`\n\n\
+                "\n<a id=\"{anchor}\"></a>\n\n### `{operation}` warning `{id}`\n\n\
                  - **Kind:** `{hazard}`: {meaning}\n\
                  - **What it does:** {effect}\n\
                  - **What cannot be had back:** {consequence}\n\

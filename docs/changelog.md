@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### A warning entry's heading spells its anchor
+
+- `warnings_markdown` (Rust `output/warning.rs`), `warningsMarkdown()` (Swift
+  `Warning.swift`, `js/warning.mjs`) head each warning `` `op.id` warning
+  `warning-id` ``, whose words spell the anchor above it
+  (`op-id-warning-warning-id`): the heading was `` `op.id.warning-id` ``,
+  which spells none, so a site that gives a heading the id its words spell
+  (oko.wisent.com) held no element for any warning link. A product sees it
+  when it moves its pin and writes its warnings page again. Written and read;
+  nothing was built or run.
+
 ### `WisentProgram`: the installed CLI a Mac app runs
 
 - `InstalledProgram` (`swift/Sources/WisentProgram`, macOS only): the places

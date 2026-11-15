@@ -118,13 +118,14 @@ extension Operation {
 
     /// The functionality's section of the warnings page, one anchored entry
     /// per warning; empty for one that declares none, because the page lists
-    /// only what warns.
+    /// only what warns. Each entry's heading spells its anchor, as the Rust
+    /// page does.
     public func warningsMarkdown() -> String {
         guard !warnings.isEmpty else { return "" }
         let started = entries.isEmpty ? "run only by the functionalities that use it" : entries.map { "`\($0)`" }.joined(separator: ", ")
         var page = "## `\(id)`\n\n\(summary)\n\nStarted through: \(started). \(warnings.count) declared warning(s).\n"
         for warning in warnings {
-            page += "\n<a id=\"\(warning.anchor(self))\"></a>\n\n### `\(id).\(warning.id)`\n\n"
+            page += "\n<a id=\"\(warning.anchor(self))\"></a>\n\n### `\(id)` warning `\(warning.id)`\n\n"
                 + "- **Kind:** `\(warning.hazard.rawValue)`: \(warning.hazard.meaning)\n"
                 + "- **What it does:** \(warning.effect)\n"
                 + "- **What cannot be had back:** \(warning.consequence)\n"
