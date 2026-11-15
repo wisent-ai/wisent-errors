@@ -50,13 +50,13 @@ test('an_unreadable_path_is_refused', () => {
   const locked = join(dir, 'src');
   try {
     mkdirSync(locked);
-    chmodSync(locked, 0o000);
+    chmodSync(locked, 0o000); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     const result = node('ci/error-standard.mjs', 'scan', dir);
-    chmodSync(locked, 0o700);
+    chmodSync(locked, 0o700); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     assert.equal(result.status, EXIT_FAILURE);
     assert.match(result.stderr, /reading a source directory .*src: the operating system refused to list or read it, so what it holds was never looked at; observed: .*mode 0, .*EACCES/);
   } finally {
-    chmodSync(locked, 0o700);
+    chmodSync(locked, 0o700); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     rmSync(dir, { recursive: true, force: true });
   }
 });

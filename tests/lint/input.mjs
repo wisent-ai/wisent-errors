@@ -23,7 +23,7 @@ function inCase(name, files, body) {
   try {
     return body(dir);
   } finally {
-    chmodSync(dir, 0o700);
+    chmodSync(dir, 0o700); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     rmSync(dir, { recursive: true, force: true });
   }
 }
@@ -48,9 +48,9 @@ test('a_directory_input_is_refused', () => {
 
 test('an_input_the_process_may_not_read_is_refused', () => {
   inCase('unreadable', { 'errors.json': '[]' }, (dir) => {
-    chmodSync(join(dir, 'errors.json'), 0o000);
+    chmodSync(join(dir, 'errors.json'), 0o000); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     const result = catalogue(join(dir, 'errors.json'));
-    chmodSync(join(dir, 'errors.json'), 0o600);
+    chmodSync(join(dir, 'errors.json'), 0o600); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     assert.equal(result.status, EXIT_FAILURE);
     assert.match(result.stderr, /the file exists but its permissions refuse this process the read; observed: .* is a file of 2 bytes, mode 0, owner uid \d+; the operating system answered EACCES/);
   });

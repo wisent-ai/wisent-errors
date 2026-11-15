@@ -41,9 +41,9 @@ test('an_unwritable_generated_file_is_refused', () => {
   inCopy('unwritable', (copy, run) => {
     const target = join(copy, 'js', 'declaration.mjs');
     appendFileSync(target, '// edited by hand\n');
-    chmodSync(target, 0o444);
+    chmodSync(target, 0o444); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     const result = run('codegen/generate.mjs');
-    chmodSync(target, 0o644);
+    chmodSync(target, 0o644); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     assert.equal(result.status, EXIT_FAILURE);
     assert.match(result.stderr, /writing the generated js\/declaration\.mjs: the operating system refused to create or write the file, so the runtime keeps what an older catalogue wrote; observed: .*mode 444/);
   });
@@ -66,9 +66,9 @@ test('an_unremovable_stale_module_is_refused', () => {
   inCopy('unremovable', (copy, run) => {
     const directory = join(copy, 'rust', 'src', 'failures');
     writeFileSync(join(directory, 'retired.rs'), '//! retired\n');
-    chmodSync(directory, 0o555);
+    chmodSync(directory, 0o555); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     const result = run('codegen/generate.mjs');
-    chmodSync(directory, 0o755);
+    chmodSync(directory, 0o755); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     assert.equal(result.status, EXIT_FAILURE);
     assert.match(result.stderr, /removing the generated rust\/src\/failures\/retired\.rs, which no part of catalogue\/failures\/ writes any more: the operating system refused to remove the file.*its directory: .*mode 555/);
   });

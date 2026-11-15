@@ -24,8 +24,8 @@ function broken(name, breakParts) {
   try {
     return spawnSync(process.execPath, [join(copy, 'ci', 'error-standard.mjs'), 'errors'], { encoding: 'utf8' });
   } finally {
-    chmodSync(failures, 0o700);
-    for (const file of ['envelope.json', 'tools.json']) if (existsSync(join(failures, file))) chmodSync(join(failures, file), 0o600);
+    chmodSync(failures, 0o700); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
+    for (const file of ['envelope.json', 'tools.json']) if (existsSync(join(failures, file))) chmodSync(join(failures, file), 0o600); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     rmSync(copy, { recursive: true, force: true });
   }
 }
@@ -33,7 +33,7 @@ function broken(name, breakParts) {
 const edit = (failures, file, change) => writeFileSync(join(failures, file), change(readFileSync(join(failures, file), 'utf8')));
 
 test('an_unlisted_parts_directory_is_refused', () => {
-  const result = broken('unlisted', (failures) => chmodSync(failures, 0o000));
+  const result = broken('unlisted', (failures) => chmodSync(failures, 0o000)); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
   assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /^Error: listing the failure catalogue parts in .*failures: the directory cannot be listed, so no part of the catalogue can be read; observed: .*mode 0.*EACCES/);
 });
@@ -48,7 +48,7 @@ test('a_parts_directory_with_no_part_is_refused', () => {
 });
 
 test('an_unreadable_part_is_refused', () => {
-  const result = broken('unreadable', (failures) => chmodSync(join(failures, 'envelope.json'), 0o000));
+  const result = broken('unreadable', (failures) => chmodSync(join(failures, 'envelope.json'), 0o000)); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
   assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /reading the failure catalogue part .*envelope\.json: the part is listed but cannot be read; observed: .*mode 0/);
 });

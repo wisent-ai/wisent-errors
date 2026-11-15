@@ -33,7 +33,7 @@ function census(name, setup, env = null) {
   try {
     return spawnSync(process.execPath, [join(root, 'ci', 'find-implementations.mjs'), dir], { encoding: 'utf8', env: env ?? isolated });
   } finally {
-    chmodSync(join(product, 'failure.mjs'), 0o600);
+    chmodSync(join(product, 'failure.mjs'), 0o600); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     rmSync(dir, { recursive: true, force: true });
   }
 }
@@ -45,7 +45,7 @@ test('a_repository_restating_the_vocabulary_is_counted', () => {
 });
 
 test('an_unreadable_file_is_refused', () => {
-  const result = census('unreadable', (dir) => chmodSync(join(dir, 'product', 'failure.mjs'), 0o000));
+  const result = census('unreadable', (dir) => chmodSync(join(dir, 'product', 'failure.mjs'), 0o000)); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
   assert.equal(result.status, EXIT_FAILURE);
   assert.match(result.stderr, /reading .*failure\.mjs while counting the implementations under .*: the operating system refused the read, so whether it restates the vocabulary or declares the package is unknown; observed: .*mode 0, .*EACCES/);
 });
