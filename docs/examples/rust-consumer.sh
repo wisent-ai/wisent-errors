@@ -80,7 +80,7 @@ fn main() {
 }
 MAIN
 
-status=0
+status=0  # https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html
 kompilator build --manifest-path "$WORK/consumer/Cargo.toml" --bin consumer --out "$WORK/out" >/dev/null
 "$WORK/out/consumer" || status=$?
 echo "\$? = $status"
