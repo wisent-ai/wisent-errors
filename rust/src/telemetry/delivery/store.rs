@@ -196,9 +196,9 @@ pub(super) fn os_version() -> Option<String> {
                 fs::read_to_string("/System/Library/CoreServices/SystemVersion.plist").ok()?;
             let key = plist.find("<key>ProductVersion</key>")?;
             let rest = &plist[key..];
-            let open = rest.find("<string>")? + "<string>".len();
-            let close = rest[open..].find("</string>")?;
-            Some(format!("macOS {}", rest[open..open + close].trim()))
+            let (_, after) = rest.split_once("<string>")?;
+            let (version, _) = after.split_once("</string>")?;
+            Some(format!("macOS {}", version.trim()))
         }
         "linux" => {
             let release = fs::read_to_string("/etc/os-release").ok()?;
