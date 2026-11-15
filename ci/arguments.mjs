@@ -19,7 +19,7 @@ export class Words {
 
   /** The command word, refused when absent or unknown. */
   command() {
-    const [command] = this.words.splice(0, 1);
+    const command = this.words.shift();
     const values = { program: this.program, commands: this.commands.join(', '), usage: this.usage };
     if (command === undefined) refuse(ARGUMENTS, 'command-absent', values);
     if (!this.commands.includes(command)) refuse(ARGUMENTS, 'command-unknown', { ...values, quoted_command: JSON.stringify(command) });
