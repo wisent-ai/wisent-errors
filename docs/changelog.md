@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### `WisentProgram` finds the program the release installer placed
+
+- `InstalledProgram.candidates` looks in `~/.local/bin/<name>` after `PATH`
+  and before `~/.stado/bin/<name>`. A product's release installer
+  (`stado://releases/<product>/<version>/<platform>/install.sh`) places its
+  programs in `~/.local/bin` and removes the copy the retired `stado product
+  install` left in `~/.stado/bin`, while an app opened from Finder or the
+  Dock runs with launchd's `PATH` (`/usr/bin:/bin:/usr/sbin:/sbin`), so
+  every Mac app driving its CLI through `WisentProgram` said the program was
+  not installed right after the installer placed it
+  (`tests/program/InstalledProgramTests.swift`). A product sees it when it
+  moves its pin. Written and read; nothing was built or run.
+
 ### A warning entry's heading spells its anchor
 
 - `warnings_markdown` (Rust `output/warning.rs`), `warningsMarkdown()` (Swift

@@ -7,13 +7,16 @@ import WisentErrors
 /// is the one the product's variable names, else the first on `PATH`, else
 /// the one the <name> release installer at
 /// `stado://releases/<name>/<version>/<platform>/install.sh` places in
-/// `~/.stado/bin`.
+/// `~/.local/bin`, else a copy the retired `stado product install` left in
+/// `~/.stado/bin`. An app opened from Finder or the Dock runs with launchd's
+/// `PATH`, which holds neither directory, so both are looked in by name.
 ///
 /// A product declares it once (`InstalledProgram(name: "para", variable:
 /// "PARA", leading: ["--json"])`) and says its two failures in its own words:
 /// ``Failure/missing(searched:)`` and ``Failure/failedToStart(path:reason:)``.
 public struct InstalledProgram: Sendable {
-    /// The program's file name, on `PATH` and in `~/.stado/bin`.
+    /// The program's file name, on `PATH`, in `~/.local/bin` and in
+    /// `~/.stado/bin`.
     public let name: String
     /// The environment variable naming the program itself.
     public let variable: String
@@ -54,7 +57,7 @@ public struct InstalledProgram: Sendable {
 
     /// The places looked in, in order: the path `variable` names, when set
     /// and not empty; `name` in every `PATH` directory; then
-    /// `~/.stado/bin/<name>` of `home`.
+    /// `~/.local/bin/<name>` and `~/.stado/bin/<name>` of `home`.
     public func candidates(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         home: URL = FileManager.default.homeDirectoryForCurrentUser
@@ -68,6 +71,7 @@ public struct InstalledProgram: Sendable {
                 URL(fileURLWithPath: String($0)).appendingPathComponent(name)
             }
         }
+        found.append(home.appendingPathComponent(".local/bin/\(name)"))
         found.append(home.appendingPathComponent(".stado/bin/\(name)"))
         return found
     }

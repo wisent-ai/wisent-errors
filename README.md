@@ -281,7 +281,8 @@ items as `[index]`, `-` for null and for an empty array or object.
 The Swift package's `WisentProgram` library is how a macOS app that drives its
 product through the CLI finds it and runs it once:
 `InstalledProgram(name: "para", variable: "PARA", leading: ["--json"])` looks
-in the path `PARA` names, then `PATH`, then `~/.stado/bin/para`, refuses with
+in the path `PARA` names, then `PATH`, then `~/.local/bin/para` (where the
+product's release installer places it) and `~/.stado/bin/para`, refuses with
 `Failure.missing(searched:)` naming every place, and `run` hands back both
 streams whole with the exit status; cancelling the caller sends SIGTERM. A
 product says the two failures in its own words

@@ -1,8 +1,9 @@
 // Real tests of how a desktop app finds and runs its product's installed CLI:
-// the places are looked in the order the product's variable, PATH and
-// ~/.stado/bin give, none executable is a refusal naming every place, a run
-// hands back both streams whole with the exit status, and cancelling the
-// caller stops the program with SIGTERM.
+// the places are looked in the order the product's variable, PATH,
+// ~/.local/bin and ~/.stado/bin give, a program the release installer placed
+// in ~/.local/bin is found by an app whose PATH is launchd's, none executable
+// is a refusal naming every place, a run hands back both streams whole with
+// the exit status, and cancelling the caller stops the program with SIGTERM.
 //
 //   swift test --filter InstalledProgramTests
 
@@ -14,14 +15,30 @@ import XCTest
 final class InstalledProgramTests: XCTestCase {
     private let program = InstalledProgram(name: "para", variable: "PARA", leading: ["-c"])
 
-    func testThePlacesAreTheVariableThenPathThenTheStadoBinDirectory() {
+    func testThePlacesAreTheVariableThenPathThenTheInstallerAndStadoBinDirectories() {
         let home = URL(fileURLWithPath: "/home/someone")
         let places = program.candidates(environment: ["PARA": "/opt/para", "PATH": "/usr/bin:/bin"], home: home)
         XCTAssertEqual(
-            places.map(\.path), ["/opt/para", "/usr/bin/para", "/bin/para", "/home/someone/.stado/bin/para"])
+            places.map(\.path),
+            ["/opt/para", "/usr/bin/para", "/bin/para", "/home/someone/.local/bin/para", "/home/someone/.stado/bin/para"])
         XCTAssertEqual(
             program.candidates(environment: ["PARA": ""], home: home).map(\.path),
-            ["/home/someone/.stado/bin/para"], "an empty variable is unset, and no PATH searches nothing")
+            ["/home/someone/.local/bin/para", "/home/someone/.stado/bin/para"],
+            "an empty variable is unset, and no PATH searches nothing")
+    }
+
+    /// An app opened from Finder runs with launchd's PATH, which does not hold
+    /// ~/.local/bin, where the release installer places the program.
+    func testAProgramTheInstallerPlacedIsFoundUnderLaunchdsPath() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let bin = home.appendingPathComponent(".local/bin")
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let placed = bin.appendingPathComponent("para")
+        try Data("#!/bin/sh\n".utf8).write(to: placed)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: placed.path)
+        let found = try program.executable(environment: ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"], home: home)
+        XCTAssertEqual(found.path, placed.path)
     }
 
     func testNoExecutableAnywhereIsRefusedNamingEveryPlace() {
@@ -29,7 +46,11 @@ final class InstalledProgramTests: XCTestCase {
         XCTAssertThrowsError(try program.executable(environment: ["PATH": home.path], home: home)) { error in
             XCTAssertEqual(
                 error as? InstalledProgram.Failure,
-                .missing(searched: [home.appendingPathComponent("para").path, home.appendingPathComponent(".stado/bin/para").path]))
+                .missing(searched: [
+                    home.appendingPathComponent("para").path,
+                    home.appendingPathComponent(".local/bin/para").path,
+                    home.appendingPathComponent(".stado/bin/para").path,
+                ]))
         }
     }
 

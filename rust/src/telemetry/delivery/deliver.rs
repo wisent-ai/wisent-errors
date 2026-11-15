@@ -128,6 +128,7 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
                 let collector_said =
                     serde_json::from_str::<Value>(&body).is_ok_and(|answer| answer.is_object());
                 let values = values(&[("status", status.to_string()), ("answer", body)]);
+                // The 5xx server error class: https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6
                 let cause = if status >= 500 {
                     &COLLECTOR_FAILED
                 } else if collector_said {
