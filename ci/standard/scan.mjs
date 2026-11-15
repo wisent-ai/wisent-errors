@@ -3,7 +3,7 @@
 
 import { extname, join, relative } from 'node:path';
 import { genericSentencesIn } from '../../js/index.mjs';
-import { describe, listDirectory, openDirectory, readJsonInput, readTreeFile } from '../input.mjs';
+import { describe, listDirectory, openDirectory, readJsonInput, readTreeFile } from '../support/input.mjs';
 
 const SOURCE = new Map([
   ['.rs', false], ['.swift', false], ['.go', false], ['.ts', true], ['.tsx', true], ['.js', true], ['.mjs', true], ['.cjs', true], ['.py', true],

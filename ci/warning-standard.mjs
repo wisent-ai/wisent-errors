@@ -21,10 +21,10 @@
 // catalogue/failures/ and exits with the status it declares.
 
 import { FAILURE_POINT_PATTERN, SENTENCES, fill, warningAnchor, warningProblems } from '../js/index.mjs';
-import { Words } from './arguments.mjs';
-import { describe, openDirectory, readJsonInput } from './input.mjs';
-import { EXIT_SUCCESS, exitOf, guarded, refusalText } from './refuse.mjs';
-import { absentTest } from './tests-held.mjs';
+import { Words } from './support/arguments.mjs';
+import { describe, openDirectory, readJsonInput } from './support/input.mjs';
+import { EXIT_SUCCESS, exitOf, guarded, refusalText } from './support/refuse.mjs';
+import { absentTest } from './support/tests-held.mjs';
 
 const USAGE = 'node ci/warning-standard.mjs <warnings.json> [--repository <dir>] [--confirmations <file>] [--json]';
 const FAILURE_POINT = new RegExp(FAILURE_POINT_PATTERN);

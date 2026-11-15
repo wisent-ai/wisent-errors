@@ -20,9 +20,9 @@
 
 import { statSync } from 'node:fs';
 import { extname, join } from 'node:path';
-import { Words } from './arguments.mjs';
-import { listDirectory, openDirectory, packageSource, parentOf, readTreeFile } from './input.mjs';
-import { EXIT_SUCCESS, exitOf, guarded, refuse, refusalText } from './refuse.mjs';
+import { Words } from './support/arguments.mjs';
+import { listDirectory, openDirectory, packageSource, parentOf, readTreeFile } from './support/input.mjs';
+import { EXIT_SUCCESS, exitOf, guarded, refuse, refusalText } from './support/refuse.mjs';
 
 const USAGE = 'node ci/no-handrolled-envelope.mjs <path> [<path>...]';
 const SOURCE = new Set(['.rs', '.py', '.mjs', '.js', '.ts', '.tsx', '.jsx', '.go', '.swift', '.sh']);

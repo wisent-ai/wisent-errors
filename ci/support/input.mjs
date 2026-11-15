@@ -12,7 +12,7 @@ import { refuse } from './refuse.mjs';
 const INPUT = 'wisent_errors.lint.input';
 const PATHS = 'wisent_errors.lint.paths';
 
-const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 // What a build or a test writes under the package is not its source: a guard
 // that skipped these could not be run on the trees its own tests make.
 const SCRATCH = ['target', '.build'].map((name) => join(PACKAGE_ROOT, name) + sep);

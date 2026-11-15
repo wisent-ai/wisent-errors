@@ -8,8 +8,8 @@
 //   fix: <remedy>
 //   cause: <operation>.<cause id>; <page>#<anchor>
 
-import { anchor, causeExit, fix, sentence, unfilled } from '../js/index.mjs';
-import { PARTS, PartsError, operationsFor, readParts } from '../codegen/parts.mjs';
+import { anchor, causeExit, fix, sentence, unfilled } from '../../js/index.mjs';
+import { PARTS, PartsError, operationsFor, readParts } from '../../codegen/parts.mjs';
 
 // The status a command fails with when its cause declares none, C's
 // EXIT_FAILURE: https://pubs.opengroup.org/onlinepubs/9799919799/functions/exit.html

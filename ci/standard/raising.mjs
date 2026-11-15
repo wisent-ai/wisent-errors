@@ -12,7 +12,7 @@
 // not one the product passes.
 
 import { extname, join } from 'node:path';
-import { listDirectory, readTreeFile } from '../input.mjs';
+import { listDirectory, readTreeFile } from '../support/input.mjs';
 
 const NAME = '(?<name>[a-z][a-z\\d_]*)';
 const PATTERNS = {

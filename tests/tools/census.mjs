@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
-import { EXIT_FAILURE } from '../../ci/refuse.mjs';
+import { EXIT_FAILURE } from '../../ci/support/refuse.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const COPY = "export const CODES = ['config', 'auth', 'not_found', 'rate_limit', 'timeout', 'infra_down'];\n";

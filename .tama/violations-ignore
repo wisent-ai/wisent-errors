@@ -7,7 +7,7 @@ assets/readme-banner.svg
 # rule's own definition, not error messages this package raises, and the
 # files are never edited by hand, so the audits read the catalogue and the
 # generator instead of these copies.
-js/codes.mjs
+js/catalogue/codes.mjs
 rust/src/codes.rs
 # The repository root. Every file below is read from the root by the
 # tool named beside it, so none of them can move into a folder and the

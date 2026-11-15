@@ -12,8 +12,8 @@
 // does not read, or no git to ask.
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
-import { Words } from '../ci/arguments.mjs';
-import { guarded, refuse } from '../ci/refuse.mjs';
+import { Words } from '../ci/support/arguments.mjs';
+import { guarded, refuse } from '../ci/support/refuse.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const LIST = 'wisent_errors.inventory.list';

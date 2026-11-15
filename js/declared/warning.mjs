@@ -10,7 +10,7 @@
 // safeguard, confirm, test }`. Most functionalities declare none: a warning on
 // an ordinary read teaches its reader to confirm without reading.
 
-import { CAUSE_ID_PATTERN, SENTENCES, TEST_PATH_PATTERN } from './declaration.mjs';
+import { CAUSE_ID_PATTERN, SENTENCES, TEST_PATH_PATTERN } from '../catalogue/declaration.mjs';
 import { CAUSE_ID, TEST_PATH, textProblems } from './operation.mjs';
 import { fill } from './template.mjs';
 

@@ -1,10 +1,10 @@
 // How this package refuses the calls made to it: each refusal is a cause of
 // its own failure catalogue (catalogue/failures/, generated into
-// js/failures.mjs), thrown as a DeclaredError that names the operation, the
+// js/catalogue/failures.mjs), thrown as a DeclaredError that names the operation, the
 // cause and the values the raising site knew.
 
-import { CODES } from './codes.mjs';
-import { ENVELOPE_BUILD } from './failures.mjs';
+import { CODES } from '../catalogue/codes.mjs';
+import { ENVELOPE_BUILD } from '../catalogue/failures.mjs';
 import { refusal } from './operation.mjs';
 
 /**

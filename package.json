@@ -10,8 +10,8 @@
       "default": "./js/index.mjs"
     },
     "./codes": {
-      "types": "./js/codes.d.ts",
-      "default": "./js/codes.mjs"
+      "types": "./js/catalogue/codes.d.ts",
+      "default": "./js/catalogue/codes.mjs"
     }
   },
   "files": [

@@ -37,8 +37,8 @@ pub fn is_placeholder_name(name: &str) -> bool {
 /// The template's parts, in order.
 pub fn parts(template: &str) -> Vec<Part<'_>> {
     let mut found = Vec::new();
-    let mut text_start: usize = Default::default();
-    let mut index: usize = Default::default();
+    let mut text_start: usize = 0;
+    let mut index: usize = 0;
     while index < template.len() {
         let byte = template.as_bytes()[index];
         if byte != b'{' && byte != b'}' {
@@ -56,12 +56,14 @@ pub fn parts(template: &str) -> Vec<Part<'_>> {
             match (rest.find('}'), rest.find('{')) {
                 (Some(close), reopen) if reopen.map_or(true, |reopen| close < reopen) => {
                     let inside = &rest[..close];
+                    // Past the `{`, what is inside, and the `}`.
+                    let end = index + 1 + close + 1;
                     found.push(if is_placeholder_name(inside) {
                         Part::Placeholder(inside)
                     } else {
-                        Part::Malformed(&template[index..index + close + 2])
+                        Part::Malformed(&template[index..end])
                     });
-                    index += close + 2;
+                    index = end;
                 }
                 (_, reopen) => {
                     let end = reopen.map_or(template.len(), |reopen| index + 1 + reopen);
@@ -129,7 +131,10 @@ pub fn unfilled<'a>(templates: &[&'a str], values: &[(&str, &str)]) -> Vec<&'a s
 /// The name a malformed placeholder most likely meant: what precedes a format
 /// spec, lowercase, with '_' for anything else.
 pub fn suggestion(malformed: &str) -> String {
-    let inside = &malformed[1..malformed.len() - 1];
+    let mut braced = malformed.chars();
+    braced.next();
+    braced.next_back();
+    let inside = braced.as_str();
     let head = inside
         .find([':', '!'])
         .map_or(inside, |end| &inside[..end])

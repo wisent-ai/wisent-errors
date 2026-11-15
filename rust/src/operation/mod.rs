@@ -24,10 +24,15 @@
 //! catalogue/declaration.json, the same in every runtime.
 
 mod catalogue;
-mod cause;
-mod declared;
+/// A declared cause, and the error a product raises when it meets one.
+mod causes {
+    pub(super) mod cause;
+    pub(super) mod declared;
+}
 mod source;
 pub mod template;
+
+use causes::{cause, declared};
 
 pub use catalogue::catalogue_problems;
 pub use cause::Cause;

@@ -25,8 +25,8 @@ import {
   retryable,
   severity,
   whose as whoseOf,
-} from './codes.mjs';
-import { checkedEnvelopeFields, pointFlaw } from './refusal.mjs';
+} from './catalogue/codes.mjs';
+import { checkedEnvelopeFields, pointFlaw } from './declared/refusal.mjs';
 
 const FAILURE_POINT = new RegExp(FAILURE_POINT_PATTERN);
 
@@ -201,12 +201,12 @@ export {
   refusal,
   sentence,
   textProblems,
-} from './operation.mjs';
+} from './declared/operation.mjs';
 
-export { fill, isPlaceholderName, parts, placeholders, templateProblems, unfilled } from './template.mjs';
-export { DeclaredError, pointFlaw } from './refusal.mjs';
+export { fill, isPlaceholderName, parts, placeholders, templateProblems, unfilled } from './declared/template.mjs';
+export { DeclaredError, pointFlaw } from './declared/refusal.mjs';
 export { causeOf } from './cause.mjs';
-export { ENVELOPE_BUILD } from './failures.mjs';
+export { ENVELOPE_BUILD } from './catalogue/failures.mjs';
 export {
   CAUSE_ID_PATTERN,
   FIELD_MEANINGS,
@@ -216,7 +216,7 @@ export {
   RAW_MESSAGE_NAMES,
   SENTENCES,
   TEST_PATH_PATTERN,
-} from './declaration.mjs';
+} from './catalogue/declaration.mjs';
 
 export {
   HAZARDS,
@@ -227,4 +227,4 @@ export {
   warningSentence,
   warningsCatalogue,
   warningsMarkdown,
-} from './warning.mjs';
+} from './declared/warning.mjs';

@@ -13,13 +13,13 @@ schema/failure.schema.json    the envelope, checkable from any language
 codegen/generate.mjs          one generator, four runtimes and docs/errors/
 rust/    crate   wisent-errors   (src/operation/: causes and templates; src/warning.rs: warnings; src/invalid.rs: why an envelope was refused; src/failures/: generated, one module per part of catalogue/failures/; src/telemetry/, feature `telemetry`: consent, queue, delivery, export)
 python/  package wisent_errors   (operation.py, template.py: the same declarations and rules)
-js/      package @wisent/errors  (+ .d.ts; operation.mjs, template.mjs, warning.mjs, refusal.mjs)
+js/      package @wisent/errors  (catalogue/: the generated codes.mjs, declaration.mjs, failures.mjs and codes.d.ts; declared/: operation.mjs, template.mjs, warning.mjs, refusal.mjs; index.mjs and index.d.ts)
 swift/   library WisentErrors    (Catalogue/: Operation.swift, Template.swift, Invalid.swift and the generated Codes.swift and Declaration.swift; Warning.swift, Report.swift; Own/OwnFailures*.swift: generated, one file per part; Telemetry*.swift: the same telemetry as the Rust feature) and WisentTelemetryUI (the Settings section)
 ci/check.mjs                  what must hold before this ships, this package's own catalogue included
 ci/no-handrolled-envelope.mjs the guard a consuming repo runs
 ci/error-standard.mjs         the lint a consuming repo runs: generic sentences, functionality catalogues, their tests, the values their raising sites pass, their entries
 ci/warning-standard.mjs       the lint a consuming repo runs: declared warnings, their tests, and one warning for every confirmation
-ci/refuse.mjs, input.mjs, arguments.mjs  how these commands refuse, read their files and read their words
+ci/support/                   refuse.mjs, input.mjs, arguments.mjs, tests-held.mjs: how these commands refuse, read their files, read their words and find a declared test
 tests/<area>/                 declaration, envelope, cli-output, lint, tools, warnings, telemetry; tests/untested-causes.json lists what no local state provokes
 ```
 

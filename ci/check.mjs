@@ -11,8 +11,8 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { catalogue as listing } from '../js/index.mjs';
-import { holding, listDirectory, readJsonInput } from './input.mjs';
-import { EXIT_FAILURE, EXIT_SUCCESS, guarded, ownOperations, refusalText } from './refuse.mjs';
+import { holding, listDirectory, readJsonInput } from './support/input.mjs';
+import { EXIT_FAILURE, EXIT_SUCCESS, guarded, ownOperations, refusalText } from './support/refuse.mjs';
 import { operationsFor, readParts } from '../codegen/parts.mjs';
 import { checkListing } from './standard/catalogue.mjs';
 

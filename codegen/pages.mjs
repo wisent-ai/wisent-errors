@@ -16,6 +16,10 @@ function section(operation) {
     const tests = cause.tests
       ? Object.entries(cause.tests).map(([runtime, test]) => `${RUNTIMES[runtime] ?? runtime} \`${test}\``).join(', ')
       : `\`${cause.test}\``;
+    // The exits rust/src/codes.rs declares: a usage refusal exits 2, as clap's usage errors do
+    // (https://docs.rs/clap/latest/clap/error/struct.Error.html#method.exit); a retryable code exits
+    // EX_UNAVAILABLE, 69 (https://man.freebsd.org/cgi/man.cgi?query=sysexits); anything else exits its
+    // declared status or 1, a failure (https://pubs.opengroup.org/onlinepubs/9799919799/functions/exit.html).
     const exit = cause.usage ? 2 : ['rate_limit', 'timeout', 'infra_down'].includes(cause.code) ? 69 : cause.exit ?? 1;
     text +=
       `\n<a id="${operation.id.replaceAll('.', '-')}-${cause.id}"></a>\n\n### \`${operation.id}.${cause.id}\`\n\n` +

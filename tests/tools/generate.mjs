@@ -10,7 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { appendFileSync, chmodSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
-import { EXIT_FAILURE } from '../../ci/refuse.mjs';
+import { EXIT_FAILURE } from '../../ci/support/refuse.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const PARTS = ['catalogue', 'codegen', 'ci', 'js', 'rust', 'python', 'swift', 'schema', 'docs', 'tests'];
@@ -29,23 +29,23 @@ function inCopy(name, body) {
 
 test('a_drifted_generated_file_is_refused', () => {
   inCopy('drift', (copy, run) => {
-    appendFileSync(join(copy, 'js', 'declaration.mjs'), '// edited by hand\n');
+    appendFileSync(join(copy, 'js', 'catalogue', 'declaration.mjs'), '// edited by hand\n');
     const result = run('codegen/generate.mjs', ['--check']);
     assert.equal(result.status, EXIT_FAILURE);
-    assert.match(result.stdout, /DRIFTED {4}js\/declaration\.mjs/);
-    assert.match(result.stderr, /generated file\(s\) differ from what the catalogue writes.*observed: .*js\/declaration\.mjs/);
+    assert.match(result.stdout, /DRIFTED {4}js\/catalogue\/declaration\.mjs/);
+    assert.match(result.stderr, /generated file\(s\) differ from what the catalogue writes.*observed: .*js\/catalogue\/declaration\.mjs/);
   });
 });
 
 test('an_unwritable_generated_file_is_refused', () => {
   inCopy('unwritable', (copy, run) => {
-    const target = join(copy, 'js', 'declaration.mjs');
+    const target = join(copy, 'js', 'catalogue', 'declaration.mjs');
     appendFileSync(target, '// edited by hand\n');
     chmodSync(target, 0o444); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     const result = run('codegen/generate.mjs');
     chmodSync(target, 0o644); // https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     assert.equal(result.status, EXIT_FAILURE);
-    assert.match(result.stderr, /writing the generated js\/declaration\.mjs: the operating system refused to create or write the file, so the runtime keeps what an older catalogue wrote; observed: .*mode 444/);
+    assert.match(result.stderr, /writing the generated js\/catalogue\/declaration\.mjs: the operating system refused to create or write the file, so the runtime keeps what an older catalogue wrote; observed: .*mode 444/);
   });
 });
 

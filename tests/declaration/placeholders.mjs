@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { PROBES, causeProblems, fill, isPlaceholderName, parts, unfilled, warningProblems } from '../../js/index.mjs';
-import { CAUSE_ID, TEST_PATH } from '../../js/operation.mjs';
+import { CAUSE_ID, TEST_PATH } from '../../js/declared/operation.mjs';
 
 const CAUSE = {
   id: 'value-unsafe',

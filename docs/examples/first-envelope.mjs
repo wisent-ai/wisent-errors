@@ -8,7 +8,7 @@
 // install.
 
 import { failure, failureOrFallback, render, chain } from '../../js/index.mjs';
-import { fromUpstreamStatus, exitCode, isCode } from '../../js/codes.mjs';
+import { fromUpstreamStatus, exitCode, isCode } from '../../js/catalogue/codes.mjs';
 
 const refused = failure({
   failurePoint: 'toy.gateway.oauth-refresh',

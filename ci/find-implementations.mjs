@@ -14,9 +14,9 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Words } from './arguments.mjs';
-import { describe, listDirectory, openDirectory, packageSource, readJsonInput, stateOf } from './input.mjs';
-import { exitOf, guarded, refuse, refusalText } from './refuse.mjs';
+import { Words } from './support/arguments.mjs';
+import { describe, listDirectory, openDirectory, packageSource, readJsonInput, stateOf } from './support/input.mjs';
+import { exitOf, guarded, refuse, refusalText } from './support/refuse.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(HERE, '..');

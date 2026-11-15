@@ -1,9 +1,9 @@
 //! A declared cause met: the cause and the values its raising site knew,
 //! as one error a product raises instead of a type of its own. It is the Rust
-//! form of the JS package's `DeclaredError` (js/refusal.mjs): displayed, it
+//! form of the JS package's `DeclaredError` (js/declared/refusal.mjs): displayed, it
 //! says the cause's refusal, its sentence and its fix.
 
-use super::{Cause, Operation};
+use crate::operation::{Cause, Operation};
 
 /// A declared cause met, with the values its sentences are filled with.
 #[derive(Clone, Debug, PartialEq, Eq)]

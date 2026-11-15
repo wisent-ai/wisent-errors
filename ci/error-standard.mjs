@@ -28,8 +28,8 @@
 // catalogue/failures/ and exits with the status it declares.
 
 import { catalogue as listing } from '../js/index.mjs';
-import { Words } from './arguments.mjs';
-import { EXIT_FAILURE, EXIT_SUCCESS, exitOf, guarded, ownOperations, refusalText } from './refuse.mjs';
+import { Words } from './support/arguments.mjs';
+import { EXIT_FAILURE, EXIT_SUCCESS, exitOf, guarded, ownOperations, refusalText } from './support/refuse.mjs';
 import { checkCatalogue } from './standard/catalogue.mjs';
 import { scanSources } from './standard/scan.mjs';
 

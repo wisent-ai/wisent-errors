@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### The JavaScript runtime and the commands keep their parts apart
+
+- `js/` held twelve files. The generated catalogue (`codes.mjs`,
+  `declaration.mjs`, `failures.mjs`) and the `codes.d.ts` beside it are now
+  in `js/catalogue/`, which `codegen/generate.mjs` writes. The declaration
+  checks (`operation.mjs`, `refusal.mjs`, `template.mjs`, `warning.mjs`) are
+  now in `js/declared/`. The `.` and `./codes` exports name the same modules
+  as before, so an importer of `@wisent/errors` or `@wisent/errors/codes`
+  changes nothing. A copy that imported `js/<file>.mjs` by its path names the
+  new folder.
+- `ci/` held nine files. The four the commands share (`refuse.mjs`,
+  `input.mjs`, `arguments.mjs`, `tests-held.mjs`) are now in `ci/support/`.
+  The commands a consuming repository runs (`ci/error-standard.mjs`,
+  `ci/warning-standard.mjs`, `ci/no-handrolled-envelope.mjs`,
+  `ci/find-implementations.mjs`, `ci/check.mjs`) keep their paths.
+- `rust/src/operation/` held six files. `cause.rs` and `declared.rs` are now
+  in `rust/src/operation/causes/`; `wisent_errors::operation::{Cause,
+  Declared}` are where they were. Written and read; nothing was built or run.
+
 ### `WisentProgram` finds the program the release installer placed
 
 - `InstalledProgram.candidates` looks in `~/.local/bin/<name>` after `PATH`

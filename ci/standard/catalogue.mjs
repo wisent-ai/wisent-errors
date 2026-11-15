@@ -8,9 +8,9 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { CODES, FAILURE_POINT_PATTERN, RETRY_EXIT, SENTENCES, USAGE_EXIT, anchor, causeProblems, fill, placeholders, refusal, retryable } from '../../js/index.mjs';
-import { absentTest } from '../tests-held.mjs';
-import { describe, openDirectory, readJsonInput } from '../input.mjs';
-import { ownOperations, refusalText, refuse } from '../refuse.mjs';
+import { absentTest } from '../support/tests-held.mjs';
+import { describe, openDirectory, readJsonInput } from '../support/input.mjs';
+import { ownOperations, refusalText, refuse } from '../support/refuse.mjs';
 import { passedNames } from './raising.mjs';
 
 const CATALOGUE = 'wisent_errors.lint.catalogue';

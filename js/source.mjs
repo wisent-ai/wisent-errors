@@ -2,7 +2,7 @@
 // sentences inside the string literals of one line. The Rust crate's
 // `operation::generic_sentences_in` applies the same rule.
 
-import { GENERIC_SENTENCES } from './codes.mjs';
+import { GENERIC_SENTENCES } from './catalogue/codes.mjs';
 
 /**
  * The generic sentences inside the string literals of one source line.

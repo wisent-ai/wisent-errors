@@ -1,8 +1,8 @@
 //! One way a functionality can fail, and the rules its declaration is held
 //! to; the rules and their sentences come from catalogue/declaration.json.
 
-use super::template::{fill, template_problems, unfilled};
-use super::Operation;
+use crate::operation::template::{fill, template_problems, unfilled};
+use crate::operation::Operation;
 use crate::declaration as rules;
 use crate::render::escape;
 use crate::{Code, Failure, GENERIC_SENTENCES};

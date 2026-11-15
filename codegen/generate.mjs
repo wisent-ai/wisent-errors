@@ -25,8 +25,8 @@ import { declarationJs, declarationPython, declarationRust, declarationSwift } f
 import { byArea, failuresJs, failuresPython, failuresRust, failuresRustModule, failuresSwift, failuresSwiftNamespace, rustModule, swiftFile } from './failures.mjs';
 import { pages } from './pages.mjs';
 import { PARTS, operationsFor, readParts } from './parts.mjs';
-import { guarded, refuse } from '../ci/refuse.mjs';
-import { holding, listDirectory, readJsonInput, stateOf } from '../ci/input.mjs';
+import { guarded, refuse } from '../ci/support/refuse.mjs';
+import { holding, listDirectory, readJsonInput, stateOf } from '../ci/support/input.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -69,9 +69,9 @@ const targets = [
   { path: at('python', 'wisent_errors', 'codes.py'), body: python(context) },
   { path: at('python', 'wisent_errors', 'declaration.py'), body: declarationPython(context) },
   { path: at('python', 'wisent_errors', 'failures.py'), body: failuresPython(own('python')) },
-  { path: at('js', 'codes.mjs'), body: javascript(context) },
-  { path: at('js', 'declaration.mjs'), body: declarationJs(context) },
-  { path: at('js', 'failures.mjs'), body: failuresJs(own('js')) },
+  { path: at('js', 'catalogue', 'codes.mjs'), body: javascript(context) },
+  { path: at('js', 'catalogue', 'declaration.mjs'), body: declarationJs(context) },
+  { path: at('js', 'catalogue', 'failures.mjs'), body: failuresJs(own('js')) },
   { path: at('swift', 'Sources', 'WisentErrors', 'Catalogue', 'Codes.swift'), body: swift(context) },
   { path: at('swift', 'Sources', 'WisentErrors', 'Catalogue', 'Declaration.swift'), body: declarationSwift(context) },
   { path: swiftFailures('OwnFailures.swift'), body: failuresSwiftNamespace(swiftAreas, banner) },

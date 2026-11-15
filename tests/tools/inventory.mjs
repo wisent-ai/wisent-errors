@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
-import { EXIT_FAILURE } from '../../ci/refuse.mjs';
+import { EXIT_FAILURE } from '../../ci/support/refuse.mjs';
 import { USAGE_EXIT } from '../../js/index.mjs';
 
 const root = resolve(import.meta.dirname, '../..');

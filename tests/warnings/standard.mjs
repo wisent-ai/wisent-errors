@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
-import { EXIT_FAILURE } from '../../ci/refuse.mjs';
+import { EXIT_FAILURE } from '../../ci/support/refuse.mjs';
 import { unconfirmed, warningsCatalogue } from '../../js/index.mjs';
 
 const root = resolve(import.meta.dirname, '../..');

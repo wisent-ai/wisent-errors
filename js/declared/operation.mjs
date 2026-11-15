@@ -2,7 +2,7 @@
 // declaration the Rust crate's `operation` module holds, with the same rules
 // and the same JSON, so a product in either language prints one shape and is
 // held to one standard. The rules and their sentences come from
-// catalogue/declaration.json, generated into js/declaration.mjs.
+// catalogue/declaration.json, generated into js/catalogue/declaration.mjs.
 //
 // An operation is one functionality, named by its failure point: `entries`
 // are every way a user or a program starts it (a command, a route, a screen,
@@ -11,8 +11,8 @@
 // cause states which step failed, why, the state the refusal shows, what
 // fixes it, its code, and the real test that provokes it.
 
-import { CODES, FAILURE_POINT_PATTERN, GENERIC_SENTENCES, RETRY_EXIT, USAGE_EXIT, retryable } from './codes.mjs';
-import { CAUSE_ID_PATTERN, FIELD_MEANINGS, SENTENCES, TEST_PATH_PATTERN } from './declaration.mjs';
+import { CODES, FAILURE_POINT_PATTERN, GENERIC_SENTENCES, RETRY_EXIT, USAGE_EXIT, retryable } from '../catalogue/codes.mjs';
+import { CAUSE_ID_PATTERN, FIELD_MEANINGS, SENTENCES, TEST_PATH_PATTERN } from '../catalogue/declaration.mjs';
 import { fill, templateProblems } from './template.mjs';
 import { warningDeclarationProblems } from './warning.mjs';
 

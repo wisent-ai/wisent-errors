@@ -9,7 +9,7 @@
 // (PLACEHOLDER_PATTERN); anything else there (`{value:?}`, `{Path}`) is kept
 // as written and never filled. A `}` no `{` opened is kept as written.
 
-import { PLACEHOLDER_GRAMMAR, PLACEHOLDER_PATTERN, RAW_MESSAGE_NAMES, SENTENCES } from './declaration.mjs';
+import { PLACEHOLDER_GRAMMAR, PLACEHOLDER_PATTERN, RAW_MESSAGE_NAMES, SENTENCES } from '../catalogue/declaration.mjs';
 
 const NAME = new RegExp(PLACEHOLDER_PATTERN);
 
