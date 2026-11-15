@@ -5,14 +5,14 @@ use std::time::Duration;
 use serde_json::{json, Value};
 use wisent_errors::telemetry::Level;
 
-use crate::{sample_failure, Case};
+use crate::{sample_failure, Case, FAILURE, SUCCESS};
 
 #[test]
 fn nothing_is_queued_before_the_user_answers() {
     let mut case = Case::new("unanswered");
     let telemetry = case.telemetry("wisent-errors-test-cli");
     telemetry.failure(&sample_failure(), Some("pairs-unreadable"));
-    telemetry.command("pairs import", 1, Duration::from_millis(5));
+    telemetry.command("pairs import", FAILURE, Duration::from_millis(5));
     let status = telemetry.status();
     case.note("status", status.clone());
     assert_eq!(status["level"], "unanswered");
@@ -31,11 +31,12 @@ fn errors_queue_failures_and_not_commands() {
         .set_level(Level::Errors)
         .expect("the level is kept");
     telemetry.failure(&sample_failure(), Some("pairs-unreadable"));
-    telemetry.command("pairs import", 1, Duration::from_millis(5));
+    telemetry.command("pairs import", FAILURE, Duration::from_millis(5));
     let queued = telemetry.queued().expect("the queue reads");
     case.note("queued", Value::Array(queued.clone()));
-    assert_eq!(queued.len(), 1);
-    let event = &queued[0];
+    let [event] = queued.as_slice() else {
+        panic!("one event is queued: {queued:?}");
+    };
     assert_eq!(event["eventName"], "failure");
     assert_eq!(event["appId"], "wisent-errors-test-cli");
     assert_eq!(
@@ -60,14 +61,16 @@ fn usage_queues_commands_without_their_arguments() {
     telemetry
         .set_level(Level::Usage)
         .expect("the level is kept");
-    telemetry.command("pairs import", 0, Duration::from_millis(42));
+    telemetry.command("pairs import", SUCCESS, Duration::from_millis(42));
     let queued = telemetry.queued().expect("the queue reads");
     case.note("queued", Value::Array(queued.clone()));
-    assert_eq!(queued.len(), 1);
-    assert_eq!(queued[0]["eventName"], "cli.command");
+    let [event] = queued.as_slice() else {
+        panic!("one event is queued: {queued:?}");
+    };
+    assert_eq!(event["eventName"], "cli.command");
     assert_eq!(
-        queued[0]["properties"],
-        json!({ "command": "pairs import", "exit_status": 0, "duration_ms": 42 })
+        event["properties"],
+        json!({ "command": "pairs import", "exit_status": SUCCESS, "duration_ms": 42 })
     );
 }
 

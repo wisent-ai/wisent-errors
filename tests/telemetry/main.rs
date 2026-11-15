@@ -22,6 +22,11 @@ use serde_json::{json, Value};
 use wisent_errors::telemetry::{Product, Telemetry};
 use wisent_errors::{Code, Failure};
 
+/// A command that ran, EXIT_SUCCESS: https://pubs.opengroup.org/onlinepubs/9799919799/functions/exit.html
+pub const SUCCESS: i32 = 0;
+/// A command that failed, EXIT_FAILURE: https://pubs.opengroup.org/onlinepubs/9799919799/functions/exit.html
+pub const FAILURE: i32 = 1;
+
 static LOCK: Mutex<()> = Mutex::new(());
 
 pub struct Case {

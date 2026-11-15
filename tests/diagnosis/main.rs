@@ -9,6 +9,11 @@ use std::sync::LazyLock;
 use wisent_errors::diagnosis::{self, Check, Probe};
 use wisent_errors::{Code, Failure, Operation};
 
+/// A diagnosis where everything works, EXIT_SUCCESS: https://pubs.opengroup.org/onlinepubs/9799919799/functions/exit.html
+const SUCCESS: i32 = 0;
+/// A diagnosis where something fails, EXIT_FAILURE: https://pubs.opengroup.org/onlinepubs/9799919799/functions/exit.html
+const FAILURE: i32 = 1;
+
 const fn operation(id: &'static str, entries: &'static [&'static str]) -> Operation {
     Operation {
         id,
@@ -99,13 +104,13 @@ fn every_functionality_is_tried_and_a_failure_says_what_failed_and_its_fix() {
     );
     assert_eq!(
         diagnosis::exit_status(&findings),
-        1,
+        FAILURE,
         "a failing functionality fails the diagnosis"
     );
     let json = diagnosis::to_json(&findings);
-    assert_eq!(json[1]["state"], "fails");
-    assert_eq!(json[1]["error_code"], "not_found");
-    assert_eq!(json[2]["state"], "skipped");
+    assert_eq!(json.pointer("/1/state").and_then(serde_json::Value::as_str), Some("fails"));
+    assert_eq!(json.pointer("/1/error_code").and_then(serde_json::Value::as_str), Some("not_found"));
+    assert_eq!(json.pointer("/2/state").and_then(serde_json::Value::as_str), Some("skipped"));
 }
 
 #[test]
@@ -116,7 +121,7 @@ fn a_diagnosis_where_everything_works_passes() {
     }]);
     assert_eq!(
         diagnosis::exit_status(&findings),
-        0,
+        SUCCESS,
         "{}",
         diagnosis::render(&findings)
     );
@@ -131,9 +136,11 @@ fn the_checks_are_held_to_the_catalogue() {
     let mut short = checks();
     short.pop();
     let problems = diagnosis::problems(CATALOGUE, &short);
-    assert_eq!(problems.len(), 1, "{problems:?}");
+    let [problem] = problems.as_slice() else {
+        panic!("{problems:?}");
+    };
     assert!(
-        problems[0].starts_with("diagnosis-test.remove has an entry point and no diagnosis check"),
+        problem.starts_with("diagnosis-test.remove has an entry point and no diagnosis check"),
         "{problems:?}"
     );
     let mut twice = checks();

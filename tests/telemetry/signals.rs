@@ -9,7 +9,7 @@ use serde_json::Value;
 use wisent_errors::telemetry::Level;
 use wisent_errors::{Code, Failure};
 
-use crate::{sample_failure, Case};
+use crate::{sample_failure, Case, SUCCESS};
 
 fn signals(queued: &[Value], name: &str) -> Vec<Value> {
     queued
@@ -80,17 +80,19 @@ fn the_same_usage_refusal_again_is_a_usage_loop_and_success_ends_it() {
     telemetry
         .set_level(Level::Usage)
         .expect("the level is kept");
-    telemetry.command("pairs import", 2, Duration::from_millis(3));
-    telemetry.command("pairs import", 2, Duration::from_millis(3));
+    telemetry.command("pairs import", Code::USAGE_EXIT, Duration::from_millis(3));
+    telemetry.command("pairs import", Code::USAGE_EXIT, Duration::from_millis(3));
     let queued = telemetry.queued().expect("the queue reads");
     case.note("queued", Value::Array(queued.clone()));
     let loops = signals(&queued, "frustration.usage_loop");
-    assert_eq!(loops.len(), 1, "{loops:?}");
-    assert_eq!(loops[0]["command"], "pairs import");
-    assert_eq!(loops[0]["consecutive"], 2);
+    let [usage_loop] = loops.as_slice() else {
+        panic!("{loops:?}");
+    };
+    assert_eq!(usage_loop["command"], "pairs import");
+    assert_eq!(usage_loop["consecutive"], 2);
 
-    telemetry.command("pairs import", 0, Duration::from_millis(3));
-    telemetry.command("pairs import", 2, Duration::from_millis(3));
+    telemetry.command("pairs import", SUCCESS, Duration::from_millis(3));
+    telemetry.command("pairs import", Code::USAGE_EXIT, Duration::from_millis(3));
     let after = signals(
         &telemetry.queued().expect("the queue reads"),
         "frustration.usage_loop",
@@ -115,8 +117,8 @@ fn each_signal_is_counted_only_under_its_consent() {
     telemetry
         .set_level(Level::Errors)
         .expect("the level is kept");
-    telemetry.command("pairs import", 2, Duration::from_millis(3));
-    telemetry.command("pairs import", 2, Duration::from_millis(3));
+    telemetry.command("pairs import", Code::USAGE_EXIT, Duration::from_millis(3));
+    telemetry.command("pairs import", Code::USAGE_EXIT, Duration::from_millis(3));
     let queued = telemetry.queued().expect("the queue reads");
     case.note("queued", Value::Array(queued.clone()));
     assert!(
@@ -146,10 +148,12 @@ fn help_asked_after_a_failure_names_the_failure_and_its_age() {
     let queued = telemetry.queued().expect("the queue reads");
     case.note("queued", Value::Array(queued.clone()));
     let helps = signals(&queued, "frustration.help_after_failure");
-    assert_eq!(helps.len(), 1, "{helps:?}");
-    assert_eq!(helps[0]["command"], "pairs import");
-    assert_eq!(helps[0]["failure_point"], "wisent-errors-test.pairs.import");
-    assert!(helps[0]["seconds_since_failure"].is_u64());
+    let [help] = helps.as_slice() else {
+        panic!("{helps:?}");
+    };
+    assert_eq!(help["command"], "pairs import");
+    assert_eq!(help["failure_point"], "wisent-errors-test.pairs.import");
+    assert!(help["seconds_since_failure"].is_u64());
 
     telemetry
         .set_level(Level::Errors)

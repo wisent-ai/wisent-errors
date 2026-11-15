@@ -93,7 +93,10 @@ fn a_report_reaches_support_and_its_reply_is_read_back() {
         .find(|read| read["id"] == id.as_str())
         .expect("the report reads back");
     assert_eq!(read["status"], "waiting_on_customer");
-    assert_eq!(read["replies"][0]["text"], "Fixed in the next release.");
+    assert_eq!(
+        read.pointer("/replies/0/text").and_then(serde_json::Value::as_str),
+        Some("Fixed in the next release.")
+    );
 }
 
 #[test]
@@ -109,7 +112,7 @@ fn a_report_without_a_description_is_refused_before_sending() {
         .remedy
         .expect("a fix")
         .contains("wisent-errors-test support report --description"));
-    assert_eq!(telemetry.reports().expect("nothing kept").len(), 0);
+    assert!(telemetry.reports().expect("nothing kept").is_empty());
 }
 
 #[test]
@@ -149,7 +152,7 @@ fn a_report_support_refuses_says_why() {
         .detail
         .expect("a sentence")
         .contains("support refused HTTP 400: email \"not an address\" is not an email address"));
-    assert_eq!(telemetry.reports().expect("nothing kept").len(), 0);
+    assert!(telemetry.reports().expect("nothing kept").is_empty());
 }
 
 #[test]
@@ -173,7 +176,7 @@ fn an_unreachable_support_files_nothing() {
     let detail = refused.detail.expect("a sentence");
     assert!(detail.contains(&format!("127.0.0.1:{port}")), "{detail}");
     assert!(detail.contains("nothing was filed"), "{detail}");
-    assert_eq!(telemetry.reports().expect("nothing kept").len(), 0);
+    assert!(telemetry.reports().expect("nothing kept").is_empty());
 }
 
 #[test]

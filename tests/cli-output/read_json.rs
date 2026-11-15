@@ -48,8 +48,10 @@ fn an_unreadable_input_is_refused() {
     use std::os::unix::fs::PermissionsExt;
     let path = place("unreadable").join("human.json");
     std::fs::write(&path, "{\"name\":\"x\"}").expect("the input can be written");
+    // No permission for anyone: https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).expect("its permissions can be withdrawn");
     let error = refusal(&path);
+    // Owner read and write: https://pubs.opengroup.org/onlinepubs/9799919799/utilities/chmod.html
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).expect("its permissions can be given back");
     assert_eq!(error.cause().id, "input-not-permitted", "{error}");
     assert!(error.to_string().contains("chmod u+r"), "{error}");

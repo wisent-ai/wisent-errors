@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use serde_json::Value;
 use wisent_errors::telemetry::{Level, EVENTS};
+use wisent_errors::Code;
 
 use crate::{sample_failure, Case};
 
@@ -20,8 +21,8 @@ fn every_queued_event_is_declared_with_exactly_its_properties() {
         .expect("the level is kept");
     telemetry.failure(&sample_failure(), Some("pairs-unreadable"));
     telemetry.failure(&sample_failure(), Some("pairs-unreadable"));
-    telemetry.command("pairs import", 2, Duration::from_millis(3));
-    telemetry.command("pairs import", 2, Duration::from_millis(3));
+    telemetry.command("pairs import", Code::USAGE_EXIT, Duration::from_millis(3));
+    telemetry.command("pairs import", Code::USAGE_EXIT, Duration::from_millis(3));
     telemetry.help("pairs import");
     let queued = telemetry.queued().expect("the queue reads");
     case.note("queued", Value::Array(queued.clone()));

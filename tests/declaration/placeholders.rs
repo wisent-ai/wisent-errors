@@ -40,12 +40,17 @@ fn every_placeholder_the_renderer_will_not_fill_is_refused() {
         ..CAUSE
     };
     let problems = broken.problems();
-    assert_eq!(problems.len(), 3, "{problems:#?}");
-    assert!(problems[0].contains("`failed` holds the placeholder {Path},") && problems[0].contains("write {path}"));
-    assert!(problems[1].contains("`failed` holds the placeholder {deal.title},") && problems[1].contains("write {deal_title}"));
-    assert!(problems[2].contains("`remedy` opens a placeholder at \"{name before passing it\" that no '}' closes; close it as {name} or drop the '{'"));
+    let [path, title, unclosed] = problems.as_slice() else {
+        panic!("{problems:#?}");
+    };
+    assert!(path.contains("`failed` holds the placeholder {Path},") && path.contains("write {path}"));
+    assert!(title.contains("`failed` holds the placeholder {deal.title},") && title.contains("write {deal_title}"));
+    assert!(unclosed.contains("`remedy` opens a placeholder at \"{name before passing it\" that no '}' closes; close it as {name} or drop the '{'"));
     let unopened = Cause { failed: "checking a} value", ..CAUSE };
-    assert!(unopened.problems()[0].contains("`failed` holds a '}' at \"checking a} value\" that no '{' opened"));
+    assert!(unopened
+        .problems()
+        .first()
+        .is_some_and(|problem| problem.contains("`failed` holds a '}' at \"checking a} value\" that no '{' opened")));
 }
 
 #[test]
