@@ -1,5 +1,7 @@
 // Render the Python vocabulary from the generator's prepared catalogue.
 
+import { CLAP_USAGE_EXIT, STATUS_CLASSES, STATUS_REGISTRY, SYSEXITS } from './sources.mjs';
+
 export function python({ catalogue, codes, exact, ranges, fallback, banner }) {
   const rows = codes
     .map(
@@ -10,13 +12,13 @@ export function python({ catalogue, codes, exact, ranges, fallback, banner }) {
         `        retryable=${entry.retryable ? 'True' : 'False'},\n` +
         `        outage=${entry.outage ? 'True' : 'False'},\n` +
         `        severity=${JSON.stringify(entry.severity)},\n` +
-        `        http_status=${entry.http_status},\n` +
+        `        http_status=${entry.http_status},  # ${STATUS_REGISTRY}\n` +
         `    ),`,
     )
     .join('\n');
-  const exactRows = exact.map(([status, code]) => `    ${status}: ${JSON.stringify(code)},`).join('\n');
+  const exactRows = exact.map(([status, code]) => `    ${status}: ${JSON.stringify(code)},  # ${STATUS_REGISTRY}`).join('\n');
   const rangeRows = ranges
-    .map((range) => `    (${range.from}, ${range.to}, ${JSON.stringify(range.code)}),`)
+    .map((range) => `    (${range.from}, ${range.to}, ${JSON.stringify(range.code)}),  # ${STATUS_CLASSES}`)
     .join('\n');
 
   return `${banner('#')}
@@ -46,10 +48,10 @@ SEVERITIES: tuple[str, ...] = ${JSON.stringify(catalogue.severities)}
 FALLBACK: str = ${JSON.stringify(fallback)}
 
 # ${catalogue.exit_code.retry_name}. ${catalogue.exit_code.rule}.
-RETRY_EXIT: int = ${catalogue.exit_code.retry}
+RETRY_EXIT: int = ${catalogue.exit_code.retry}  # ${SYSEXITS}
 
 # ${catalogue.exit_code.usage_name}: a request refused for its own form. Never retryable.
-USAGE_EXIT: int = ${catalogue.exit_code.usage}
+USAGE_EXIT: int = ${catalogue.exit_code.usage}  # ${CLAP_USAGE_EXIT}
 
 _EXACT_STATUS: dict[int, str] = {
 ${exactRows}

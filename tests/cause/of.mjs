@@ -1,5 +1,7 @@
 // What `causeOf` says of a caught value: the message and every cause under
-// it once, a value that is no Error as text, and a chain that loops ending.
+// it once, a value that is no Error as text, and a chain that loops ending; an
+// object JSON cannot say as it is, and an empty message, said without a throw
+// or an empty sentence.
 //
 //   node --test tests/cause/of.mjs
 import assert from 'node:assert/strict';
@@ -31,4 +33,18 @@ test('a_chain_that_comes_back_to_itself_ends', () => {
   const second = new Error('second', { cause: first });
   first.cause = second;
   assert.equal(causeOf(first), 'first: second');
+});
+
+test('an_object_that_holds_itself_or_a_bigint_is_said_without_a_throw', () => {
+  const row = { id: 7n, table: 'orders' };
+  row.self = row;
+  assert.equal(causeOf(row), '{"id":"7","table":"orders","self":"[Circular]"}');
+  const shared = { status: 503 };
+  assert.equal(causeOf({ first: shared, second: shared }), '{"first":{"status":503},"second":{"status":503}}');
+});
+
+test('an_empty_message_says_no_empty_sentence', () => {
+  assert.equal(causeOf(new Error('', { cause: new Error('disk full') })), 'disk full');
+  assert.equal(causeOf(new TypeError('')), 'TypeError');
+  assert.equal(causeOf(new Error('waited: timeout', { cause: 'timeout' })), 'waited: timeout');
 });

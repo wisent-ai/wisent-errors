@@ -21,10 +21,10 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
     case unknown
 
     /// The exit code a retryable failure leaves the process with.
-    public static let retryExit: Int32 = 69
+    public static let retryExit: Int32 = 69 // https://man.freebsd.org/cgi/man.cgi?query=sysexits
 
     /// The exit code a usage refusal leaves the process with: the clap and click usage code.
-    public static let usageExit: Int32 = 2
+    public static let usageExit: Int32 = 2 // https://docs.rs/clap/latest/clap/error/struct.Error.html#method.exit
 
     public var severity: Severity {
         switch self {
@@ -70,14 +70,14 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
     /// The HTTP status a service answers with when this failure reaches its edge.
     public var httpStatus: Int {
         switch self {
-        case .config: 503
-        case .auth: 401
-        case .notFound: 404
-        case .rateLimit: 429
-        case .timeout: 504
-        case .infraDown: 503
-        case .refused: 403
-        case .unknown: 500
+        case .config: 503 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case .auth: 401 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case .notFound: 404 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case .rateLimit: 429 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case .timeout: 504 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case .infraDown: 503 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case .refused: 403 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case .unknown: 500 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
         }
     }
 
@@ -118,18 +118,18 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
     /// Classify a status an upstream answered one of our calls with.
     public static func fromUpstream(status: Int) -> Code {
         switch status {
-        case 401: .auth
-        case 402: .auth
-        case 403: .auth
-        case 404: .notFound
-        case 407: .auth
-        case 408: .timeout
-        case 410: .notFound
-        case 429: .rateLimit
-        case 501: .config
-        case 504: .timeout
-        case 505: .config
-        case 500...599: .infraDown
+        case 401: .auth // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 402: .auth // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 403: .auth // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 404: .notFound // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 407: .auth // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 408: .timeout // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 410: .notFound // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 429: .rateLimit // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 501: .config // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 504: .timeout // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 505: .config // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+        case 500...599: .infraDown // https://www.rfc-editor.org/rfc/rfc9110.html#section-15
         default: .unknown
         }
     }

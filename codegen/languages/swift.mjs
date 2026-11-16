@@ -1,5 +1,7 @@
 // Render the Swift vocabulary from the generator's prepared catalogue.
 
+import { CLAP_USAGE_EXIT, STATUS_CLASSES, STATUS_REGISTRY, SYSEXITS } from './sources.mjs';
+
 // Swift, because two native clients hold their own copies: oko-desktop and
 // wisent-ios. Cases are camelCase with the catalogue's string as the raw value,
 // which is the spelling both already use, so neither has to rename anything.
@@ -18,12 +20,12 @@ export function swift({ catalogue, codes, exact, ranges, fallback, banner }) {
   const severityArms = codes.map((entry) => arm(entry, `.${entry.severity}`)).join('\n');
   const retryableArms = codes.map((entry) => arm(entry, entry.retryable)).join('\n');
   const outageArms = codes.map((entry) => arm(entry, entry.outage)).join('\n');
-  const statusArms = codes.map((entry) => arm(entry, entry.http_status)).join('\n');
+  const statusArms = codes.map((entry) => `${arm(entry, entry.http_status)} // ${STATUS_REGISTRY}`).join('\n');
   const summaryArms = codes.map((entry) => arm(entry, JSON.stringify(entry.operator_summary))).join('\n');
   const whoseArms = codes.map((entry) => arm(entry, JSON.stringify(entry.whose))).join('\n');
-  const exactArms = exact.map(([status, code]) => `        case ${status}: .${swiftName(code)}`).join('\n');
+  const exactArms = exact.map(([status, code]) => `        case ${status}: .${swiftName(code)} // ${STATUS_REGISTRY}`).join('\n');
   const rangeArms = ranges
-    .map((range) => `        case ${range.from}...${range.to}: .${swiftName(range.code)}`)
+    .map((range) => `        case ${range.from}...${range.to}: .${swiftName(range.code)} // ${STATUS_CLASSES}`)
     .join('\n');
 
   return `${banner('//')}
@@ -38,10 +40,10 @@ public enum Code: String, CaseIterable, Sendable, Hashable, Codable {
 ${cases}
 
     /// The exit code a retryable failure leaves the process with.
-    public static let retryExit: Int32 = ${catalogue.exit_code.retry}
+    public static let retryExit: Int32 = ${catalogue.exit_code.retry} // ${SYSEXITS}
 
     /// The exit code a usage refusal leaves the process with: ${catalogue.exit_code.usage_name}.
-    public static let usageExit: Int32 = ${catalogue.exit_code.usage}
+    public static let usageExit: Int32 = ${catalogue.exit_code.usage} // ${CLAP_USAGE_EXIT}
 
     public var severity: Severity {
         switch self {

@@ -1,5 +1,7 @@
 // Render the Rust vocabulary from the generator's prepared catalogue.
 
+import { CLAP_USAGE_EXIT, STATUS_CLASSES, STATUS_REGISTRY, SYSEXITS } from './sources.mjs';
+
 const capitalized = ([first, ...rest]) => first.toUpperCase() + rest.join('');
 const rustName = (code) => code.split('_').map(capitalized).join('');
 
@@ -12,10 +14,10 @@ export function rust({ catalogue, codes, exact, ranges, fallback, banner }) {
   const retryable = codes.filter((entry) => entry.retryable).map((entry) => `Self::${rustName(entry.code)}`).join(' | ');
   const outage = codes.filter((entry) => entry.outage).map((entry) => `Self::${rustName(entry.code)}`).join(' | ');
   const severity = codes.map((entry) => `            Self::${rustName(entry.code)} => Severity::${capitalized(entry.severity)},`).join('\n');
-  const statusArms = exact.map(([status, code]) => `            ${status} => Self::${rustName(code)},`).join('\n');
-  const httpStatus = codes.map((entry) => `            Self::${rustName(entry.code)} => ${entry.http_status},`).join('\n');
+  const statusArms = exact.map(([status, code]) => `            ${status} => Self::${rustName(code)}, // ${STATUS_REGISTRY}`).join('\n');
+  const httpStatus = codes.map((entry) => `            Self::${rustName(entry.code)} => ${entry.http_status}, // ${STATUS_REGISTRY}`).join('\n');
   const rangeArms = ranges
-    .map((range) => `        if (${range.from}..=${range.to}).contains(&status) {\n            return Self::${rustName(range.code)};\n        }`)
+    .map((range) => `        if (${range.from}..=${range.to}).contains(&status) { // ${STATUS_CLASSES}\n            return Self::${rustName(range.code)};\n        }`)
     .join('\n');
   const generic = catalogue.generic_sentences.sentences
     .map((entry) => `    GenericSentence {\n        text: ${JSON.stringify(entry.text)},\n        reason: ${JSON.stringify(entry.reason)},\n    },`)
@@ -59,10 +61,10 @@ impl Code {
     /// The exit code a retryable failure leaves the process with.
     ///
     /// ${catalogue.exit_code.retry_name} on every platform this fleet runs on.
-    pub const RETRY_EXIT: i32 = ${catalogue.exit_code.retry};
+    pub const RETRY_EXIT: i32 = ${catalogue.exit_code.retry}; // ${SYSEXITS}
 
     /// The exit code a usage refusal leaves the process with: ${catalogue.exit_code.usage_name}.
-    pub const USAGE_EXIT: i32 = ${catalogue.exit_code.usage};
+    pub const USAGE_EXIT: i32 = ${catalogue.exit_code.usage}; // ${CLAP_USAGE_EXIT}
 
     pub const ALL: &'static [Self] = &[${codes.map((entry) => `Self::${rustName(entry.code)}`).join(', ')}];
 

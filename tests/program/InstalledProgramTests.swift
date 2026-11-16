@@ -75,6 +75,14 @@ final class InstalledProgramTests: XCTestCase {
         XCTAssertEqual(outcome.stdout, "one")
     }
 
+    /// `ł` (C5 82) written in two halves reaches the run in two reads; each
+    /// read decoded on its own said it as two U+FFFD.
+    func testACharacterTwoReadsSplitIsSaidWhole() async throws {
+        let outcome = try await program.run(
+            ["printf 'Rachuba \\305'; sleep 0.2; printf '\\202\\303\\263d'"], executable: URL(fileURLWithPath: "/bin/sh"))
+        XCTAssertEqual(outcome.stdout, "Rachuba łód")
+    }
+
     func testCancellingTheCallerStopsTheProgram() async throws {
         let run = Task { try await program.run(["exec sleep 30"], executable: URL(fileURLWithPath: "/bin/sh")) }
         try await Task.sleep(nanoseconds: 200_000_000)

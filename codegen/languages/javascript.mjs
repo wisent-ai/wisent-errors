@@ -1,5 +1,7 @@
 // Render the JavaScript vocabulary from the generator's prepared catalogue.
 
+import { CLAP_USAGE_EXIT, STATUS_CLASSES, STATUS_REGISTRY, SYSEXITS } from './sources.mjs';
+
 export function javascript({ catalogue, codes, exact, ranges, fallback, banner }) {
   const rows = codes
     .map(
@@ -10,12 +12,12 @@ export function javascript({ catalogue, codes, exact, ranges, fallback, banner }
         `    retryable: ${entry.retryable},\n` +
         `    outage: ${entry.outage},\n` +
         `    severity: ${JSON.stringify(entry.severity)},\n` +
-        `    httpStatus: ${entry.http_status},\n` +
+        `    httpStatus: ${entry.http_status}, // ${STATUS_REGISTRY}\n` +
         `  },`,
     )
     .join('\n');
-  const exactRows = exact.map(([status, code]) => `  ${status}: ${JSON.stringify(code)},`).join('\n');
-  const rangeRows = ranges.map((range) => `  { from: ${range.from}, to: ${range.to}, code: ${JSON.stringify(range.code)} },`).join('\n');
+  const exactRows = exact.map(([status, code]) => `  ${status}: ${JSON.stringify(code)}, // ${STATUS_REGISTRY}`).join('\n');
+  const rangeRows = ranges.map((range) => `  { from: ${range.from}, to: ${range.to}, code: ${JSON.stringify(range.code)} }, // ${STATUS_CLASSES}`).join('\n');
 
   return `${banner('//')}
 
@@ -36,10 +38,10 @@ export const FALLBACK = ${JSON.stringify(fallback)};
 export const FAILURE_POINT_PATTERN = ${JSON.stringify(catalogue.failure_point.pattern)};
 
 /** ${catalogue.exit_code.retry_name}. ${catalogue.exit_code.rule}. */
-export const RETRY_EXIT = ${catalogue.exit_code.retry};
+export const RETRY_EXIT = ${catalogue.exit_code.retry}; // ${SYSEXITS}
 
 /** ${catalogue.exit_code.usage_name}: a request refused for its own form. Never retryable. */
-export const USAGE_EXIT = ${catalogue.exit_code.usage};
+export const USAGE_EXIT = ${catalogue.exit_code.usage}; // ${CLAP_USAGE_EXIT}
 
 /** Wording that says a failure happened without saying which; matched case-insensitively in string literals. */
 export const GENERIC_SENTENCES = Object.freeze(${JSON.stringify(catalogue.generic_sentences.sentences.map(({ text, reason }) => ({ text, reason })), null, 2)});

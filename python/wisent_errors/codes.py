@@ -25,7 +25,7 @@ MEANINGS: dict[str, _Meaning] = {
         retryable=False,
         outage=True,
         severity="critical",
-        http_status=503,
+        http_status=503,  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
     ),
     "auth": _Meaning(
         operator_summary="the credentials this command used were rejected",
@@ -33,7 +33,7 @@ MEANINGS: dict[str, _Meaning] = {
         retryable=False,
         outage=False,
         severity="warning",
-        http_status=401,
+        http_status=401,  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
     ),
     "not_found": _Meaning(
         operator_summary="what the command asked for is not there",
@@ -41,7 +41,7 @@ MEANINGS: dict[str, _Meaning] = {
         retryable=False,
         outage=False,
         severity="warning",
-        http_status=404,
+        http_status=404,  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
     ),
     "rate_limit": _Meaning(
         operator_summary="an upstream is throttling us",
@@ -49,7 +49,7 @@ MEANINGS: dict[str, _Meaning] = {
         retryable=True,
         outage=False,
         severity="warning",
-        http_status=429,
+        http_status=429,  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
     ),
     "timeout": _Meaning(
         operator_summary="an upstream did not answer in time",
@@ -57,7 +57,7 @@ MEANINGS: dict[str, _Meaning] = {
         retryable=True,
         outage=True,
         severity="error",
-        http_status=504,
+        http_status=504,  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
     ),
     "infra_down": _Meaning(
         operator_summary="infrastructure we depend on is unreachable",
@@ -65,7 +65,7 @@ MEANINGS: dict[str, _Meaning] = {
         retryable=True,
         outage=True,
         severity="critical",
-        http_status=503,
+        http_status=503,  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
     ),
     "refused": _Meaning(
         operator_summary="an explicit policy refused this command",
@@ -73,7 +73,7 @@ MEANINGS: dict[str, _Meaning] = {
         retryable=False,
         outage=False,
         severity="warning",
-        http_status=403,
+        http_status=403,  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
     ),
     "unknown": _Meaning(
         operator_summary="the command failed and we could not attribute the failure",
@@ -81,7 +81,7 @@ MEANINGS: dict[str, _Meaning] = {
         retryable=False,
         outage=False,
         severity="error",
-        http_status=500,
+        http_status=500,  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
     ),
 }
 
@@ -90,27 +90,27 @@ SEVERITIES: tuple[str, ...] = ["warning","error","critical"]
 FALLBACK: str = "unknown"
 
 # EX_UNAVAILABLE. retryable codes exit with `retry`; every other code keeps the exit code the caller already chose.
-RETRY_EXIT: int = 69
+RETRY_EXIT: int = 69  # https://man.freebsd.org/cgi/man.cgi?query=sysexits
 
 # the clap and click usage code: a request refused for its own form. Never retryable.
-USAGE_EXIT: int = 2
+USAGE_EXIT: int = 2  # https://docs.rs/clap/latest/clap/error/struct.Error.html#method.exit
 
 _EXACT_STATUS: dict[int, str] = {
-    401: "auth",
-    402: "auth",
-    403: "auth",
-    404: "not_found",
-    407: "auth",
-    408: "timeout",
-    410: "not_found",
-    429: "rate_limit",
-    501: "config",
-    504: "timeout",
-    505: "config",
+    401: "auth",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+    402: "auth",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+    403: "auth",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+    404: "not_found",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+    407: "auth",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+    408: "timeout",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+    410: "not_found",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+    429: "rate_limit",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+    501: "config",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+    504: "timeout",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+    505: "config",  # https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
 }
 
 _STATUS_RANGES: tuple[tuple[int, int, str], ...] = (
-    (500, 599, "infra_down"),
+    (500, 599, "infra_down"),  # https://www.rfc-editor.org/rfc/rfc9110.html#section-15
 )
 
 FAILURE_POINT_PATTERN: str = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$"

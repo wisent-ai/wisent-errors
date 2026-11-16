@@ -45,10 +45,10 @@ impl Code {
     /// The exit code a retryable failure leaves the process with.
     ///
     /// EX_UNAVAILABLE on every platform this fleet runs on.
-    pub const RETRY_EXIT: i32 = 69;
+    pub const RETRY_EXIT: i32 = 69; // https://man.freebsd.org/cgi/man.cgi?query=sysexits
 
     /// The exit code a usage refusal leaves the process with: the clap and click usage code.
-    pub const USAGE_EXIT: i32 = 2;
+    pub const USAGE_EXIT: i32 = 2; // https://docs.rs/clap/latest/clap/error/struct.Error.html#method.exit
 
     pub const ALL: &'static [Self] = &[Self::Config, Self::Auth, Self::NotFound, Self::RateLimit, Self::Timeout, Self::InfraDown, Self::Refused, Self::Unknown];
 
@@ -146,19 +146,19 @@ impl Code {
     /// Classify a status an upstream answered one of our calls with.
     pub fn from_upstream_status(status: u16) -> Self {
         match status {
-            401 => Self::Auth,
-            402 => Self::Auth,
-            403 => Self::Auth,
-            404 => Self::NotFound,
-            407 => Self::Auth,
-            408 => Self::Timeout,
-            410 => Self::NotFound,
-            429 => Self::RateLimit,
-            501 => Self::Config,
-            504 => Self::Timeout,
-            505 => Self::Config,
+            401 => Self::Auth, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            402 => Self::Auth, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            403 => Self::Auth, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            404 => Self::NotFound, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            407 => Self::Auth, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            408 => Self::Timeout, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            410 => Self::NotFound, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            429 => Self::RateLimit, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            501 => Self::Config, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            504 => Self::Timeout, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            505 => Self::Config, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
             _ => {
-        if (500..=599).contains(&status) {
+        if (500..=599).contains(&status) { // https://www.rfc-editor.org/rfc/rfc9110.html#section-15
             return Self::InfraDown;
         }
                 Self::Unknown
@@ -169,14 +169,14 @@ impl Code {
     /// The HTTP status a service answers with when this failure reaches its edge.
     pub fn http_status(self) -> u16 {
         match self {
-            Self::Config => 503,
-            Self::Auth => 401,
-            Self::NotFound => 404,
-            Self::RateLimit => 429,
-            Self::Timeout => 504,
-            Self::InfraDown => 503,
-            Self::Refused => 403,
-            Self::Unknown => 500,
+            Self::Config => 503, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            Self::Auth => 401, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            Self::NotFound => 404, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            Self::RateLimit => 429, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            Self::Timeout => 504, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            Self::InfraDown => 503, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            Self::Refused => 403, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+            Self::Unknown => 500, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
         }
     }
 

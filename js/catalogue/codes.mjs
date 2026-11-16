@@ -9,7 +9,7 @@ export const MEANINGS = Object.freeze({
     retryable: false,
     outage: true,
     severity: "critical",
-    httpStatus: 503,
+    httpStatus: 503, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
   },
   auth: {
     operatorSummary: "the credentials this command used were rejected",
@@ -17,7 +17,7 @@ export const MEANINGS = Object.freeze({
     retryable: false,
     outage: false,
     severity: "warning",
-    httpStatus: 401,
+    httpStatus: 401, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
   },
   not_found: {
     operatorSummary: "what the command asked for is not there",
@@ -25,7 +25,7 @@ export const MEANINGS = Object.freeze({
     retryable: false,
     outage: false,
     severity: "warning",
-    httpStatus: 404,
+    httpStatus: 404, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
   },
   rate_limit: {
     operatorSummary: "an upstream is throttling us",
@@ -33,7 +33,7 @@ export const MEANINGS = Object.freeze({
     retryable: true,
     outage: false,
     severity: "warning",
-    httpStatus: 429,
+    httpStatus: 429, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
   },
   timeout: {
     operatorSummary: "an upstream did not answer in time",
@@ -41,7 +41,7 @@ export const MEANINGS = Object.freeze({
     retryable: true,
     outage: true,
     severity: "error",
-    httpStatus: 504,
+    httpStatus: 504, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
   },
   infra_down: {
     operatorSummary: "infrastructure we depend on is unreachable",
@@ -49,7 +49,7 @@ export const MEANINGS = Object.freeze({
     retryable: true,
     outage: true,
     severity: "critical",
-    httpStatus: 503,
+    httpStatus: 503, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
   },
   refused: {
     operatorSummary: "an explicit policy refused this command",
@@ -57,7 +57,7 @@ export const MEANINGS = Object.freeze({
     retryable: false,
     outage: false,
     severity: "warning",
-    httpStatus: 403,
+    httpStatus: 403, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
   },
   unknown: {
     operatorSummary: "the command failed and we could not attribute the failure",
@@ -65,7 +65,7 @@ export const MEANINGS = Object.freeze({
     retryable: false,
     outage: false,
     severity: "error",
-    httpStatus: 500,
+    httpStatus: 500, // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
   },
 });
 
@@ -82,10 +82,10 @@ export const FALLBACK = "unknown";
 export const FAILURE_POINT_PATTERN = "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)*$";
 
 /** EX_UNAVAILABLE. retryable codes exit with `retry`; every other code keeps the exit code the caller already chose. */
-export const RETRY_EXIT = 69;
+export const RETRY_EXIT = 69; // https://man.freebsd.org/cgi/man.cgi?query=sysexits
 
 /** the clap and click usage code: a request refused for its own form. Never retryable. */
-export const USAGE_EXIT = 2;
+export const USAGE_EXIT = 2; // https://docs.rs/clap/latest/clap/error/struct.Error.html#method.exit
 
 /** Wording that says a failure happened without saying which; matched case-insensitively in string literals. */
 export const GENERIC_SENTENCES = Object.freeze([
@@ -144,21 +144,21 @@ export const GENERIC_SENTENCES = Object.freeze([
 ]);
 
 const EXACT_STATUS = Object.freeze({
-  401: "auth",
-  402: "auth",
-  403: "auth",
-  404: "not_found",
-  407: "auth",
-  408: "timeout",
-  410: "not_found",
-  429: "rate_limit",
-  501: "config",
-  504: "timeout",
-  505: "config",
+  401: "auth", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+  402: "auth", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+  403: "auth", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+  404: "not_found", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+  407: "auth", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+  408: "timeout", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+  410: "not_found", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+  429: "rate_limit", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+  501: "config", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+  504: "timeout", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+  505: "config", // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
 });
 
 const STATUS_RANGES = Object.freeze([
-  { from: 500, to: 599, code: "infra_down" },
+  { from: 500, to: 599, code: "infra_down" }, // https://www.rfc-editor.org/rfc/rfc9110.html#section-15
 ]);
 
 export const operatorSummary = (code) => MEANINGS[code].operatorSummary;

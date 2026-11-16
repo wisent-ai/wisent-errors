@@ -21,6 +21,26 @@
   in `rust/src/operation/causes/`; `wisent_errors::operation::{Cause,
   Declared}` are where they were. Written and read; nothing was built or run.
 
+### `WisentProgram` says a character two reads split whole
+
+- `InstalledProgram.run` decoded each pipe read on its own, so a character
+  whose UTF-8 bytes arrived in two reads (`ł`, `ó`, `–`) became two U+FFFD
+  in `Outcome.stdout`/`stderr`, in what `onOutput` was handed, and in the
+  JSON a Mac app parses from its CLI. The bytes of a character a read cuts
+  short now wait for the read that completes it, and what is left at end of
+  file is decoded as it is (`tests/program/InstalledProgramTests.swift`).
+  Written and read; nothing was built or run.
+
+### `causeOf` never throws, and says no empty sentence
+
+- `causeOf` said an object as `JSON.stringify` of it, which throws on an
+  object that holds itself or a bigint, so the catch that called it failed
+  with a TypeError of its own instead of saying why. Such a value is now
+  said with `"[Circular]"` and the bigint's digits. An empty message no
+  longer opens the line with `": "`, a cause that is no Error is said once
+  like an Error's, and an Error whose chain says nothing is its name
+  (`tests/cause/of.mjs`). Written and read; nothing was built or run.
+
 ### `WisentProgram` finds the program the release installer placed
 
 - `InstalledProgram.candidates` looks in `~/.local/bin/<name>` after `PATH`

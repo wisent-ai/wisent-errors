@@ -93,8 +93,10 @@ public struct InstalledProgram: Sendable {
 
     /// Run `executable` with ``leading`` and `arguments` to completion, its
     /// standard input empty, handing each chunk it writes to `onOutput` with
-    /// the stream it came from, in arrival order. Cancelling the calling task
-    /// stops the run: the program is sent SIGTERM, and the run ends with
+    /// the stream it came from, in arrival order; a character whose UTF-8
+    /// bytes two reads split is handed on whole with the read that completes
+    /// it. Cancelling the calling task stops the run: the program is sent
+    /// SIGTERM, and the run ends with
     /// `signalled` set once it has exited and its pipes closed. A program that
     /// cannot start is ``Failure/failedToStart(path:reason:)``; one cancelled
     /// before it started is `CancellationError`.
@@ -120,12 +122,13 @@ public struct InstalledProgram: Sendable {
                         let data = handle.availableData
                         if data.isEmpty {
                             handle.readabilityHandler = nil
+                            let rest = run.drain(stream)
+                            if !rest.isEmpty { onOutput(stream, rest) }
                             run.closed(stream)
                             return
                         }
-                        let text = String(decoding: data, as: UTF8.self)
-                        run.append(text, to: stream)
-                        onOutput(stream, text)
+                        let text = run.append(data, to: stream)
+                        if !text.isEmpty { onOutput(stream, text) }
                     }
                 }
                 process.terminationHandler = { finished in
@@ -147,9 +150,9 @@ public struct InstalledProgram: Sendable {
     }
 }
 
-/// Lock-guarded state of one run: its process, both streams' output, which
-/// of them has closed, the exit status, and the once-only resume of the
-/// caller.
+/// Lock-guarded state of one run: its process, both streams' output and the
+/// bytes of a character a read split, which of them has closed, the exit
+/// status, and the once-only resume of the caller.
 private final class RunState: @unchecked Sendable {
     private let lock = NSLock()
     private let process: Process
@@ -160,6 +163,7 @@ private final class RunState: @unchecked Sendable {
     private var stderr = ""
     private var open: Set<InstalledProgram.Stream> = [.stdout, .stderr]
     private var status: (code: Int32, signalled: Bool)?
+    private var split: [InstalledProgram.Stream: Data] = [:]
 
     init(process: Process) {
         self.process = process
@@ -193,13 +197,58 @@ private final class RunState: @unchecked Sendable {
         if running { process.terminate() }
     }
 
-    func append(_ text: String, to stream: InstalledProgram.Stream) {
-        lock.withLock {
-            switch stream {
-            case .stdout: stdout += text
-            case .stderr: stderr += text
-            }
+    /// Add a read from `stream` to its output and return the text it
+    /// completes. Decoding each read on its own turned a character whose
+    /// UTF-8 bytes the pipe delivered in two reads (`ó`, `ł`, `–`) into two
+    /// U+FFFD, in the output and in the JSON a product parses from it; the
+    /// bytes of a character still incomplete wait for the next read.
+    func append(_ data: Data, to stream: InstalledProgram.Stream) -> String {
+        lock.withLock { () -> String in
+            var bytes = split[stream] ?? Data()
+            bytes.append(data)
+            let whole = Self.wholeCharacters(bytes)
+            split[stream] = Data(bytes[whole...])
+            let text = String(decoding: bytes[..<whole], as: UTF8.self)
+            add(text, to: stream)
+            return text
         }
+    }
+
+    /// At end of file, the bytes of a character no read completed, decoded
+    /// as they are (U+FFFD for what is not UTF-8) and added to the output.
+    func drain(_ stream: InstalledProgram.Stream) -> String {
+        lock.withLock { () -> String in
+            guard let bytes = split.removeValue(forKey: stream), !bytes.isEmpty else { return "" }
+            let text = String(decoding: bytes, as: UTF8.self)
+            add(text, to: stream)
+            return text
+        }
+    }
+
+    /// Called with the lock held.
+    private func add(_ text: String, to stream: InstalledProgram.Stream) {
+        switch stream {
+        case .stdout: stdout += text
+        case .stderr: stderr += text
+        }
+    }
+
+    /// The index ending the longest prefix of `bytes` that holds no UTF-8
+    /// sequence cut short: the lead byte of the last sequence, when fewer
+    /// bytes follow it than it announces, else the end. Bytes that are not
+    /// UTF-8 end nothing early; decoding says them as U+FFFD.
+    private static func wholeCharacters(_ bytes: Data) -> Data.Index {
+        var index = bytes.endIndex
+        var following = 0
+        while index > bytes.startIndex, following < 4 {
+            index -= 1
+            following += 1
+            let byte = bytes[index]
+            if byte & 0b1100_0000 == 0b1000_0000 { continue }
+            let announced = byte >= 0b1111_0000 ? 4 : byte >= 0b1110_0000 ? 3 : byte >= 0b1100_0000 ? 2 : 1
+            return announced > following ? index : bytes.endIndex
+        }
+        return bytes.endIndex
     }
 
     func closed(_ stream: InstalledProgram.Stream) {
