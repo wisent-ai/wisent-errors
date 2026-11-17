@@ -280,16 +280,36 @@ items as `[index]`, `-` for null and for an empty array or object.
 
 The Swift package's `WisentProgram` library is how a macOS app that drives its
 product through the CLI finds it and runs it once:
-`InstalledProgram(name: "para", variable: "PARA", leading: ["--json"])` looks
-in the path `PARA` names, then `PATH`, then `~/.local/bin/para` (where the
-product's release installer places it) and `~/.stado/bin/para`, refuses with
-`Failure.missing(searched:)` naming every place, and `run` hands back both
-streams whole with the exit status. The program runs in a process group of its
-own: cancelling the caller sends the group SIGTERM, and a further
-`InstalledProgram.Stop.request()` sends it SIGKILL. The run ends on the
+`InstalledProgram(name: "para", leading: ["--json"])` looks in
+`~/.local/bin/para` (where the product's release installer places it), then
+`~/.stado/bin/para`, and never in an environment variable or `PATH`. The file
+found, and then the process the kernel started from it (spawned suspended,
+checked to be still suspended with no user time run, and resumed only once
+admitted), must carry the fleet's signature: `identifier "com.wisent.para" and
+anchor apple generic and certificate leaf[subject.OU] = "LNTWB5B9DV"`
+(`FleetSignature`; a program another publisher signs is named with `team:`).
+The fleet CLIs are signed with an Apple Development certificate of that team,
+so any certificate Apple issued the team meets it. A stand-in or a renamed copy
+of another program is refused with `Failure.unverified(path:reason:)`, a
+refused process is killed with its group before it reads its input, and each
+admission and refusal is recorded to the unified log
+(`com.wisent.WisentProgram`, `admission`). `run` hands back both streams whole
+with the exit status. The program does not inherit the app's variables that
+begin with its own name (`PARA_`), `XDG_` or `DYLD_` (`withheld`), nor those
+`withholding:` names (a Node.js runtime obeys `NODE_OPTIONS`, `OPENSSL_CONF`
+and more); what a run needs is set with `environment:`. The program runs in a
+process group of its own: cancelling the caller sends the group SIGTERM, and a
+further `InstalledProgram.Stop.request()` sends it SIGKILL. The run ends on the
 program's exit; `Outcome.heldOpen` names a stream a process it left running
-still held. A product says the three failures (`missing`, `failedToStart`,
-`unfollowed`) in its own words (`tests/program/InstalledProgramTests.swift`).
+still held. A product says the four failures (`missing`, `unverified`,
+`failedToStart`, `unfollowed`) in its own words
+(`tests/program/FleetSignatureTests.swift`, `InstalledProgramTests.swift`). An
+app that keeps a server running with Foundation's `Process` checks the file
+with `FleetSignature.verify(file:)` before it starts it, and the process with
+`FleetSignature.verify(process:)` before it reads its answer or sends it a
+request: `Process` cannot start a program suspended, so the program has
+already run with its arguments by then, and such an app hands it nothing in
+them.
 
 ## Layout, and how it stays one thing
 

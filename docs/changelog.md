@@ -2,6 +2,49 @@
 
 ## Unreleased
 
+### `WisentProgram` runs only the program the fleet signed
+
+- `InstalledProgram` ran the program the product's variable named, else the
+  first on `PATH`, else `~/.local/bin` or `~/.stado/bin`, checking only that
+  the file was executable: any process of the user's account could set the
+  variable, or put a stand-in first on the login `PATH`, and be handed the
+  product's finance, health or legal data and its serve token (audit
+  2026-11-17, audit-rest-01.md row 39). It now looks only in
+  `~/.local/bin/<name>` and `~/.stado/bin/<name>`, and both the file found
+  and the process the kernel started from it must meet
+  `identifier "com.wisent.<name>" and anchor apple generic and certificate
+  leaf[subject.OU] = "LNTWB5B9DV"`: the program is spawned suspended
+  (`POSIX_SPAWN_START_SUSPENDED`), checked by pid (`SecCodeCopyGuestWithAttributes`,
+  `SecCodeCheckValidity`), checked to be still stopped with no user time
+  (`proc_pidinfo`, `proc_pid_rusage`: any process of the account may resume
+  a suspended child early) and resumed only once admitted, so a file
+  replaced after it was found is caught too. A program that is not admitted
+  is `Failure.unverified(path:reason:)`; a refused process is killed with
+  its group before it runs or reads its input; each admission and refusal
+  is recorded to the unified log. The exit is waited for only once the
+  program runs: macOS answers a `waitid` for `WEXITED` alone with a
+  suspended child's stop (`CLD_STOPPED`).
+- This release removes public API, and every consumer pins an exact
+  version: `InstalledProgram(name:variable:leading:)` and the `environment:`
+  parameter of `candidates` and `executable` are gone. Every app passes
+  `name` (and `identifier:`, or `team:` for a program another publisher
+  signs) and says `Failure.unverified` in its own words.
+- A run no longer hands the program the app's variables that begin with
+  the program's own name (`PARA_`, where it keeps state and keys), `XDG_` or
+  `DYLD_` (`InstalledProgram.withheld`): any process of the account can set
+  them for the app with `launchctl setenv`. `run(…, withholding:)` names
+  more (`NODE_`, `OPENSSL_CONF` for a Node.js runtime); what a run needs is
+  set with `environment:`.
+- `FleetSignature` checks a file or a child process against the fleet's (or a
+  named publisher's) requirement, for an app that keeps a server running.
+  The requirement names the team, not Developer ID: the fleet CLIs carry an
+  Apple Development certificate of the team.
+- `FleetSignatureTests` refuses a stand-in where `PATH` or the old variable
+  led, a stand-in script and a renamed copy of `/bin/sh` (errSecCSReqFailed)
+  where the installer places the program, kills a run of `/bin/sh` as `para`
+  before it writes or reads anything, runs an installed `stado` through the
+  suspended check, and refuses a running process as not untouched.
+
 ### A refused or unreachable support report names the product's own command
 
 - `support-refused` and `support-unreachable` tell the reader to send the

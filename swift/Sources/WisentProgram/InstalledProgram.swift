@@ -1,35 +1,74 @@
 #if os(macOS)
 import Darwin
 import Foundation
+import os
 import WisentErrors
 
 /// An installed Wisent command line program and one finite run of it, as a
 /// desktop app that drives its product through the CLI runs it: the program
-/// is the one the product's variable names, else the first on `PATH`, else
-/// the one the <name> release installer at
+/// is the one the <name> release installer at
 /// `stado://releases/<name>/<version>/<platform>/install.sh` places in
 /// `~/.local/bin`, else a copy the retired `stado product install` left in
-/// `~/.stado/bin`. An app opened from Finder or the Dock runs with launchd's
-/// `PATH`, which holds neither directory, so both are looked in by name.
+/// `~/.stado/bin`, and only when the fleet signed it (``FleetSignature``).
+/// No environment variable and no `PATH` directory is looked in: either
+/// lets any process of the user's account choose the program that is
+/// handed the product's data, by a name alone.
 ///
-/// A product declares it once (`InstalledProgram(name: "para", variable:
-/// "PARA", leading: ["--json"])`) and says its three failures in its own
-/// words: ``Failure/missing(searched:)``,
+/// A product declares it once (`InstalledProgram(name: "para", leading:
+/// ["--json"])`) and says its four failures in its own words:
+/// ``Failure/missing(searched:)``, ``Failure/unverified(path:reason:)``,
 /// ``Failure/failedToStart(path:reason:)`` and
 /// ``Failure/unfollowed(path:step:reason:)``.
 public struct InstalledProgram: Sendable {
-    /// The program's file name, on `PATH`, in `~/.local/bin` and in
-    /// `~/.stado/bin`.
+    /// The program's file name in `~/.local/bin` and in `~/.stado/bin`.
     public let name: String
-    /// The environment variable naming the program itself.
-    public let variable: String
+    /// The signing identifier the fleet signs the program as
+    /// (`com.wisent.<name>`).
+    public let identifier: String
     /// The arguments every run begins with (`--json`).
     public let leading: [String]
+    /// The code requirement the file and the started process must meet:
+    /// ``FleetSignature/requirement(identifier:)``. Only this module's tests
+    /// name another (`@testable`), to run the system's own signed programs.
+    let requirement: String
 
-    public init(name: String, variable: String, leading: [String] = []) {
+    /// The fleet program `name`, signed as `com.wisent.<name>`.
+    public init(name: String, leading: [String] = []) {
+        self.init(name: name, identifier: "com.wisent.\(name)", leading: leading)
+    }
+
+    /// The fleet program `name`, signed as `identifier`.
+    public init(name: String, identifier: String, leading: [String] = []) {
+        self.init(name: name, identifier: identifier, team: FleetSignature.team, leading: leading)
+    }
+
+    /// A program another publisher signs (the Node.js runtime a product's
+    /// CLI runs on): `name`, signed as `identifier` by the Apple developer
+    /// team `team`.
+    public init(name: String, identifier: String, team: String, leading: [String] = []) {
+        self.init(name: name, identifier: identifier, leading: leading,
+                  requirement: FleetSignature.requirement(identifier: identifier, team: team))
+    }
+
+    init(name: String, identifier: String, leading: [String], requirement: String) {
+        precondition(
+            !name.isEmpty && name != "." && name != ".." && !name.contains("/"),
+            "a program's name is one file name, not a path: \(name)")
         self.name = name
-        self.variable = variable
+        self.identifier = identifier
         self.leading = leading
+        self.requirement = requirement
+    }
+
+    /// The prefixes of the app's own variables no run hands the program:
+    /// the program's own (`PARA_` for para: where it keeps its state and
+    /// keys), `XDG_` (where it looks for its configuration and data) and
+    /// `DYLD_` (code the loader would put in it). Any process of the account
+    /// can set these for the app (`launchctl setenv`), and so choose, for the
+    /// signed program, where the product's data goes; what a run needs is
+    /// set with `environment`.
+    public var withheld: [String] {
+        ["\(name.uppercased().replacingOccurrences(of: "-", with: "_"))_", "XDG_", "DYLD_"]
     }
 
     public struct Outcome: Sendable, Equatable {
@@ -74,6 +113,12 @@ public struct InstalledProgram: Sendable {
     public enum Failure: Error, Equatable {
         /// No executable program in any place looked in, in the order looked.
         case missing(searched: [String])
+        /// The program at `path` (the file found, or the executable the
+        /// kernel ran for the started process) is not one the fleet signed
+        /// as ``InstalledProgram/identifier``: `reason` is Security's answer.
+        /// A started process that is refused is killed before it is handed
+        /// any input or resumed.
+        case unverified(path: String, reason: String)
         /// The program was found and could not be started.
         case failedToStart(path: String, reason: String)
         /// The program started, and `step` — waiting for its exit, reaping
@@ -116,38 +161,25 @@ public struct InstalledProgram: Sendable {
         }
     }
 
-    /// The places looked in, in order: the path `variable` names, when set
-    /// and not empty; `name` in every `PATH` directory; then
-    /// `~/.local/bin/<name>` and `~/.stado/bin/<name>` of `home`.
-    public func candidates(
-        environment: [String: String] = ProcessInfo.processInfo.environment,
-        home: URL = FileManager.default.homeDirectoryForCurrentUser
-    ) -> [URL] {
-        var found: [URL] = []
-        if let named = environment[variable], !named.isEmpty {
-            found.append(URL(fileURLWithPath: named))
-        }
-        if let path = environment["PATH"] {
-            found += path.split(separator: ":").map {
-                URL(fileURLWithPath: String($0)).appendingPathComponent(name)
-            }
-        }
-        found.append(home.appendingPathComponent(".local/bin/\(name)"))
-        found.append(home.appendingPathComponent(".stado/bin/\(name)"))
-        return found
+    /// The places looked in, in order: `~/.local/bin/<name>` and
+    /// `~/.stado/bin/<name>` of `home`.
+    public func candidates(home: URL = FileManager.default.homeDirectoryForCurrentUser) -> [URL] {
+        [home.appendingPathComponent(".local/bin/\(name)"), home.appendingPathComponent(".stado/bin/\(name)")]
     }
 
-    /// The first executable among ``candidates(environment:home:)``;
-    /// ``Failure/missing(searched:)`` naming every place looked in when there
-    /// is none.
-    public func executable(
-        environment: [String: String] = ProcessInfo.processInfo.environment,
-        home: URL = FileManager.default.homeDirectoryForCurrentUser
-    ) throws -> URL {
-        let places = candidates(environment: environment, home: home)
+    /// The first executable among ``candidates(home:)``, when the fleet
+    /// signed it; ``Failure/unverified(path:reason:)`` when it is not signed
+    /// so (it is refused, never passed over for the next place), and
+    /// ``Failure/missing(searched:)`` naming every place looked in when
+    /// there is none.
+    public func executable(home: URL = FileManager.default.homeDirectoryForCurrentUser) throws -> URL {
+        let places = candidates(home: home)
         guard let found = places.first(where: { FileManager.default.isExecutableFile(atPath: $0.path) })
         else {
             throw Failure.missing(searched: places.map(\.path))
+        }
+        if case .failure(let refused) = FleetSignature.check(file: found, requirement: requirement) {
+            throw Failure.unverified(path: refused.path, reason: refused.reason)
         }
         return found
     }
@@ -163,8 +195,22 @@ public struct InstalledProgram: Sendable {
     /// cannot hold the run on a full pipe; one that closes its input or exits
     /// before reading it all is ``Outcome/inputDelivered`` false, never a
     /// signal to this app (the write end raises no SIGPIPE). Its environment
-    /// is this app's with `environment` set over it, each name holding no
-    /// `=`.
+    /// is this app's, less every variable whose name begins with one of
+    /// ``withheld`` or `withholding`, with `environment` set over it, each
+    /// name holding no `=`. A runtime that obeys variables of its own
+    /// (`NODE_OPTIONS=--require …`, `OPENSSL_CONF`) is run withholding each.
+    ///
+    /// The program is started suspended, and the process the kernel started
+    /// must meet the requirement for ``identifier``
+    /// (``FleetSignature/verify(process:identifier:team:)``), still be
+    /// suspended and have run nothing, before it runs one instruction or is
+    /// handed its input: whatever path `executable`
+    /// names, and whatever replaced that file since it was found, a process
+    /// that is not the signed program is killed and the run is
+    /// ``Failure/unverified(path:reason:)`` naming the executable the kernel
+    /// ran. The admitted process is recorded to the unified log (subsystem
+    /// `com.wisent.WisentProgram`, category `admission`): its path, pid and
+    /// the requirement it met.
     ///
     /// The program runs in a process group of its own, so a stop reaches
     /// every process it started. Cancelling the calling task is the first
@@ -181,11 +227,17 @@ public struct InstalledProgram: Sendable {
         executable: URL,
         input: Data? = nil,
         environment: [String: String] = [:],
+        withholding: [String] = [],
         stop: Stop = Stop(),
         onOutput: @escaping @Sendable (Stream, String) -> Void = { _, _ in }
     ) async throws -> Outcome {
+        let withholding = withheld + withholding
+        let inherited = ProcessInfo.processInfo.environment.filter { variable in
+            !withholding.contains { variable.key.hasPrefix($0) }
+        }
         let run = RunState(
-            path: executable.path, arguments: leading + arguments, input: input, environment: environment,
+            path: executable.path, arguments: leading + arguments, input: input,
+            environment: inherited.merging(environment) { _, given in given }, requirement: requirement,
             onOutput: onOutput)
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -237,8 +289,10 @@ private final class RunState: @unchecked Sendable {
     private let arguments: [String]
     /// The program's standard input, or none for `/dev/null`.
     private let input: Data?
-    /// Set over this app's environment for the program.
+    /// The program's whole environment: what it inherits, and what is set.
     private let environment: [String: String]
+    /// The code requirement the started process must meet before it runs.
+    private let requirement: String
     private let onOutput: @Sendable (InstalledProgram.Stream, String) -> Void
     private var continuation: CheckedContinuation<InstalledProgram.Outcome, Error>?
     /// The program's pid, which is its process group's id; none until it
@@ -263,13 +317,14 @@ private final class RunState: @unchecked Sendable {
     private var split: [InstalledProgram.Stream: Data] = [:]
 
     init(
-        path: String, arguments: [String], input: Data?, environment: [String: String],
+        path: String, arguments: [String], input: Data?, environment: [String: String], requirement: String,
         onOutput: @escaping @Sendable (InstalledProgram.Stream, String) -> Void
     ) {
         self.path = path
         self.arguments = arguments
         self.input = input
         self.environment = environment
+        self.requirement = requirement
         self.onOutput = onOutput
     }
 
@@ -372,9 +427,11 @@ private final class RunState: @unchecked Sendable {
         // A process group of its own (group 0: the program's own pid), so a
         // stop reaches every process it starts; every signal a process may
         // set at its default (all but SIGKILL and SIGSTOP, which none can
-        // set) and none blocked, whatever this app set; and no descriptor of
-        // this app but the three it is handed.
+        // set) and none blocked, whatever this app set; no descriptor of
+        // this app but the three it is handed; and suspended before its
+        // first instruction, until the process is admitted (`admit`).
         let flags = POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_CLOEXEC_DEFAULT
+            | POSIX_SPAWN_START_SUSPENDED
         try Self.checked("posix_spawnattr_setflags", posix_spawnattr_setflags(&attributes, Int16(flags)))
         try Self.checked("posix_spawnattr_setpgroup", posix_spawnattr_setpgroup(&attributes, 0))
         var every = sigset_t()
@@ -387,7 +444,7 @@ private final class RunState: @unchecked Sendable {
         try Self.checked("posix_spawnattr_setsigmask", posix_spawnattr_setsigmask(&attributes, &none))
 
         let words = ([path] + arguments).map { strdup($0) }
-        let variables = ProcessInfo.processInfo.environment.merging(environment) { _, given in given }
+        let variables = environment
             .map { strdup("\($0.key)=\($0.value)") }
         defer { (words + variables).forEach { free($0) } }
         guard !(words + variables).contains(where: { $0 == nil }) else {
@@ -400,9 +457,63 @@ private final class RunState: @unchecked Sendable {
         for (stream, end) in zip([InstalledProgram.Stream.stdout, .stderr], ends) {
             watch(stream, end.read)
         }
+        guard admit(pid) else {
+            // Killed while suspended: it ran nothing and is handed nothing.
+            if let feed { Darwin.close(feed.write) }
+            return
+        }
         if let feed, let input { write(input, to: feed.write) }
+        // Only once it runs: macOS answers a waitid for WEXITED alone with
+        // the suspended child's stop (CLD_STOPPED), as if it had exited.
         Thread.detachNewThread { [self] in awaitExit(pid) }
     }
+
+    /// Check the suspended process `pid` against `requirement`, then that it
+    /// is still suspended and ran nothing (``FleetSignature/unrun(_:)``),
+    /// and resume it, recording who was admitted. A process that is refused
+    /// is killed with its whole group (SIGKILL reaches a suspended process),
+    /// reaped, recorded, and the run ends as unverified; a resume that fails
+    /// does the same and ends it as unfollowed, naming the call.
+    private func admit(_ pid: pid_t) -> Bool {
+        let checked = FleetSignature.admission(process: pid, requirement: requirement).flatMap { admitted in
+            FleetSignature.unrun(pid).map { admitted }
+        }
+        switch checked {
+        case .success(let admitted):
+            Self.admissions.notice(
+                "admitted \(admitted.path, privacy: .public) pid \(admitted.pid) meeting \(admitted.requirement, privacy: .public)")
+        case .failure(let refusal):
+            killed(pid)
+            Self.admissions.error(
+                "refused \(refusal.path, privacy: .public) pid \(pid): \(refusal.reason, privacy: .public)")
+            finish(.failure(InstalledProgram.Failure.unverified(path: refusal.path, reason: refusal.reason)))
+            return false
+        }
+        guard Darwin.kill(pid, SIGCONT) == 0 else {
+            let code = errno
+            killed(pid)
+            unfollowed("kill(\(pid), SIGCONT)", code)
+            return false
+        }
+        return true
+    }
+
+    /// End the suspended process `pid`, with every process its group holds,
+    /// and reap it, so no stop or later run meets it. The process itself is
+    /// signalled as well as its group: one resumed early may have moved to
+    /// another group (`setpgid`), which killpg would then not reach. A
+    /// system that reaps children itself (SIGCHLD ignored) leaves waitpid
+    /// nothing to reap, which ends it all the same.
+    private func killed(_ pid: pid_t) {
+        Darwin.kill(pid, SIGKILL)
+        Darwin.killpg(pid, SIGKILL)
+        var raw: Int32 = 0
+        while waitpid(pid, &raw, 0) == -1 && errno == EINTR {}
+        group = nil
+    }
+
+    /// Where each admitted process is recorded.
+    private static let admissions = Logger(subsystem: "com.wisent.WisentProgram", category: "admission")
 
     /// A pipe for the program's standard input that no other program this
     /// app starts inherits, its write end not blocking and raising no
@@ -553,15 +664,24 @@ private final class RunState: @unchecked Sendable {
     /// Wait on a thread of its own until the program exits, without reaping
     /// it: until the queue reaps it, it keeps its process group's id from
     /// being given to another, so a stop sent before then signals only that
-    /// group's members still alive, or finds none (see `stop`).
+    /// group's members still alive, or finds none (see `stop`). macOS answers
+    /// this wait with a stop of the program too (`CLD_STOPPED`, or
+    /// `CLD_TRAPPED` under a debugger), as if it had exited: that report is
+    /// taken (a wait for `WSTOPPED` without `WNOWAIT`, so it is not answered
+    /// again) and the wait goes on until the program exits, is killed or
+    /// dumps core.
     private func awaitExit(_ pid: pid_t) {
         var info = siginfo_t()
-        while waitid(P_PID, id_t(pid), &info, WEXITED | WNOWAIT) == -1 {
-            let code = errno
-            guard code == EINTR else {
+        while true {
+            guard waitid(P_PID, id_t(pid), &info, WEXITED | WNOWAIT) == 0 else {
+                let code = errno
+                if code == EINTR { continue }
                 queue.async { [self] in unfollowed(SystemCallFailed(call: "waitid", code: code)) }
                 return
             }
+            if [CLD_EXITED, CLD_KILLED, CLD_DUMPED].contains(info.si_code) { break }
+            var stopped = siginfo_t()
+            while waitid(P_PID, id_t(pid), &stopped, WSTOPPED | WNOHANG) == -1 && errno == EINTR {}
         }
         queue.async { [self] in exited(pid) }
     }
