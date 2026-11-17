@@ -154,9 +154,19 @@ fn a_report_support_refuses_says_why() {
     assert_eq!(refused.code.as_str(), "refused");
     assert!(refused
         .detail
+        .as_deref()
         .expect("a sentence")
         .contains("support refused HTTP 400: email \"not an address\" is not an email address"));
+    names_the_product(&refused);
     assert!(telemetry.reports().expect("nothing kept").is_empty());
+}
+
+/// The remedy of a refused or unreachable report names the product's own
+/// `support report`, and no placeholder of the cause was left unfilled.
+fn names_the_product(refused: &wisent_errors::Failure) {
+    let remedy = refused.remedy.as_deref().expect("a fix");
+    assert!(remedy.contains("`wisent-errors-test support report`"), "{remedy}");
+    assert!(!refused.context.contains_key("wisent_errors.unfilled"), "{:?}", refused.context);
 }
 
 #[test]
@@ -177,9 +187,10 @@ fn an_unreachable_support_files_nothing() {
         .expect_err("nothing answers");
     case.note("refusal", json!(refused.detail));
     assert_eq!(refused.code.as_str(), "infra_down");
-    let detail = refused.detail.expect("a sentence");
+    let detail = refused.detail.as_deref().expect("a sentence");
     assert!(detail.contains(&format!("127.0.0.1:{port}")), "{detail}");
     assert!(detail.contains("nothing was filed"), "{detail}");
+    names_the_product(&refused);
     assert!(telemetry.reports().expect("nothing kept").is_empty());
 }
 

@@ -158,11 +158,15 @@ final class TelemetryTests: XCTestCase {
     func testADamagedConsentFileIsRefusedAndNothingIsSent() throws {
         let state = root.appendingPathComponent("state")
         try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
-        try Data(#"{"level": "sometimes"}"#.utf8).write(to: state.appendingPathComponent("consent.json"))
+        // Spaced and with a second key, so the file is longer than its object
+        // written again compactly: the refusal must name the file's own size.
+        let damaged = Data("{ \"level\" : \"sometimes\",\n  \"answered_at\" : \"never\" }\n".utf8)
+        try damaged.write(to: state.appendingPathComponent("consent.json"))
         let telemetry = telemetry(app: "wisent-errors-test-desktop")
         XCTAssertThrowsError(try telemetry.level()) { error in
             XCTAssertTrue("\(error)".contains("consent.json"), "\(error)")
             XCTAssertTrue("\(error)".contains("sometimes"), "\(error)")
+            XCTAssertTrue("\(error)".contains("the file holds \(damaged.count) bytes"), "\(error)")
         }
         settle(telemetry, failure())
         XCTAssertEqual(telemetry.status()["queued"] as? Int, 0)

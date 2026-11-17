@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+### A refused or unreachable support report names the product's own command
+
+- `support-refused` and `support-unreachable` tell the reader to send the
+  report again with `{product} support report`, and neither runtime gave
+  them the product: Rust's remedy said `{product}` as written and its
+  failure carried `wisent_errors.unfilled=product`, and Swift's Report a
+  Problem window, `support report` and `support status` showed the
+  placeholder. Both runtimes now give each cause the product's id, and the
+  support tests of both check the remedy names `<product> support report`
+  with nothing left unfilled.
+
+### A stop after the program's group exited keeps the run's outcome
+
+- `InstalledProgram`'s stop signals the program's process group with
+  `killpg`. A stop that came after every member exited, but before the run
+  reaped the program, met `killpg` failing, since macOS skips a zombie and
+  answers ESRCH (EPERM in POSIX mode) when it signalled no member, and
+  ended the run as `unfollowed`, dropping the program's real status and
+  output. When `killpg` answers ESRCH or EPERM and the program itself has
+  exited, its exit waiting to be reaped, the stop now leaves the run to that
+  exit, which ends it with the outcome. While the program still runs (a live
+  member this app may not signal answers the same), and on any other
+  `killpg` failure, the run ends as `unfollowed` as before.
+  `InstalledProgramTests` stops a program that has already exited on
+  SIGTERM, with its exit not yet reaped, and checks the run ends signalled
+  by SIGTERM.
+
+### A consent file with an unknown level names its own size
+
+- `file-unreadable` for a consent file whose level is not off, errors or
+  usage said the file held as many bytes as its object written again, which
+  differs from the file whenever it holds other spacing or key order. Both
+  runtimes now name the bytes read from the file, and both damaged-consent
+  tests write a spaced file with a second key and check the size named is
+  the file's.
+
 ### An unreadable support answer is named, not read as empty
 
 - Rust's support exchange read a body it could not read as empty text, so

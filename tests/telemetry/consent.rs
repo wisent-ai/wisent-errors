@@ -127,8 +127,10 @@ fn a_damaged_consent_file_is_refused_and_nothing_is_sent() {
     let telemetry = case.telemetry("wisent-errors-test-cli");
     let state = case.root.join("state");
     std::fs::create_dir_all(&state).expect("the state directory");
-    std::fs::write(state.join("consent.json"), "{\"level\": \"sometimes\"}")
-        .expect("a damaged file");
+    // Spaced and with a second key, so the file is longer than its object
+    // written again compactly: the refusal must name the file's own size.
+    let damaged = "{ \"level\" : \"sometimes\",\n  \"answered_at\" : \"never\" }\n";
+    std::fs::write(state.join("consent.json"), damaged).expect("a damaged file");
     let refused = telemetry
         .level()
         .expect_err("a level that is none of the three is refused");
@@ -136,6 +138,10 @@ fn a_damaged_consent_file_is_refused_and_nothing_is_sent() {
     let detail = refused.detail.expect("a sentence");
     assert!(detail.contains("consent.json"), "{detail}");
     assert!(detail.contains("sometimes"), "{detail}");
+    assert!(
+        detail.contains(&format!("the file holds {} bytes", damaged.len())),
+        "{detail}"
+    );
     telemetry.failure(&sample_failure(), None);
     assert_eq!(telemetry.status()["queued"], 0);
 }

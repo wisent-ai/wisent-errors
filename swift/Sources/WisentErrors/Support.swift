@@ -138,7 +138,7 @@ extension WisentTelemetry {
         }
         if let failure {
             throw SupportError.unreachable(OwnFailures.supportExchangeSupportUnreachable.refusal([
-                "doing": doing, "address": address, "why": failure, "observed": observed,
+                "doing": doing, "address": address, "why": failure, "observed": observed, "product": product.id,
             ]))
         }
         let text = data.map { String(decoding: $0, as: UTF8.self) } ?? ""
@@ -148,6 +148,7 @@ extension WisentTelemetry {
         if !(200..<300).contains(status), let reason = (error?["message"] ?? error?["code"]) as? String {
             throw SupportError.refused(OwnFailures.supportExchangeSupportRefused.refusal([
                 "doing": doing, "address": address, "status": String(status), "answer": reason, "observed": observed,
+                "product": product.id,
             ]))
         }
         throw SupportError.answerUnreadable(OwnFailures.supportExchangeSupportAnswerUnreadable.refusal([

@@ -126,6 +126,7 @@ final class SupportTests: XCTestCase {
             XCTFail("support refuses the email")
         } catch {
             XCTAssertTrue("\(error)".contains("support refused HTTP 400: email \"not an address\" is not an email address"), "\(error)")
+            namesTheProduct(error)
         }
         let reports = try await telemetry.reports()
         XCTAssertEqual(reports.count, 0)
@@ -140,9 +141,17 @@ final class SupportTests: XCTestCase {
         } catch {
             XCTAssertTrue("\(error)".contains("support could not be reached"), "\(error)")
             XCTAssertTrue("\(error)".contains("nothing was filed"), "\(error)")
+            namesTheProduct(error)
         }
         let reports = try await telemetry.reports()
         XCTAssertEqual(reports.count, 0)
+    }
+
+    /// The fix of a refused or unreachable report names the product's own
+    /// `support report`, and no placeholder was left unfilled.
+    private func namesTheProduct(_ error: Error) {
+        XCTAssertTrue("\(error)".contains("`wisent-errors-test support report`"), "\(error)")
+        XCTAssertFalse("\(error)".contains("{product}"), "\(error)")
     }
 
     func testAnAddressThatIsNotSupportIsNamed() async throws {

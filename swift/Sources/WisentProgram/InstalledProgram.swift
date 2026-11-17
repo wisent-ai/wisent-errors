@@ -289,7 +289,15 @@ private final class RunState: @unchecked Sendable {
     }
 
     /// One request to stop: SIGTERM to the program's process group the first
-    /// time, SIGKILL every later time.
+    /// time, SIGKILL every later time. killpg answers ESRCH, or EPERM where
+    /// the caller runs in POSIX mode, when it signalled no member: macOS's
+    /// killpg skips a zombie (killpg1's group filter `p->p_stat != SZOMB`:
+    /// https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_sig.c),
+    /// and a live member this app may not signal is not counted either. So
+    /// such an answer is left to `exited` only when the program itself has
+    /// exited, its exit waiting to be reaped (`exited` is queued or about to
+    /// be, and ends the run with its outcome); while it still runs, the stop
+    /// did not reach it and the run ends as unfollowed, naming the call.
     func stop() {
         queue.async { [self] in
             requests += 1
@@ -297,9 +305,22 @@ private final class RunState: @unchecked Sendable {
             let signal = requests == 1 ? SIGTERM : SIGKILL
             if killpg(group, signal) == -1 {
                 let code = errno
+                if (code == ESRCH || code == EPERM) && Self.hasExited(group) { return }
                 unfollowed("killpg(\(group), \(String(cString: strsignal(signal))))", code)
             }
         }
+    }
+
+    /// Whether `pid`, a child of this process, has exited and waits to be
+    /// reaped: waitid without waiting or reaping it (WNOHANG | WNOWAIT)
+    /// names it only then.
+    private static func hasExited(_ pid: pid_t) -> Bool {
+        var info = siginfo_t()
+        var waited: Int32
+        repeat {
+            waited = waitid(P_PID, id_t(pid), &info, WEXITED | WNOHANG | WNOWAIT)
+        } while waited == -1 && errno == EINTR
+        return waited == 0 && info.si_pid == pid
     }
 
     private func start() throws {
@@ -531,7 +552,8 @@ private final class RunState: @unchecked Sendable {
 
     /// Wait on a thread of its own until the program exits, without reaping
     /// it: until the queue reaps it, it keeps its process group's id from
-    /// being given to another, so a stop sent before then reaches its group.
+    /// being given to another, so a stop sent before then signals only that
+    /// group's members still alive, or finds none (see `stop`).
     private func awaitExit(_ pid: pid_t) {
         var info = siginfo_t()
         while waitid(P_PID, id_t(pid), &info, WEXITED | WNOWAIT) == -1 {

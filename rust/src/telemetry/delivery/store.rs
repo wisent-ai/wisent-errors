@@ -72,6 +72,17 @@ pub(super) fn read_json(
     product: &str,
     service: &str,
 ) -> Result<Option<Value>, Failure> {
+    Ok(read_json_sized(path, what, product, service)?.map(|(value, _)| value))
+}
+
+/// [`read_json`] with how many bytes the file held, for a refusal of what
+/// the object says that names the file's own size.
+pub(super) fn read_json_sized(
+    path: &Path,
+    what: &str,
+    product: &str,
+    service: &str,
+) -> Result<Option<(Value, usize)>, Failure> {
     let bytes = match fs::read(path) {
         Ok(bytes) => bytes,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -87,7 +98,7 @@ pub(super) fn read_json(
         }
     };
     match serde_json::from_slice::<Value>(&bytes) {
-        Ok(value) if value.is_object() => Ok(Some(value)),
+        Ok(value) if value.is_object() => Ok(Some((value, bytes.len()))),
         Ok(_) => Err(unreadable(
             path,
             what,

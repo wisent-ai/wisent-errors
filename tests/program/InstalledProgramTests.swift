@@ -6,9 +6,10 @@
 // the exit status, its input is the program's standard input and a program
 // that closes it early is told apart, its environment is set over the app's
 // and a name holding = is refused, cancelling the caller stops the program's
-// whole process group with SIGTERM and a second request with SIGKILL, a
-// process the program left holding its output does not hold the run, and a
-// run whose exit cannot be waited for is refused naming the wait.
+// whole process group with SIGTERM and a second request with SIGKILL, a stop
+// that arrives after the group exited keeps the run's outcome, a process the
+// program left holding its output does not hold the run, and a run whose exit
+// cannot be waited for is refused naming the wait.
 //
 //   swift test --filter InstalledProgramTests
 
@@ -138,24 +139,27 @@ final class InstalledProgramTests: XCTestCase {
     }
 
     /// The first line a run writes on stdout, handed to the test as it
-    /// arrives.
+    /// arrives, and answered by the `add` that completes it.
     private final class FirstLine: @unchecked Sendable {
         private let lock = NSLock()
         private var text = ""
         private var line: String?
         private var waiting: CheckedContinuation<String, Never>?
 
-        func add(_ chunk: String) {
-            let ready = lock.withLock { () -> (CheckedContinuation<String, Never>, String)? in
+        @discardableResult
+        func add(_ chunk: String) -> String? {
+            let ready = lock.withLock { () -> (CheckedContinuation<String, Never>?, String)? in
                 text += chunk
                 guard line == nil, let end = text.firstIndex(of: "\n") else { return nil }
                 let first = String(text[..<end])
                 line = first
-                guard let waiting else { return nil }
+                let waiting = self.waiting
                 self.waiting = nil
                 return (waiting, first)
             }
-            if let ready { ready.0.resume(returning: ready.1) }
+            guard let ready else { return nil }
+            ready.0?.resume(returning: ready.1)
+            return ready.1
         }
 
         func next() async -> String {
@@ -227,6 +231,33 @@ final class InstalledProgramTests: XCTestCase {
         } catch {
             XCTAssertTrue(error is CancellationError, "\(error)")
         }
+    }
+
+    /// A stop that reaches the run after the program's whole group exited,
+    /// but before its exit is reaped, keeps the run's outcome. The output
+    /// callback runs on the run's queue, so while it holds that queue it
+    /// requests a stop (queued behind it, ahead of the exit), ends the
+    /// program with SIGTERM itself and waits, without reaping, until it has
+    /// exited. The stop then signals a group whose only member is a zombie,
+    /// which killpg on macOS skips, answering ESRCH, or EPERM in POSIX mode
+    /// (XNU bsd/kern/kern_sig.c, killpg1), and the run ends with the
+    /// program's own SIGTERM.
+    func testAStopAfterTheGroupExitedKeepsTheRunsOutcome() async throws {
+        let stop = InstalledProgram.Stop()
+        let first = FirstLine()
+        let outcome = try await program.run(
+            ["echo $$; exec tail -f /dev/null"], executable: shell, stop: stop
+        ) { stream, text in
+            guard stream == .stdout, let line = first.add(text), let pid = pid_t(line) else { return }
+            stop.request()
+            XCTAssertEqual(kill(pid, SIGTERM), 0, String(cString: strerror(errno)))
+            var info = siginfo_t()
+            var waited: Int32
+            repeat { waited = waitid(P_PID, id_t(pid), &info, WEXITED | WNOWAIT) } while waited == -1 && errno == EINTR
+            XCTAssertEqual(waited, 0, String(cString: strerror(errno)))
+        }
+        XCTAssertTrue(outcome.signalled, "\(outcome)")
+        XCTAssertEqual(outcome.status, SIGTERM)
     }
 
     /// The program leaves `tail` running with both its streams: the run ends
