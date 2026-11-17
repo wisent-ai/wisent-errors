@@ -210,7 +210,14 @@ fn exchange(
         Some(body) => request.send_string(&body.to_string()),
         None => request.call(),
     };
-    let common = [("doing", doing), ("address", address), ("observed", observed)];
+    // support-refused and support-unreachable name `{product} support report`
+    // in their remedy, so the product is one of their values.
+    let common = [
+        ("doing", doing),
+        ("address", address),
+        ("observed", observed),
+        ("product", product),
+    ];
     match answer {
         Ok(response) => {
             let status = response.status().to_string();

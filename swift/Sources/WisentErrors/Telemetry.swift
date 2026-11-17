@@ -97,16 +97,15 @@ public final class WisentTelemetry: @unchecked Sendable {
     /// The level the user chose, nil while unanswered; a file telemetry did
     /// not write is refused naming it.
     public func level() throws -> TelemetryLevel? {
-        guard let path = file("consent.json"), let consent = try readObject(path, what: "the telemetry consent") else {
+        guard let path = file("consent.json"), let read = try readSizedObject(path, what: "the telemetry consent") else {
             return nil
         }
-        let text = consent["level"] as? String ?? ""
+        let text = read.object["level"] as? String ?? ""
         guard let level = TelemetryLevel(rawValue: text) else {
-            let bytes = try JSONSerialization.data(withJSONObject: consent).count
             throw TelemetryError.unreadable(OwnFailures.telemetryStoreFileUnreadable.refusal([
                 "what": "the telemetry consent", "path": path.path,
                 "why": "level \"\(text)\" is not off, errors or usage",
-                "bytes": String(bytes), "product": product.id,
+                "bytes": String(read.bytes), "product": product.id,
             ]))
         }
         return level

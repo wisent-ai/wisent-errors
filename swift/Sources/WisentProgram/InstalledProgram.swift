@@ -289,7 +289,13 @@ private final class RunState: @unchecked Sendable {
     }
 
     /// One request to stop: SIGTERM to the program's process group the first
-    /// time, SIGKILL every later time.
+    /// time, SIGKILL every later time. A group whose every member has exited
+    /// is left to `exited`, which is already queued or about to be: until it
+    /// reaps the program its pid stays the group's id, and macOS's killpg
+    /// skips a zombie, answering ESRCH, or EPERM where the caller runs in
+    /// POSIX mode, when it signalled no member (killpg1's group filter
+    /// `p->p_stat != SZOMB`:
+    /// https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_sig.c).
     func stop() {
         queue.async { [self] in
             requests += 1
@@ -297,6 +303,10 @@ private final class RunState: @unchecked Sendable {
             let signal = requests == 1 ? SIGTERM : SIGKILL
             if killpg(group, signal) == -1 {
                 let code = errno
+                // discarded: ESRCH or EPERM from a group of the run's own
+                // program means no member is left alive to signal; its exit
+                // is followed by `exited`, which ends the run with it.
+                guard code != ESRCH && code != EPERM else { return }
                 unfollowed("killpg(\(group), \(String(cString: strsignal(signal))))", code)
             }
         }
@@ -531,7 +541,8 @@ private final class RunState: @unchecked Sendable {
 
     /// Wait on a thread of its own until the program exits, without reaping
     /// it: until the queue reaps it, it keeps its process group's id from
-    /// being given to another, so a stop sent before then reaches its group.
+    /// being given to another, so a stop sent before then signals only that
+    /// group's members still alive, or finds none (see `stop`).
     private func awaitExit(_ pid: pid_t) {
         var info = siginfo_t()
         while waitid(P_PID, id_t(pid), &info, WEXITED | WNOWAIT) == -1 {

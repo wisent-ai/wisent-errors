@@ -162,7 +162,7 @@ impl Telemetry {
         let Some(path) = self.file("consent.json") else {
             return Ok(None);
         };
-        let Some(consent) = store::read_json(
+        let Some((consent, size)) = store::read_json_sized(
             &path,
             "the telemetry consent",
             self.product.id,
@@ -183,7 +183,7 @@ impl Telemetry {
                         "why",
                         &format!("level {level:?} is not off, errors or usage"),
                     ),
-                    ("bytes", &consent.to_string().len().to_string()),
+                    ("bytes", &size.to_string()),
                     ("product", self.product.id),
                 ],
             )

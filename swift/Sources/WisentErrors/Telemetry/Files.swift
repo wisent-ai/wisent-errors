@@ -5,6 +5,12 @@ import Foundation
 
 extension WisentTelemetry {
     func readObject(_ path: URL, what: String) throws -> [String: Any]? {
+        try readSizedObject(path, what: what)?.object
+    }
+
+    /// ``readObject(_:what:)`` with how many bytes the file held, for a
+    /// refusal of what the object says that names the file's own size.
+    func readSizedObject(_ path: URL, what: String) throws -> (object: [String: Any], bytes: Int)? {
         let data: Data
         do {
             data = try Data(contentsOf: path)
@@ -17,7 +23,7 @@ extension WisentTelemetry {
                 "bytes": String(data.count), "product": product.id,
             ]))
         }
-        return object
+        return (object, data.count)
     }
 
     func writeObject(_ object: [String: Any], to path: URL, what: String) throws {
