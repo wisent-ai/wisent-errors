@@ -1,6 +1,9 @@
 //! Support reports against a real support service, wisent-customer-support,
-//! named by `WISENT_SUPPORT_TEST_URL` (its `/v1/public/reports`) with the
-//! service token `WISENT_SUPPORT_TEST_TOKEN` an agent replies with.
+//! named by `WISENT_SUPPORT_TEST_URL` (its `/v1/public/reports`). The agent
+//! lists tickets and replies with `WISENT_SUPPORT_TEST_AGENT_TOKEN`, the
+//! support-agent token the service holds under its own grant
+//! (`SUPPORT_AGENT_TOKEN`, whose role carries the `reply` capability); the
+//! service token is refused a reply (403 `Missing capability: reply`).
 
 use std::net::TcpListener;
 
@@ -16,8 +19,9 @@ fn support() -> String {
 }
 
 fn token() -> String {
-    std::env::var("WISENT_SUPPORT_TEST_TOKEN")
-        .expect("set WISENT_SUPPORT_TEST_TOKEN to that service's support token, which the agent's reply needs")
+    std::env::var("WISENT_SUPPORT_TEST_AGENT_TOKEN").expect(
+        "set WISENT_SUPPORT_TEST_AGENT_TOKEN to that service's support-agent token (its SUPPORT_AGENT_TOKEN, which carries the reply capability; the service token is refused a reply)",
+    )
 }
 
 fn report(description: &str) -> Report<'_> {

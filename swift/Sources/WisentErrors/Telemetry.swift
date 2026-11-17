@@ -102,8 +102,12 @@ public final class WisentTelemetry: @unchecked Sendable {
         }
         let text = consent["level"] as? String ?? ""
         guard let level = TelemetryLevel(rawValue: text) else {
-            throw TelemetryError.unreadable(
-                "reading the telemetry consent from \(path.path): the file is not what telemetry wrote: level \"\(text)\" is not off, errors or usage; fix: answer again in the app's settings, which rewrites it, or remove \(path.path)")
+            let bytes = try JSONSerialization.data(withJSONObject: consent).count
+            throw TelemetryError.unreadable(OwnFailures.telemetryStoreFileUnreadable.refusal([
+                "what": "the telemetry consent", "path": path.path,
+                "why": "level \"\(text)\" is not off, errors or usage",
+                "bytes": String(bytes), "product": product.id,
+            ]))
         }
         return level
     }
@@ -113,7 +117,7 @@ public final class WisentTelemetry: @unchecked Sendable {
         guard let path = file("consent.json") else { throw TelemetryError.noHome }
         try writeObject(["level": level.rawValue, "answered_at": Self.now()], to: path, what: "the telemetry consent")
         if level == .off, let queue = file("queue") {
-            try remove(queue, what: "the event queue", left: "the events queued before telemetry was turned off are still kept, and are sent if it is turned on again")
+            try remove(queue, what: "the event queue")
         }
     }
 
@@ -139,8 +143,9 @@ public final class WisentTelemetry: @unchecked Sendable {
             return (Self.publicCollector, "wisent-errors")
         }
         guard let url = URL(string: address), Self.acceptable(url) else {
-            throw TelemetryError.collectorInvalid(
-                "reading the collector address from WISENT_TELEMETRY_COLLECTOR_URL: a collector address must be https://, or http:// on a loopback host; observed: WISENT_TELEMETRY_COLLECTOR_URL holds \(address)")
+            throw TelemetryError.collectorInvalid(OwnFailures.telemetryDeliverCollectorInvalid.refusal([
+                "source": "WISENT_TELEMETRY_COLLECTOR_URL", "address": address,
+            ]))
         }
         return (url, "WISENT_TELEMETRY_COLLECTOR_URL")
     }

@@ -1,6 +1,7 @@
 //! Delivery against the real Echo app collector: what it accepts leaves the
 //! queue, and every way it can stop is named and leaves the events waiting.
 
+use std::io::Read;
 use std::net::TcpListener;
 use std::sync::LazyLock;
 
@@ -143,6 +144,80 @@ fn an_unreachable_collector_keeps_the_events() {
         .detail
         .expect("a sentence")
         .contains(&format!("127.0.0.1:{port}")));
+}
+
+/// A collector that accepts the connection and never answers held the flush
+/// without a word. The send is now a stado-wait wait, and it ends on the
+/// collector's own evidence: here the collector takes the request and closes
+/// the connection without answering, and the flush stops there, naming it,
+/// with the event still queued.
+#[test]
+fn a_collector_that_closes_without_answering_ends_the_flush_and_keeps_the_events() {
+    let mut case = Case::new("closed-unanswered");
+    let listener = TcpListener::bind("127.0.0.1:0").expect("a free port");
+    let port = listener.local_addr().expect("its address").port();
+    let peer = std::thread::spawn(move || {
+        let (mut connection, _) = listener.accept().expect("the flush connects");
+        let mut first = [u8::MIN];
+        let read = connection.read(&mut first).expect("the request arrives");
+        assert_eq!(read, first.len(), "the flush sent its request");
+    });
+    std::env::set_var(
+        "WISENT_TELEMETRY_COLLECTOR_URL",
+        format!("http://127.0.0.1:{port}/api/analytics/mobile/collect"),
+    );
+    let telemetry = case.telemetry("wisent-errors-test-cli");
+    telemetry
+        .set_level(Level::Errors)
+        .expect("the level is kept");
+    telemetry.failure(&sample_failure(), None);
+    let delivered = telemetry.flush().expect("the store is readable");
+    peer.join().expect("the collector took the request");
+    case.note("delivered", delivered.to_json());
+    assert_eq!((delivered.sent, delivered.remaining), (0, 1));
+    let stopped = delivered.stopped.expect("the closed connection");
+    assert_eq!(stopped.code.as_str(), "infra_down");
+    assert!(stopped.retryable());
+    let detail = stopped.detail.expect("a sentence");
+    assert!(detail.contains("the collector could not be reached"), "{detail}");
+    assert!(detail.contains(&format!("127.0.0.1:{port}")), "{detail}");
+    assert_eq!(delivery(&case)["stopped"]["error_code"], "infra_down");
+    assert_eq!(telemetry.status()["queued"], 1);
+}
+
+/// `delivery.json` says when the last delivery was tried, which a person
+/// reads in `telemetry status`: in this host's local time with its offset,
+/// never a bare UTC `Z`.
+#[test]
+fn the_last_delivery_says_when_in_local_time_with_its_offset() {
+    let mut case = Case::new("delivery-moment");
+    let port = TcpListener::bind("127.0.0.1:0")
+        .expect("a free port")
+        .local_addr()
+        .expect("its address")
+        .port();
+    std::env::set_var(
+        "WISENT_TELEMETRY_COLLECTOR_URL",
+        format!("http://127.0.0.1:{port}/api/analytics/mobile/collect"),
+    );
+    let telemetry = case.telemetry("wisent-errors-test-cli");
+    telemetry
+        .set_level(Level::Errors)
+        .expect("the level is kept");
+    telemetry.failure(&sample_failure(), None);
+    telemetry.flush().expect("the store is readable");
+    let at = delivery(&case)["at"]
+        .as_str()
+        .expect("the moment of the delivery")
+        .to_owned();
+    case.note("at", json!(at));
+    assert!(!at.ends_with('Z'), "{at}");
+    let moment = chrono::DateTime::parse_from_rfc3339(&at).expect("RFC 3339");
+    assert_eq!(
+        moment.offset().local_minus_utc(),
+        chrono::Local::now().offset().local_minus_utc(),
+        "{at} is in this host's offset"
+    );
 }
 
 #[test]

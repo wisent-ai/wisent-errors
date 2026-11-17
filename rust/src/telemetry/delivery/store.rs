@@ -9,7 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
-use super::causes::{FILE_UNREADABLE, STORE_UNWRITABLE};
+use crate::failures as own;
 use crate::Failure;
 
 /// The directory a product's telemetry lives in: `WISENT_TELEMETRY_HOME`,
@@ -42,7 +42,7 @@ pub(super) fn write_json(
 ) -> Result<(), Failure> {
     let directory = path.parent().unwrap_or(path);
     let unwritable = |error: std::io::Error| {
-        STORE_UNWRITABLE.failure(
+        own::TELEMETRY_STORE_STORE_UNWRITABLE.failure(
             RECORD_POINT,
             service,
             &[
@@ -115,7 +115,7 @@ fn unreadable(
     error: &str,
     bytes: usize,
 ) -> Failure {
-    FILE_UNREADABLE.failure(
+    own::TELEMETRY_STORE_FILE_UNREADABLE.failure(
         RECORD_POINT,
         service,
         &[
@@ -149,6 +149,15 @@ pub(super) fn random_id() -> Option<String> {
         u16::from_be_bytes(*version),
         u16::from_be_bytes(*variant),
     ))
+}
+
+/// Now on this host's clock, RFC 3339 to the millisecond with the host's
+/// offset written out (`2026-11-16T14:03:07.120+01:00`, `+00:00` on a host
+/// whose local time is UTC, never `Z`), as stado-wait writes its moments:
+/// the moment of the last delivery, which a person reads in `<product>
+/// telemetry status`, in their own local time.
+pub(super) fn local_now() -> String {
+    chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, false)
 }
 
 /// Now, as RFC 3339 in UTC with milliseconds.

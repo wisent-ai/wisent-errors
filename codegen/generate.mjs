@@ -9,8 +9,11 @@
 // drift between languages -- which is exactly what happened when six products
 // each kept their own copy and one of them quietly lost the vocabulary.
 //
-// Generated files are committed. A consumer needs no build step, and CI
-// regenerates and fails on any difference, so the copies stay copies.
+// Generated files are committed, so a consumer needs no build step. No CI
+// runs on a push here (.github/ holds only banner.toml): `--check` writes
+// nothing and fails on any difference, and `node ci/check.mjs`, the `checks`
+// gate .wisent-release.json declares, runs it, so the copies stay copies only
+// while that gate is run before a change lands.
 //
 // Usage: node codegen/generate.mjs [--check]
 

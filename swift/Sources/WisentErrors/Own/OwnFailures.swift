@@ -3,5 +3,5 @@
 // catalogue version 1
 
 /// This package's own failures, declared like any product's: each part of
-/// catalogue/failures/ extends it from its own file (OwnFailuresEnvelope.swift).
+/// catalogue/failures/ extends it from its own file (OwnFailuresEnvelope.swift, OwnFailuresTelemetry.swift).
 public enum OwnFailures {}

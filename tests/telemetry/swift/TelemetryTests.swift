@@ -141,4 +141,58 @@ final class TelemetryTests: XCTestCase {
             XCTAssertTrue("\(error)".contains("WISENT_TELEMETRY_COLLECTOR_URL holds http://collector.example"), "\(error)")
         }
     }
+
+    func testAnUnwritableDirectoryIsNamedAndNothingIsLostSilently() throws {
+        let blocker = root.appendingPathComponent("a-file")
+        try Data("not a directory".utf8).write(to: blocker)
+        let telemetry = WisentTelemetry(
+            product: TelemetryProduct(id: "wisent-errors-test", appID: "wisent-errors-test-desktop", version: "0.0.0"),
+            environment: ["WISENT_TELEMETRY_HOME": blocker.appendingPathComponent("telemetry").path])
+        XCTAssertThrowsError(try telemetry.setLevel(.errors)) { error in
+            XCTAssertTrue("\(error)".contains("a-file"), "the directory is named: \(error)")
+            XCTAssertTrue("\(error)".contains("WISENT_TELEMETRY_HOME"), "the fix names the variable: \(error)")
+        }
+        settle(telemetry, failure())
+    }
+
+    func testADamagedConsentFileIsRefusedAndNothingIsSent() throws {
+        let state = root.appendingPathComponent("state")
+        try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
+        try Data(#"{"level": "sometimes"}"#.utf8).write(to: state.appendingPathComponent("consent.json"))
+        let telemetry = telemetry(app: "wisent-errors-test-desktop")
+        XCTAssertThrowsError(try telemetry.level()) { error in
+            XCTAssertTrue("\(error)".contains("consent.json"), "\(error)")
+            XCTAssertTrue("\(error)".contains("sometimes"), "\(error)")
+        }
+        settle(telemetry, failure())
+        XCTAssertEqual(telemetry.status()["queued"] as? Int, 0)
+    }
+
+    func testAnUnreachableCollectorKeepsTheEvents() async throws {
+        // The discard port, which nothing on a test machine answers.
+        setenv("WISENT_TELEMETRY_COLLECTOR_URL", "http://127.0.0.1:9/api/analytics/mobile/collect", 1)
+        let telemetry = telemetry(app: "wisent-errors-test-desktop")
+        try telemetry.setLevel(.errors)
+        settle(telemetry, failure())
+        let delivered = await telemetry.flush()
+        XCTAssertEqual(delivered.sent, 0)
+        XCTAssertEqual(delivered.remaining, 1)
+        let stopped = try XCTUnwrap(delivered.stopped)
+        XCTAssertTrue(stopped.contains("127.0.0.1:9"), stopped)
+    }
+
+    func testAnAddressThatIsNotACollectorIsNamed() async throws {
+        let real = try collector()
+        let origin = try XCTUnwrap(real.range(of: "/api/")).lowerBound
+        let elsewhere = String(real[..<origin]) + "/robots.txt"
+        setenv("WISENT_TELEMETRY_COLLECTOR_URL", elsewhere, 1)
+        let telemetry = telemetry(app: "wisent-errors-test-desktop")
+        try telemetry.setLevel(.errors)
+        settle(telemetry, failure())
+        let delivered = await telemetry.flush()
+        XCTAssertEqual(delivered.remaining, 1)
+        let stopped = try XCTUnwrap(delivered.stopped)
+        XCTAssertTrue(stopped.contains(elsewhere), stopped)
+        XCTAssertTrue(stopped.contains("/api/analytics/mobile/collect"), stopped)
+    }
 }

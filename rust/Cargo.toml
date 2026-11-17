@@ -14,8 +14,12 @@ repository = "https://github.com/wisent-ai/wisent-errors"
 cli-output = ["dep:serde", "dep:serde_json"]
 # Failures and usage from an installed copy, sent to Echo's app collector with
 # the user's consent (docs/telemetry.md). Only a product that ships to people
-# outside the fleet needs it, so only it pays for an HTTP client.
-telemetry = ["dep:serde_json", "dep:ureq", "dep:getrandom"]
+# outside the fleet needs it, so only it pays for an HTTP client. Each send to
+# the collector is a wait through stado-wait (in its register, said on stderr,
+# measured; ended by the collector's answer or close, never a guessed time),
+# and the moment of the last delivery is written in local time with its
+# offset through chrono, the clock stado-wait already links.
+telemetry = ["dep:serde_json", "dep:ureq", "dep:getrandom", "dep:stado-wait", "dep:chrono"]
 # `<product> doctor`: every functionality of the product's catalogue tried now
 # (docs/diagnosis.md).
 diagnosis = ["dep:serde_json"]
@@ -25,6 +29,12 @@ serde = { version = "1", optional = true }
 serde_json = { version = "1", optional = true }
 ureq = { version = "2.12", optional = true }
 getrandom = { version = "0.2", optional = true }
+# 0.2.0, as the fleet declares it (`stado quality check` refuses an earlier
+# one). Neither of its clients (`http`, `async`): the send is ureq's, waited
+# on as blocking work. stado-wait depends on no wisent-errors, and Stado's own
+# dependency on this crate takes no `telemetry`, so there is no cycle.
+stado-wait = { git = "https://github.com/wisent-ai/stado", package = "stado-wait", version = "0.2.0", default-features = false, optional = true }
+chrono = { version = "0.4", optional = true }
 
 # The tests of `cli_output`, `telemetry` and `diagnosis` run in every `cargo
 # test`: the crate depends on itself with those features on, so no test target
@@ -34,6 +44,9 @@ getrandom = { version = "0.2", optional = true }
 wisent-errors = { path = ".", features = ["cli-output", "telemetry", "diagnosis"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# The telemetry tests read the moment of the last delivery back as an instant
+# and compare its offset with this host's.
+chrono = "0.4"
 
 # The fleet's tests live under tests/<area>/ at the repository root.
 [[test]]

@@ -12,8 +12,10 @@ extension WisentTelemetry {
             return nil
         }
         guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
-            throw TelemetryError.unreadable(
-                "reading \(what) from \(path.path): the file is not what telemetry wrote: it is not a JSON object; observed: the file holds \(data.count) bytes; fix: answer again in the app's settings, which rewrites it, or remove \(path.path)")
+            throw TelemetryError.unreadable(OwnFailures.telemetryStoreFileUnreadable.refusal([
+                "what": what, "path": path.path, "why": "it is not a JSON object",
+                "bytes": String(data.count), "product": product.id,
+            ]))
         }
         return object
     }
@@ -27,21 +29,24 @@ extension WisentTelemetry {
             defer { lock.unlock() }
             try data.write(to: path, options: .atomic)
         } catch {
-            throw TelemetryError.unwritable(
-                "keeping \(what) in \(path.path): the telemetry directory could not be written: \(error.explained); observed: directory \(folder.path); fix: make \(folder.path) writable by this user, or name a writable one with WISENT_TELEMETRY_HOME")
+            throw TelemetryError.unwritable(OwnFailures.telemetryStoreStoreUnwritable.refusal([
+                "what": what, "path": path.path, "why": error.explained, "directory": folder.path,
+            ]))
         }
     }
 
     /// Remove a file or directory telemetry keeps; one already gone is what
-    /// removal wanted, any other failure says what stays because of it.
-    func remove(_ path: URL, what: String, left: String) throws {
+    /// removal wanted, any other failure is the store's own refusal.
+    func remove(_ path: URL, what: String) throws {
         do {
             try FileManager.default.removeItem(at: path)
         } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError {
             return
         } catch {
-            throw TelemetryError.unwritable(
-                "removing \(what) at \(path.path): the telemetry directory refused it: \(error.explained); observed: \(left); fix: make \(path.deletingLastPathComponent().path) writable by this user, then try again")
+            throw TelemetryError.unwritable(OwnFailures.telemetryStoreStoreUnwritable.refusal([
+                "what": what, "path": path.path, "why": error.explained,
+                "directory": path.deletingLastPathComponent().path,
+            ]))
         }
     }
 
@@ -53,6 +58,19 @@ extension WisentTelemetry {
         #else
         return "macos"
         #endif
+    }
+
+    /// Now on this host's clock with its offset written out
+    /// (`2026-11-16T14:03:07.120+01:00`, `+00:00` where local time is UTC,
+    /// never `Z`): the moment of the last delivery, which the Settings window
+    /// shows a person as "Last sent", in their own local time.
+    static func localNow() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSxxxxx"
+        return formatter.string(from: Date())
     }
 
     static func now() -> String {

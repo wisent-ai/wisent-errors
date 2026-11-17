@@ -11,7 +11,6 @@
 // and reports; boxing it would give telemetry a second failure type.
 #![allow(clippy::result_large_err)]
 
-mod causes;
 #[path = "delivery/deliver.rs"]
 mod deliver;
 pub mod events;
@@ -28,14 +27,33 @@ use std::time::Duration;
 use serde_json::{json, Map, Value};
 
 /// The functionalities a product's own `telemetry` and `support` commands
-/// use, for its catalogue's `uses`.
-pub use causes::{operations, CONSENT, DELIVER, RECORD, REPORT, STATUS};
+/// use, for its catalogue's `uses`; declared in catalogue/failures/telemetry.json.
+pub use crate::failures::{
+    SUPPORT_REPORT as REPORT, SUPPORT_STATUS as STATUS, TELEMETRY_CONSENT as CONSENT,
+    TELEMETRY_DELIVER as DELIVER, TELEMETRY_RECORD as RECORD,
+};
 pub use deliver::Delivered;
 pub use events::{Event, EVENTS};
 pub use support::{Report, PUBLIC_SUPPORT};
 
-use crate::Failure;
+use crate::failures as own;
+use crate::{Failure, Operation};
 use store::Cleaner;
+
+/// Every telemetry and support functionality, for a product's `errors list`:
+/// the five its commands use, then the store and the support exchange they
+/// share.
+pub fn operations() -> [&'static Operation; 7] {
+    [
+        &own::TELEMETRY_RECORD,
+        &own::TELEMETRY_CONSENT,
+        &own::TELEMETRY_DELIVER,
+        &own::SUPPORT_REPORT,
+        &own::SUPPORT_STATUS,
+        &own::TELEMETRY_STORE,
+        &own::SUPPORT_EXCHANGE,
+    ]
+}
 
 /// Which product is reporting.
 #[derive(Clone, Copy, Debug)]
@@ -70,9 +88,11 @@ impl Level {
             "off" => Ok(Self::Off),
             "errors" => Ok(Self::Errors),
             "usage" => Ok(Self::Usage),
-            other => {
-                Err(causes::LEVEL_UNKNOWN.failure(CONSENT_POINT, product, &[("level", other)]))
-            }
+            other => Err(own::TELEMETRY_CONSENT_LEVEL_UNKNOWN.failure(
+                CONSENT_POINT,
+                product,
+                &[("level", other)],
+            )),
         }
     }
 }
@@ -153,7 +173,7 @@ impl Telemetry {
         };
         let level = consent.get("level").and_then(Value::as_str).unwrap_or("");
         Level::parse(level, self.product.id).map(Some).map_err(|_| {
-            causes::FILE_UNREADABLE.failure(
+            own::TELEMETRY_STORE_FILE_UNREADABLE.failure(
                 CONSENT_POINT,
                 self.product.id,
                 &[
@@ -221,7 +241,7 @@ impl Telemetry {
                 source: RUNTIME_COLLECTOR,
             })
         } else {
-            Err(causes::COLLECTOR_INVALID.failure(
+            Err(own::TELEMETRY_DELIVER_COLLECTOR_INVALID.failure(
                 DELIVER_POINT,
                 self.product.id,
                 &[("source", RUNTIME_COLLECTOR), ("address", &address)],

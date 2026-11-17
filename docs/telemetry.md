@@ -91,7 +91,7 @@ state uses:
 | `consent.json` | the level the user chose and when |
 | `installation.json` | the installation's random id |
 | `queue/<event-id>.json` | one event waiting to be sent |
-| `delivery.json` | the last delivery attempt: when, how many were sent, and the refusal or transport error that stopped it |
+| `delivery.json` | the last delivery attempt: when (`at`, this host's local time with its offset, `2026-11-16T14:03:07.120+01:00`, never a bare UTC `Z`), how many were sent, and the refusal or transport error that stopped it |
 
 ## The collector address
 
@@ -108,7 +108,14 @@ until the user chose a level that sends it.
 
 `Telemetry::flush` sends every queued event and removes each one the collector
 accepted (`{"ok": true}`). It stops at the first refusal or transport error and
-records it in `delivery.json`, so the events wait for the next attempt.
+records it in `delivery.json`, so the events wait for the next attempt. Each
+send is a wait through stado-wait (`telemetry delivery`, on the network): it
+is in the register `stado waits` lists for as long as it stands, it is said on
+stderr when nothing tells it from a stall or once it stands past the time
+earlier sends took, and its time is measured. It ends on evidence, never after
+a guessed time: the collector answers, refuses or closes the connection, or
+the flushing process is ended (`kill <pid>` of the `<product> telemetry
+flush` that `stado waits` names).
 A command-line product never sends on the user's path: when its command ends
 with events queued it starts itself again detached (`<product> telemetry
 flush`, `Telemetry::spawn_flush`) and exits at once. A failure to queue or to

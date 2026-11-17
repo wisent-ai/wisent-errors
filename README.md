@@ -284,9 +284,12 @@ product through the CLI finds it and runs it once:
 in the path `PARA` names, then `PATH`, then `~/.local/bin/para` (where the
 product's release installer places it) and `~/.stado/bin/para`, refuses with
 `Failure.missing(searched:)` naming every place, and `run` hands back both
-streams whole with the exit status; cancelling the caller sends SIGTERM. A
-product says the two failures in its own words
-(`tests/program/InstalledProgramTests.swift`).
+streams whole with the exit status. The program runs in a process group of its
+own: cancelling the caller sends the group SIGTERM, and a further
+`InstalledProgram.Stop.request()` sends it SIGKILL. The run ends on the
+program's exit; `Outcome.heldOpen` names a stream a process it left running
+still held. A product says the three failures (`missing`, `failedToStart`,
+`unfollowed`) in its own words (`tests/program/InstalledProgramTests.swift`).
 
 ## Layout, and how it stays one thing
 

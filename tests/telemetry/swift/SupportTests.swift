@@ -1,6 +1,9 @@
 // The Swift support client and the Report a Problem window's model against a
 // real wisent-customer-support named by WISENT_SUPPORT_TEST_URL (its
-// /v1/public/reports), whose agent replies with WISENT_SUPPORT_TEST_TOKEN.
+// /v1/public/reports). The agent lists tickets and replies with
+// WISENT_SUPPORT_TEST_AGENT_TOKEN, the support-agent token the service holds
+// under its own grant (SUPPORT_AGENT_TOKEN, whose role carries the `reply`
+// capability); the service token is refused a reply (403 Missing capability).
 
 import Foundation
 import XCTest
@@ -43,8 +46,8 @@ final class SupportTests: XCTestCase {
     private func agent(_ path: String) throws -> URLRequest {
         let base = try support()
         let origin = String(base[..<base.range(of: "/v1/")!.lowerBound])
-        guard let token = ProcessInfo.processInfo.environment["WISENT_SUPPORT_TEST_TOKEN"] else {
-            throw XCTSkip("blocked, not passed: set WISENT_SUPPORT_TEST_TOKEN to that service's support token")
+        guard let token = ProcessInfo.processInfo.environment["WISENT_SUPPORT_TEST_AGENT_TOKEN"] else {
+            throw XCTSkip("blocked, not passed: set WISENT_SUPPORT_TEST_AGENT_TOKEN to that service's support-agent token (its SUPPORT_AGENT_TOKEN, which carries the reply capability)")
         }
         var request = URLRequest(url: URL(string: origin + path)!)
         request.setValue(token, forHTTPHeaderField: "x-support-token")
@@ -85,7 +88,11 @@ final class SupportTests: XCTestCase {
         reply.httpMethod = "POST"
         reply.setValue("application/json", forHTTPHeaderField: "Content-Type")
         reply.httpBody = Data(#"{"body_text":"Fixed in the next release."}"#.utf8)
-        _ = try await URLSession.shared.data(for: reply)
+        let (answer, response) = try await URLSession.shared.data(for: reply)
+        let status = try XCTUnwrap(response as? HTTPURLResponse).statusCode
+        XCTAssertTrue(
+            (200..<300).contains(status) /* https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3 */,
+            "the agent's reply was refused with \(status): \(String(decoding: answer, as: UTF8.self))")
 
         await model.refresh()
         let read = try XCTUnwrap(model.reports.first { $0["id"] as? String == id })
@@ -136,5 +143,20 @@ final class SupportTests: XCTestCase {
         }
         let reports = try await telemetry.reports()
         XCTAssertEqual(reports.count, 0)
+    }
+
+    func testAnAddressThatIsNotSupportIsNamed() async throws {
+        let real = try support()
+        let origin = try XCTUnwrap(real.range(of: "/v1/")).lowerBound
+        let elsewhere = String(real[..<origin]) + "/robots.txt"
+        setenv("WISENT_SUPPORT_URL", elsewhere, 1)
+        defer { unsetenv("WISENT_SUPPORT_URL") }
+        do {
+            _ = try await telemetry().fileReport(subject: nil, description: "something failed", email: nil, withFailure: false)
+            XCTFail("the answer is not support's")
+        } catch {
+            XCTAssertTrue("\(error)".contains(elsewhere), "\(error)")
+            XCTAssertTrue("\(error)".contains("/v1/public/reports"), "\(error)")
+        }
     }
 }

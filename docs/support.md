@@ -87,6 +87,10 @@ support did not take.
 
 ## Tests
 
-`tests/telemetry/support.rs` runs every case against a real
-`wisent-customer-support` named by `WISENT_SUPPORT_TEST_URL`, with the agent's
-reply made through its API with `WISENT_SUPPORT_TEST_TOKEN`.
+`tests/telemetry/support.rs` and `tests/telemetry/swift/SupportTests.swift`
+run every case against a real `wisent-customer-support` named by
+`WISENT_SUPPORT_TEST_URL`. The agent lists tickets and replies through its
+API with `WISENT_SUPPORT_TEST_AGENT_TOKEN`, the support-agent token the service
+holds under its own grant (`SUPPORT_AGENT_TOKEN`), whose role carries the
+`reply` capability; the service token is refused a reply with 403
+`Missing capability: reply`, and a refused reply fails the case.

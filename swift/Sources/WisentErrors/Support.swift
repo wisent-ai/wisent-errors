@@ -1,7 +1,9 @@
 // Support reports filed from an installed app: Help → Report a Problem files
 // one with this installation's id and, when the user agrees, its newest queued
 // failure; the same window reads each back with the key it was filed with.
-// The contract is docs/support.md; the sentences are the Rust client's.
+// The contract is docs/support.md; the sentences are the declared causes of
+// catalogue/failures/telemetry.json, generated into OwnFailuresTelemetry.swift
+// and into the Rust client from the same entries.
 
 import Foundation
 
@@ -18,8 +20,7 @@ extension WisentTelemetry {
         while runtime.hasSuffix("/") { runtime.removeLast() }
         guard !runtime.isEmpty else { return (Self.publicSupport, "wisent-errors") }
         guard let url = URL(string: runtime), Self.supportAcceptable(url) else {
-            throw SupportError.addressInvalid(
-                "reading the support address from WISENT_SUPPORT_URL: a support address must be https://, or http:// on a loopback host; observed: WISENT_SUPPORT_URL holds \(runtime); fix: set WISENT_SUPPORT_URL to the https:// address of a support service's /v1/public/reports, or unset it")
+            throw SupportError.addressInvalid(OwnFailures.supportExchangeSupportAddressInvalid.refusal(["address": runtime]))
         }
         return (url, "WISENT_SUPPORT_URL")
     }
@@ -38,8 +39,7 @@ extension WisentTelemetry {
     public func fileReport(subject: String?, description: String, email: String?, withFailure: Bool) async throws -> [String: Any] {
         let description = description.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !description.isEmpty else {
-            throw SupportError.descriptionEmpty(
-                "filing a support report: the report has no description; observed: the description is empty; fix: say what you were doing and what happened")
+            throw SupportError.descriptionEmpty(OwnFailures.supportReportSupportDescriptionEmpty.refusal(["product": product.id]))
         }
         let address = try supportAddress().url
         guard let folder = file("support") else { throw TelemetryError.noHome }
@@ -66,8 +66,9 @@ extension WisentTelemetry {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let answer = try await exchange(request, doing: "filing a support report", observed: "nothing was filed")
         guard let id = answer["id"] as? String, let key = answer["access_key"] as? String else {
-            throw SupportError.answerUnreadable(
-                "reading support's answer at \(address.absoluteString): the answer is not a support service's: \(answer); observed: HTTP 201; fix: check that \(address.absoluteString) is a support service's /v1/public/reports")
+            throw SupportError.answerUnreadable(OwnFailures.supportExchangeSupportAnswerUnreadable.refusal([
+                "address": address.absoluteString, "answer": "\(answer)", "status": "201",
+            ]))
         }
         let kept = folder.appendingPathComponent("\(id).json")
         try writeObject([
@@ -136,23 +137,28 @@ extension WisentTelemetry {
             }.resume()
         }
         if let failure {
-            throw SupportError.unreachable(
-                "\(doing) at \(address): support could not be reached: \(failure); observed: \(observed); fix: run it again once the network or support is back")
+            throw SupportError.unreachable(OwnFailures.supportExchangeSupportUnreachable.refusal([
+                "doing": doing, "address": address, "why": failure, "observed": observed,
+            ]))
         }
         let text = data.map { String(decoding: $0, as: UTF8.self) } ?? ""
         let object = data.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any]
         if (200..<300).contains(status), let object { return object }
         let error = object?["error"] as? [String: Any]
         if !(200..<300).contains(status), let reason = (error?["message"] ?? error?["code"]) as? String {
-            throw SupportError.refused(
-                "\(doing) at \(address): support refused HTTP \(status): \(reason); observed: \(observed); fix: the answer is support's own reason: correct what it names and try again")
+            throw SupportError.refused(OwnFailures.supportExchangeSupportRefused.refusal([
+                "doing": doing, "address": address, "status": String(status), "answer": reason, "observed": observed,
+            ]))
         }
-        throw SupportError.answerUnreadable(
-            "reading support's answer at \(address): the answer is not a support service's: \(text); observed: HTTP \(status); fix: check that \(address) is a support service's /v1/public/reports")
+        throw SupportError.answerUnreadable(OwnFailures.supportExchangeSupportAnswerUnreadable.refusal([
+            "address": address, "answer": text, "status": String(status),
+        ]))
     }
 }
 
-/// Why a support report could not be filed or read, as the sentence it says.
+/// Why a support report could not be filed or read, as the sentence it says:
+/// the refusal of a declared cause of catalogue/failures/telemetry.json
+/// (`OwnFailures.supportReport…`, `OwnFailures.supportExchange…`).
 public enum SupportError: Error, CustomStringConvertible, Sendable {
     case descriptionEmpty(String)
     case addressInvalid(String)
