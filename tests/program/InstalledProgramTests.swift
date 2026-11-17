@@ -1,63 +1,42 @@
-// Real tests of how a desktop app finds and runs its product's installed CLI:
-// the places are looked in the order the product's variable, PATH,
-// ~/.local/bin and ~/.stado/bin give, a program the release installer placed
-// in ~/.local/bin is found by an app whose PATH is launchd's, none executable
-// is a refusal naming every place, a run hands back both streams whole with
-// the exit status, its input is the program's standard input and a program
-// that closes it early is told apart, its environment is set over the app's
-// and a name holding = is refused, cancelling the caller stops the program's
-// whole process group with SIGTERM and a second request with SIGKILL, a stop
-// that arrives after the group exited keeps the run's outcome, a process the
-// program left holding its output does not hold the run, and a run whose exit
-// cannot be waited for is refused naming the wait.
+// Real tests of how a desktop app runs its product's installed CLI, once the
+// process the kernel started is admitted: a run hands back both streams whole
+// with the exit status, its input is the program's standard input and a
+// program that closes it early is told apart, its environment is the app's
+// that it inherits with what is set over it and a name holding = is refused,
+// cancelling the caller stops the program's whole process group with SIGTERM
+// and a second request with SIGKILL, a stop that arrives after the group
+// exited keeps the run's outcome, a process the program left holding its
+// output does not hold the run, and a run whose exit cannot be waited for is
+// refused naming the wait. Where the program is found, and that a program
+// the fleet did not sign is refused, is FleetSignatureTests.swift.
+//
+// The runs here are of /bin/sh, which Apple signs (`codesign -d -r- /bin/sh`:
+// identifier "com.apple.sh" and anchor apple), so they are admitted under
+// that requirement, given through the module's own initializer
+// (`@testable`), and pass the same suspended-start check a fleet program does.
 //
 //   swift test --filter InstalledProgramTests
 
 #if os(macOS)
 import Foundation
-import WisentProgram
+@testable import WisentProgram
 import XCTest
 
 final class InstalledProgramTests: XCTestCase {
-    private let program = InstalledProgram(name: "para", variable: "PARA", leading: ["-c"])
+    private let program = InstalledProgram(
+        name: "sh", identifier: "com.apple.sh", leading: ["-c"],
+        requirement: #"identifier "com.apple.sh" and anchor apple"#)
 
-    func testThePlacesAreTheVariableThenPathThenTheInstallerAndStadoBinDirectories() {
-        let home = URL(fileURLWithPath: "/home/someone")
-        let places = program.candidates(environment: ["PARA": "/opt/para", "PATH": "/usr/bin:/bin"], home: home)
-        XCTAssertEqual(
-            places.map(\.path),
-            ["/opt/para", "/usr/bin/para", "/bin/para", "/home/someone/.local/bin/para", "/home/someone/.stado/bin/para"])
-        XCTAssertEqual(
-            program.candidates(environment: ["PARA": ""], home: home).map(\.path),
-            ["/home/someone/.local/bin/para", "/home/someone/.stado/bin/para"],
-            "an empty variable is unset, and no PATH searches nothing")
+    func testAVariableTheRunWithholdsDoesNotReachTheProgram() async throws {
+        XCTAssertNotNil(ProcessInfo.processInfo.environment["HOME"], "the test needs HOME set to withhold it")
+        let outcome = try await program.run(
+            [#"printf '%s' "${HOME:-withheld}""#], executable: URL(fileURLWithPath: "/bin/sh"),
+            withholding: ["HOME"])
+        XCTAssertEqual(outcome.stdout, "withheld")
     }
 
-    /// An app opened from Finder runs with launchd's PATH, which does not hold
-    /// ~/.local/bin, where the release installer places the program.
-    func testAProgramTheInstallerPlacedIsFoundUnderLaunchdsPath() throws {
-        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let bin = home.appendingPathComponent(".local/bin")
-        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: home) }
-        let placed = bin.appendingPathComponent("para")
-        try Data("#!/bin/sh\n".utf8).write(to: placed)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: placed.path)
-        let found = try program.executable(environment: ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"], home: home)
-        XCTAssertEqual(found.path, placed.path)
-    }
-
-    func testNoExecutableAnywhereIsRefusedNamingEveryPlace() {
-        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        XCTAssertThrowsError(try program.executable(environment: ["PATH": home.path], home: home)) { error in
-            XCTAssertEqual(
-                error as? InstalledProgram.Failure,
-                .missing(searched: [
-                    home.appendingPathComponent("para").path,
-                    home.appendingPathComponent(".local/bin/para").path,
-                    home.appendingPathComponent(".stado/bin/para").path,
-                ]))
-        }
+    func testTheProgramsOwnVariablesAndTheLoadersAreWithheldByDefault() {
+        XCTAssertEqual(InstalledProgram(name: "trends-cli").withheld, ["TRENDS_CLI_", "XDG_", "DYLD_"])
     }
 
     func testARunHandsBackBothStreamsWholeAndItsStatus() async throws {
@@ -87,10 +66,11 @@ final class InstalledProgramTests: XCTestCase {
     }
 
     func testTheEnvironmentIsSetOverTheAppsOwn() async throws {
+        let home = try XCTUnwrap(ProcessInfo.processInfo.environment["HOME"], "the test needs HOME set to inherit it")
         let outcome = try await program.run(
-            [#"printf '%s %s' "$WISENT_PROGRAM_TEST" "${PATH:+kept}""#], executable: URL(fileURLWithPath: "/bin/sh"),
+            [#"printf '%s|%s' "$WISENT_PROGRAM_TEST" "$HOME""#], executable: URL(fileURLWithPath: "/bin/sh"),
             environment: ["WISENT_PROGRAM_TEST": "set"])
-        XCTAssertEqual(outcome.stdout, "set kept")
+        XCTAssertEqual(outcome.stdout, "set|\(home)", "HOME is the app's own, inherited")
     }
 
     func testAnEnvironmentNameHoldingAnEqualsSignIsRefusedBeforeTheProgramStarts() async {
