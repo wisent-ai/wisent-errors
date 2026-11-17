@@ -49,24 +49,28 @@ extension WisentTelemetry {
         for (index, event) in events.enumerated() {
             let eventID = event["eventId"] as? String ?? ""
             let waiting = events.count - index
+            let values = [
+                "event": eventID, "collector": target.absoluteString, "queued": String(waiting),
+                "app": product.appID, "product": product.id, "accepted": "{\"ok\": true}",
+            ]
             switch await post(event, to: target) {
             case .accepted:
                 sent += 1
                 guard let path = file("queue")?.appendingPathComponent("\(eventID).json") else { continue }
                 do {
-                    try remove(path, what: "the sent event \(eventID)", left: "the collector accepted it, so the next flush sends it again")
+                    try remove(path, what: "the sent event \(eventID)")
                     continue
                 } catch {
                     stopped = "\(error)"
                 }
             case .refused(let status, let answer):
-                stopped = "sending event \(eventID) to \(target.absoluteString): the collector refused HTTP \(status): \(answer); observed: \(waiting) event(s) stay queued; fix: the answer names what the collector refuses; when it is Unknown mobile analytics app, declare app \(product.appID) in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON; the events are sent again on the next flush"
+                stopped = OwnFailures.telemetryDeliverCollectorRefused.refusal(values.merging(["status": String(status), "answer": answer]) { $1 })
             case .failed(let status, let answer):
-                stopped = "sending event \(eventID) to \(target.absoluteString): the collector failed on its own side, HTTP \(status): \(answer); observed: \(waiting) event(s) stay queued; fix: nothing on this machine is to fix: the events are sent again on the next flush; a collector that keeps failing is reported from Help → Report a Problem"
+                stopped = OwnFailures.telemetryDeliverCollectorFailed.refusal(values.merging(["status": String(status), "answer": answer]) { $1 })
             case .notCollector(let status, let answer):
-                stopped = "reading the collector's answer to event \(eventID): the answer is not the collector's {\"ok\": true}: \(answer); observed: HTTP \(status) from \(target.absoluteString); fix: check that \(target.absoluteString) is the Echo app collector, /api/analytics/mobile/collect"
+                stopped = OwnFailures.telemetryDeliverCollectorAnswerUnreadable.refusal(values.merging(["status": String(status), "answer": answer]) { $1 })
             case .unreachable(let cause):
-                stopped = "sending event \(eventID) to \(target.absoluteString): the collector could not be reached: \(cause); observed: \(waiting) event(s) stay queued; fix: nothing to do: the events are sent on the next flush once the network or the collector is back"
+                stopped = OwnFailures.telemetryDeliverCollectorUnreachable.refusal(values.merging(["why": cause]) { $1 })
             }
             break
         }
@@ -114,7 +118,7 @@ extension WisentTelemetry {
     private func keep(_ delivered: Delivered) {
         guard let path = file("delivery.json") else { return }
         let record: [String: Any] = [
-            "at": Self.now(),
+            "at": Self.localNow(),
             "sent": delivered.sent,
             "remaining": delivered.remaining,
             "stopped": delivered.stopped.map { ["detail": $0] } as Any? ?? NSNull(),

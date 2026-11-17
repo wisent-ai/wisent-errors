@@ -32,7 +32,7 @@ impl Telemetry {
             .stderr(Stdio::null())
             .spawn();
         let error = started.err()?;
-        let failure = causes::FLUSH_UNSTARTED.failure(
+        let failure = own::TELEMETRY_DELIVER_FLUSH_UNSTARTED.failure(
             DELIVER_POINT,
             self.product.id,
             &[
@@ -146,7 +146,7 @@ impl Telemetry {
     }
 
     pub(super) fn no_home(&self, what: &str) -> Failure {
-        causes::STORE_UNWRITABLE.failure(
+        own::TELEMETRY_STORE_STORE_UNWRITABLE.failure(
             store::RECORD_POINT,
             self.product.id,
             &[
@@ -162,7 +162,7 @@ impl Telemetry {
     }
 
     pub(super) fn no_randomness(&self) -> Failure {
-        causes::STORE_UNWRITABLE.failure(
+        own::TELEMETRY_STORE_STORE_UNWRITABLE.failure(
             store::RECORD_POINT,
             self.product.id,
             &[
@@ -182,7 +182,7 @@ impl Telemetry {
     }
 
     pub(super) fn unwritable(&self, what: &str, path: &Path, error: &std::io::Error) -> Failure {
-        causes::STORE_UNWRITABLE.failure(
+        own::TELEMETRY_STORE_STORE_UNWRITABLE.failure(
             store::RECORD_POINT,
             self.product.id,
             &[

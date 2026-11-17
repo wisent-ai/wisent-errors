@@ -7,6 +7,8 @@
 
 mod cli_output;
 mod envelope;
+mod telemetry;
 
 pub use cli_output::*;
 pub use envelope::*;
+pub use telemetry::*;

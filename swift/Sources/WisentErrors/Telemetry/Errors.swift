@@ -3,7 +3,10 @@
 
 import Foundation
 
-/// Why telemetry could not keep or send something, as the sentence it says.
+/// Why telemetry could not keep or send something, as the sentence it says:
+/// each case but `noHome` carries the refusal of a declared cause of
+/// catalogue/failures/telemetry.json (`OwnFailures.telemetryStore…`,
+/// `OwnFailures.telemetryDeliver…`), the same sentence the Rust client says.
 public enum TelemetryError: Error, CustomStringConvertible, Sendable {
     case noHome
     case unwritable(String)

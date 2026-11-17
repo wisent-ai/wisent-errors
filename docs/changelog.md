@@ -2,6 +2,110 @@
 
 ## Unreleased
 
+### An unreadable support answer is named, not read as empty
+
+- Rust's support exchange read a body it could not read as empty text, so
+  a connection lost mid-answer was reported as `support-answer-unreadable`
+  holding no answer, or a refusal lost its reason. It is now
+  `support-unreachable` naming the HTTP status that came and why the body
+  could not be read, as the collector's delivery and Swift's exchange
+  already report it.
+
+### Telemetry's causes are declared in the catalogue, for Rust and Swift alike
+
+- Telemetry's and support's causes were written by hand twice: as statics in
+  `rust/src/telemetry/causes.rs`, past `catalogue/failures/` and the
+  generator, and as sentence literals in Swift's `TelemetryError` and
+  `SupportError`, which had drifted from Rust's (a damaged consent file
+  named no byte count, an invalid collector address named no fix, a
+  failed send to the collector a different remedy). They are now
+  `catalogue/failures/telemetry.json`, generated into
+  `rust/src/failures/telemetry.rs`, `OwnFailuresTelemetry.swift` and
+  `docs/errors/telemetry.md`; `causes.rs` is gone, and Swift raises each
+  through its generated `OwnFailures` cause, so both say the same sentence.
+  `store-unwritable` and `file-unreadable`, which every functionality meets,
+  are `wisent-errors.telemetry.store`; the support address and exchange
+  causes, which `support report` and `support status` share, are
+  `wisent-errors.support.exchange`; each functionality lists them in `uses`,
+  and `telemetry::operations()` lists those two as well (seven, no longer
+  five). `support status` now declares `store-unwritable`, which it raises
+  when its reports directory cannot be listed. `RECORD`, `CONSENT`,
+  `DELIVER`, `REPORT` and `STATUS` keep their names in `telemetry`; their
+  `docs` and every cause's `doc` point at `docs/errors/telemetry.md`, the
+  page that holds the anchors.
+- `collector-failed`'s fix names `{product} support report` and an app's
+  Help → Report a Problem; Swift's removal of a sent event or of the queue
+  is `store-unwritable`, as in Rust. Swift's untested causes are listed in
+  `tests/untested-causes.json`.
+- `codegen/generate.mjs` claimed CI regenerates and fails on a difference;
+  no CI runs here. It now says `--check`, run by `node ci/check.mjs` (the
+  `checks` gate of `.wisent-release.json`), is what keeps the copies equal.
+- The generated files were written by hand as `codegen/generate.mjs`
+  renders them, with the generator held; `node codegen/generate.mjs --check`
+  confirms them once it may run. Written and read; nothing was built or run.
+
+### A telemetry flush says what it waits on, and says when in local time
+
+- `Telemetry::flush` sent each event with a ureq agent nothing reported, so a
+  collector that accepted the connection and never answered held the flush
+  (ster's detached `telemetry flush`) with no word anywhere. Each send is
+  now a stado-wait wait (`telemetry` feature: `stado-wait` 0.2.0 without its
+  clients): in the register `stado waits` lists, said on stderr when it
+  stands, measured. It ends on evidence (the collector answers, refuses or
+  closes, or the process is ended), never after a guessed time
+  (`tests/telemetry/delivery.rs::a_collector_that_closes_without_answering_ends_the_flush_and_keeps_the_events`).
+  An answer whose body could not be read was taken as an empty body; it is
+  now `collector-unreachable` naming the status and the read's error.
+- `delivery.json`'s `at`, which `telemetry status` and the Settings window
+  show a person, was UTC (`…Z`). It is now this host's local time with its
+  offset (`2026-11-16T14:03:07.120+01:00`), in Rust and in Swift
+  (`tests/telemetry/delivery.rs::the_last_delivery_says_when_in_local_time_with_its_offset`).
+  An event's `occurredAt` and the consent and installation records stay
+  UTC: programs read them, people do not.
+- `Cargo.lock` locks stado-wait and chrono (`kompilator lock --manifest-path
+  Cargo.toml`). Written and read; nothing was built or run.
+
+### `WisentProgram` stops the whole program and ends on its exit
+
+- `InstalledProgram.run` started the program with `Process`, sent only it
+  SIGTERM on cancellation with no way to insist, and ended only once both
+  pipes closed, so a process the CLI left running with its output kept the
+  run open after the CLI exited. The program now runs in a process group of
+  its own (`posix_spawn`, `POSIX_SPAWN_SETPGROUP`): cancelling the task sends
+  the group SIGTERM, and a further `InstalledProgram.Stop.request()` sends it
+  SIGKILL, on that request and never after a guessed wait. The run ends on
+  the program's exit with everything its streams hold then;
+  `Outcome.heldOpen` names a stream a process it started still held, so
+  what that process writes later is not dropped unsaid. A run whose exit
+  cannot be waited for (an app that ignores SIGCHLD reaps it first) is the
+  new `Failure.unfollowed(path:step:reason:)`, which a product says in its
+  own words beside the other two (`tests/program/InstalledProgramTests.swift`:
+  `testCancellingTheCallerStopsEveryProcessOfTheProgramsGroup`,
+  `testASecondRequestKillsAProgramThatIgnoresTheFirst`,
+  `testAStopRequestedBeforeTheRunRefusesIt`,
+  `testAProcessTheProgramLeftHoldingItsOutputDoesNotHoldTheRun`,
+  `testAProgramThatCannotStartIsRefusedNamingWhy`,
+  `testAProgramSomethingElseReapedIsRefusedNamingTheWait`). No consumer
+  switches over `InstalledProgram.Failure`; each catches its cases by name,
+  so the new case breaks no build. Until a product catches
+  `Failure.unfollowed` in its own words, it reaches the person as the case
+  itself, naming the path, the step and the reason. Written and read;
+  nothing was built or run.
+
+### SwiftPM pins a tag, and the version files stay at what consumers declare
+
+- `docs/maintaining/pinning.md` said every consumer pins a commit, while
+  SwiftPM consumers pin a tag, as SwiftPM requires of a package depended on
+  by version; it now says so. It also says why `package.json`,
+  `rust/Cargo.toml` and `python/pyproject.toml` stay `1.0.0` below the tag
+  line: eight Cargo consumers declare `version = "1.0.0"` against the git
+  source, and cargo refuses a crate version that does not meet it.
+- `.wisent-release.json` declares test gates: `node ci/check.mjs` (the
+  catalogue checks and every node test), each Rust test target that needs
+  no live collector, three delivery tests that need none, and `swift test`
+  for `WisentErrorsTests` and `WisentProgramTests`. Its reason says how each
+  ecosystem pins and that the version tags exist.
+
 ### The JavaScript runtime and the commands keep their parts apart
 
 - `js/` held twelve files. The generated catalogue (`codes.mjs`,

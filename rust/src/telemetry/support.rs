@@ -7,11 +7,8 @@ use std::path::PathBuf;
 
 use serde_json::{json, Value};
 
-use super::causes::{
-    DESCRIPTION_EMPTY, SUPPORT_ADDRESS_INVALID, SUPPORT_ANSWER_UNREADABLE, SUPPORT_REFUSED,
-    SUPPORT_UNREACHABLE,
-};
 use super::{acceptable_collector, store, Telemetry};
+use crate::failures as own;
 use crate::Failure;
 
 /// The public address Wisent's support takes reports on. Every product files
@@ -46,7 +43,7 @@ impl Telemetry {
         if acceptable_collector(&address) {
             Ok((address, RUNTIME_SUPPORT))
         } else {
-            Err(SUPPORT_ADDRESS_INVALID.failure(
+            Err(own::SUPPORT_EXCHANGE_SUPPORT_ADDRESS_INVALID.failure(
                 REPORT_POINT,
                 self.product().id,
                 &[("address", &address)],
@@ -65,7 +62,11 @@ impl Telemetry {
         let product = self.product().id;
         let description = report.description.trim();
         if description.is_empty() {
-            return Err(DESCRIPTION_EMPTY.failure(REPORT_POINT, product, &[("product", product)]));
+            return Err(own::SUPPORT_REPORT_SUPPORT_DESCRIPTION_EMPTY.failure(
+                REPORT_POINT,
+                product,
+                &[("product", product)],
+            ));
         }
         let (address, _) = self.support_address()?;
         let directory = self
@@ -100,7 +101,7 @@ impl Telemetry {
             answer.get("id").and_then(Value::as_str),
             answer.get("access_key").and_then(Value::as_str),
         ) else {
-            return Err(SUPPORT_ANSWER_UNREADABLE.failure(
+            return Err(own::SUPPORT_EXCHANGE_SUPPORT_ANSWER_UNREADABLE.failure(
                 REPORT_POINT,
                 product,
                 &[
@@ -213,12 +214,12 @@ fn exchange(
     match answer {
         Ok(response) => {
             let status = response.status().to_string();
-            let text = response.into_string().unwrap_or_default();
+            let text = read_answer(response, &common, product, point)?;
             serde_json::from_str::<Value>(&text)
                 .ok()
                 .filter(Value::is_object)
                 .ok_or_else(|| {
-                    SUPPORT_ANSWER_UNREADABLE.failure(
+                    own::SUPPORT_EXCHANGE_SUPPORT_ANSWER_UNREADABLE.failure(
                         point,
                         product,
                         &[("address", address), ("answer", &text), ("status", &status)],
@@ -226,7 +227,7 @@ fn exchange(
                 })
         }
         Err(ureq::Error::Status(status, response)) => {
-            let text = response.into_string().unwrap_or_default();
+            let text = read_answer(response, &common, product, point)?;
             // Support refuses with {"error": {"message": …}}; anything else
             // came from an address that is not support.
             let said = serde_json::from_str::<Value>(&text)
@@ -238,9 +239,9 @@ fn exchange(
                 Some(reason) => {
                     let mut values = common.to_vec();
                     values.extend([("status", status.as_str()), ("answer", reason.as_str())]);
-                    Err(SUPPORT_REFUSED.failure(point, product, &values))
+                    Err(own::SUPPORT_EXCHANGE_SUPPORT_REFUSED.failure(point, product, &values))
                 }
-                None => Err(SUPPORT_ANSWER_UNREADABLE.failure(
+                None => Err(own::SUPPORT_EXCHANGE_SUPPORT_ANSWER_UNREADABLE.failure(
                     point,
                     product,
                     &[("address", address), ("answer", &text), ("status", &status)],
@@ -251,7 +252,25 @@ fn exchange(
             let error = transport.to_string();
             let mut values = common.to_vec();
             values.push(("why", error.as_str()));
-            Err(SUPPORT_UNREACHABLE.failure(point, product, &values))
+            Err(own::SUPPORT_EXCHANGE_SUPPORT_UNREACHABLE.failure(point, product, &values))
         }
     }
+}
+
+/// The whole body of support's answer. A body that cannot be read after its
+/// status came is support-unreachable naming that status and why, as the
+/// collector's is, never an empty answer.
+fn read_answer(
+    response: ureq::Response,
+    common: &[(&str, &str)],
+    product: &str,
+    point: &str,
+) -> Result<String, Failure> {
+    let status = response.status();
+    response.into_string().map_err(|error| {
+        let why = format!("HTTP {status} came and its body could not be read: {error}");
+        let mut values = common.to_vec();
+        values.push(("why", why.as_str()));
+        own::SUPPORT_EXCHANGE_SUPPORT_UNREACHABLE.failure(point, product, &values)
+    })
 }

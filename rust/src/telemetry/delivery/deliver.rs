@@ -2,12 +2,37 @@
 //! outcome of the last attempt where `status` reads it.
 
 use serde_json::{json, Value};
+use stado_wait::Kind;
 
-use super::causes::{
-    COLLECTOR_ANSWER_UNREADABLE, COLLECTOR_FAILED, COLLECTOR_REFUSED, COLLECTOR_UNREACHABLE,
-};
 use super::{store, Collector, Level, Telemetry, DELIVER_POINT};
+use crate::failures as own;
 use crate::Failure;
+
+/// What the collector answered to one event, its body read inside the wait.
+struct Answered {
+    status: u16,
+    /// The answer carried an HTTP error status (ureq's `Error::Status`).
+    refused: bool,
+    body: std::io::Result<String>,
+}
+
+/// Send one event and read the whole answer: the work one wait stands on.
+fn post(agent: &ureq::Agent, collector: &str, event: &str) -> Result<Answered, ureq::Transport> {
+    let (response, refused) = match agent
+        .post(collector)
+        .set("Content-Type", "application/json")
+        .send_string(event)
+    {
+        Ok(response) => (response, false),
+        Err(ureq::Error::Status(_, response)) => (response, true),
+        Err(ureq::Error::Transport(transport)) => return Err(transport),
+    };
+    Ok(Answered {
+        status: response.status(),
+        refused,
+        body: response.into_string(),
+    })
+}
 
 /// What one flush did.
 #[derive(Debug)]
@@ -76,6 +101,11 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
             return Ok(delivered);
         }
     };
+    // Each send is a stado-wait wait: in the register `stado waits` lists for
+    // as long as it stands, said on stderr when nothing tells it from a stall
+    // or once it is past the time its earlier sends took, and measured. It
+    // ends on evidence: the collector answers, refuses or closes, or this
+    // process is ended; no time is guessed for it.
     let agent = ureq::AgentBuilder::new().build();
     let product = telemetry.product().id;
     let app = telemetry.product().app_id;
@@ -96,14 +126,40 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
             values.extend(extra.iter().map(|(key, value)| (*key, value.clone())));
             values
         };
-        let answer = agent
-            .post(&collector)
-            .set("Content-Type", "application/json")
-            .send_string(&event.to_string());
+        let answer = stado_wait::blocking_as(
+            Kind::Network,
+            "telemetry delivery",
+            format!("POST event {event_id}"),
+            &collector,
+            || post(&agent, &collector, &event.to_string()),
+        );
         let refusal = match answer {
-            Ok(response) => {
-                let status = response.status();
-                let body = response.into_string().unwrap_or_default();
+            Err(transport) => {
+                let values = values(&[("why", transport.to_string())]);
+                own::TELEMETRY_DELIVER_COLLECTOR_UNREACHABLE.failure(
+                    DELIVER_POINT,
+                    product,
+                    &borrowed(&values),
+                )
+            }
+            Ok(Answered {
+                status,
+                body: Err(error),
+                ..
+            }) => {
+                let why = format!("HTTP {status} came and its body could not be read: {error}");
+                let values = values(&[("why", why)]);
+                own::TELEMETRY_DELIVER_COLLECTOR_UNREACHABLE.failure(
+                    DELIVER_POINT,
+                    product,
+                    &borrowed(&values),
+                )
+            }
+            Ok(Answered {
+                status,
+                refused: false,
+                body: Ok(body),
+            }) => {
                 let accepted = serde_json::from_str::<Value>(&body)
                     .ok()
                     .and_then(|answer| answer.get("ok").and_then(Value::as_bool))
@@ -118,10 +174,17 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
                     continue;
                 }
                 let values = values(&[("status", status.to_string()), ("answer", body)]);
-                COLLECTOR_ANSWER_UNREADABLE.failure(DELIVER_POINT, product, &borrowed(&values))
+                own::TELEMETRY_DELIVER_COLLECTOR_ANSWER_UNREADABLE.failure(
+                    DELIVER_POINT,
+                    product,
+                    &borrowed(&values),
+                )
             }
-            Err(ureq::Error::Status(status, response)) => {
-                let body = response.into_string().unwrap_or_default();
+            Ok(Answered {
+                status,
+                refused: true,
+                body: Ok(body),
+            }) => {
                 // A server error is the collector's own failure, whatever its
                 // body; below that, the collector refuses with a JSON object
                 // and anything else came from an address that is not it.
@@ -130,17 +193,13 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
                 let values = values(&[("status", status.to_string()), ("answer", body)]);
                 // The 5xx server error class: https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6
                 let cause = if status >= 500 {
-                    &COLLECTOR_FAILED
+                    &own::TELEMETRY_DELIVER_COLLECTOR_FAILED
                 } else if collector_said {
-                    &COLLECTOR_REFUSED
+                    &own::TELEMETRY_DELIVER_COLLECTOR_REFUSED
                 } else {
-                    &COLLECTOR_ANSWER_UNREADABLE
+                    &own::TELEMETRY_DELIVER_COLLECTOR_ANSWER_UNREADABLE
                 };
                 cause.failure(DELIVER_POINT, product, &borrowed(&values))
-            }
-            Err(ureq::Error::Transport(transport)) => {
-                let values = values(&[("why", transport.to_string())]);
-                COLLECTOR_UNREACHABLE.failure(DELIVER_POINT, product, &borrowed(&values))
             }
         };
         stopped = Some(refusal);
@@ -168,6 +227,6 @@ fn keep(telemetry: &Telemetry, delivered: &Delivered) -> Result<(), Failure> {
         return Ok(());
     };
     let mut record = delivered.to_json();
-    record["at"] = json!(store::now());
+    record["at"] = json!(store::local_now());
     store::write_json(&path, "the last delivery", &record, telemetry.product().id)
 }
