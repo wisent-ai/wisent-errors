@@ -40,6 +40,9 @@ export function stateOf(path) {
   }
 }
 
+/** What PATH is, for the refusal of a program that could not be started: unset, or what it holds, quoted so an empty one reads as empty. */
+export const pathVariable = () => (process.env.PATH === undefined ? 'is unset' : `holds ${JSON.stringify(process.env.PATH)}`);
+
 /** What the directory meant to hold `path` holds, for a refusal of an absent path. */
 export function parentOf(path) {
   const parent = dirname(resolve(path));

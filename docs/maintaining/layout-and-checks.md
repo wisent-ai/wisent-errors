@@ -8,19 +8,19 @@ the schema and the generated runtimes saying the same thing.
 ```
 catalogue/codes.json          the vocabulary, the single source of truth
 catalogue/declaration.json    what a declared cause or warning must be, and every sentence refusing one
-catalogue/failures/           this package's own failures, one part per area (read by codegen/parts.mjs), telemetry's included
+catalogue/failures/           this package's own failures, parts at any depth, read in path order by codegen/parts.mjs (cli-output, envelope, telemetry, tools; lint/commands.json and lint/layers.json, one area in two parts)
 schema/failure.schema.json    the envelope, checkable from any language
 codegen/generate.mjs          one generator, four runtimes and docs/errors/
-rust/    crate   wisent-errors   (src/operation/: causes and templates; src/warning.rs: warnings; src/invalid.rs: why an envelope was refused; src/failures/: generated, one module per part of catalogue/failures/; src/telemetry/, feature `telemetry`: consent, queue, delivery, export)
+rust/    crate   wisent-errors   (src/operation/: causes and templates; src/warning.rs: warnings; src/invalid.rs: why an envelope was refused; src/failures/: generated, one module per area of catalogue/failures/; src/telemetry/, feature `telemetry`: consent, queue, delivery, export)
 python/  package wisent_errors   (operation.py, template.py: the same declarations and rules)
 js/      package @wisent/errors  (catalogue/: the generated codes.mjs, declaration.mjs, failures.mjs and codes.d.ts; declared/: operation.mjs, template.mjs, warning.mjs, refusal.mjs; index.mjs and index.d.ts)
-swift/   library WisentErrors    (Catalogue/: Operation.swift, Template.swift, Invalid.swift and the generated Codes.swift and Declaration.swift; Warning.swift, Report.swift; Own/OwnFailures*.swift: generated, one file per part; Telemetry*.swift: the same telemetry as the Rust feature) and WisentTelemetryUI (the Settings section)
+swift/   library WisentErrors    (Catalogue/: Operation.swift, Template.swift, Invalid.swift and the generated Codes.swift and Declaration.swift; Warning.swift, Report.swift; Own/OwnFailures*.swift: generated, one file per area; Telemetry*.swift: the same telemetry as the Rust feature) and WisentTelemetryUI (the Settings section)
 ci/check.mjs                  what must hold before this ships, this package's own catalogue included
 ci/no-handrolled-envelope.mjs the guard a consuming repo runs
 ci/error-standard.mjs         the lint a consuming repo runs: generic sentences, functionality catalogues, their tests, the values their raising sites pass, their entries
 ci/warning-standard.mjs       the lint a consuming repo runs: declared warnings, their tests, and one warning for every confirmation
 ci/support/                   refuse.mjs, input.mjs, arguments.mjs, tests-held.mjs: how these commands refuse, read their files, read their words and find a declared test
-tests/<area>/                 declaration, envelope, cli-output, lint, tools, warnings, telemetry; tests/untested-causes.json lists what no local state provokes
+tests/<area>/                 declaration, envelope, cli-output, lint, guard, tools, warnings, telemetry, program; tests/untested-causes.json lists what no local state provokes
 ```
 
 Generated files are committed, so a consumer needs no build step, and

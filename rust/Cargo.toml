@@ -36,12 +36,13 @@ getrandom = { version = "0.2", optional = true }
 stado-wait = { git = "https://github.com/wisent-ai/stado", package = "stado-wait", version = "0.2.0", default-features = false, optional = true }
 chrono = { version = "0.4", optional = true }
 
-# The tests of `cli_output`, `telemetry` and `diagnosis` run in every `cargo
-# test`: the crate depends on itself with those features on, so no test target
-# is skipped for a feature nobody turned on. serde_json decodes the documents
-# those tests read.
+# The tests of `cli_output`, `telemetry` and `diagnosis` each name the feature
+# they test (`required-features`), and the release gates run them with it on
+# (`kompilator test --features <feature> --test <name>`), so no gated test
+# target is skipped for a feature nobody turned on. The crate does not depend
+# on itself for them: kompilator compiles each package once and refuses that
+# cycle. serde_json decodes the documents those tests read.
 [dev-dependencies]
-wisent-errors = { path = ".", features = ["cli-output", "telemetry", "diagnosis"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # The telemetry tests read the moment of the last delivery back as an instant
@@ -68,10 +69,12 @@ path = "../tests/declared/raise.rs"
 [[test]]
 name = "cli-output-read"
 path = "../tests/cli-output/read_json.rs"
+required-features = ["cli-output"]
 
 [[test]]
 name = "cli-output-print"
 path = "../tests/cli-output/print.rs"
+required-features = ["cli-output"]
 
 [[test]]
 name = "telemetry"

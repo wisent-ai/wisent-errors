@@ -1,7 +1,7 @@
 // Why an envelope could not be built, as the declared causes of
 // `wisent_errors.envelope.build` say it (OwnFailures.envelopeBuild, generated
 // into OwnFailuresEnvelope.swift from catalogue/failures/ and raised by
-// tests/envelope/BuildTests.swift): which segment of the point broke the
+// tests/envelope/EnvelopeBuildTests.swift): which segment of the point broke the
 // grammar, the character found, a point that would pass, and the fallback
 // that never refuses.
 

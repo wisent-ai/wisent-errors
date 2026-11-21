@@ -47,7 +47,7 @@ pub static TELEMETRY_DELIVER_COLLECTOR_INVALID: Cause = Cause {
     cause: "a collector address must be https://, or http:// on a loopback host",
     observed: "{source} holds {address}",
     remedy: "set WISENT_TELEMETRY_COLLECTOR_URL to the https:// address of the Echo app collector, or unset it",
-    test: "tests/telemetry/delivery.rs::a_plain_http_collector_is_refused_by_name",
+    test: "tests/telemetry/delivery/unreached.rs::a_plain_http_collector_is_refused_by_name",
 };
 
 pub static TELEMETRY_DELIVER_COLLECTOR_REFUSED: Cause = Cause {
@@ -58,8 +58,8 @@ pub static TELEMETRY_DELIVER_COLLECTOR_REFUSED: Cause = Cause {
     failed: "sending event {event} to {collector}",
     cause: "the collector refused HTTP {status}: {answer}",
     observed: "{queued} event(s) stay queued",
-    remedy: "the answer names what the collector refuses; when it is Unknown mobile analytics app, declare app {app} in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON; the events are sent again on the next flush",
-    test: "tests/telemetry/delivery.rs::an_app_the_collector_does_not_declare_stays_queued_with_its_refusal",
+    remedy: "the answer names what the collector refuses and how to fix it; when its cause is app-undeclared, declare app {app} in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON with its collector URL and an analytics backend; the events are sent again on the next flush",
+    test: "tests/telemetry/delivery/reached.rs::an_app_the_collector_does_not_declare_stays_queued_with_its_refusal",
 };
 
 pub static TELEMETRY_DELIVER_COLLECTOR_FAILED: Cause = Cause {
@@ -71,7 +71,7 @@ pub static TELEMETRY_DELIVER_COLLECTOR_FAILED: Cause = Cause {
     cause: "the collector failed on its own side, HTTP {status}: {answer}",
     observed: "{queued} event(s) stay queued",
     remedy: "nothing on this machine is to fix: the events are sent again on the next flush; a collector that keeps failing is reported with `{product} support report`, or from an app's Help → Report a Problem",
-    test: "tests/telemetry/delivery.rs::a_collector_failing_on_its_side_keeps_the_events_with_its_own_failure",
+    test: "tests/telemetry/delivery/reached.rs::a_collector_failing_on_its_side_keeps_the_events_with_its_own_failure",
 };
 
 pub static TELEMETRY_DELIVER_COLLECTOR_UNREACHABLE: Cause = Cause {
@@ -83,7 +83,7 @@ pub static TELEMETRY_DELIVER_COLLECTOR_UNREACHABLE: Cause = Cause {
     cause: "the collector could not be reached: {why}",
     observed: "{queued} event(s) stay queued",
     remedy: "nothing to do: the events are sent on the next flush once the network or the collector is back",
-    test: "tests/telemetry/delivery.rs::an_unreachable_collector_keeps_the_events",
+    test: "tests/telemetry/delivery/unreached.rs::an_unreachable_collector_keeps_the_events",
 };
 
 pub static TELEMETRY_DELIVER_COLLECTOR_ANSWER_UNREADABLE: Cause = Cause {
@@ -95,7 +95,7 @@ pub static TELEMETRY_DELIVER_COLLECTOR_ANSWER_UNREADABLE: Cause = Cause {
     cause: "the answer is not the collector's {accepted}: {answer}",
     observed: "HTTP {status} from {collector}",
     remedy: "check that {collector} is the Echo app collector, /api/analytics/mobile/collect",
-    test: "tests/telemetry/delivery.rs::an_address_that_is_not_a_collector_is_named",
+    test: "tests/telemetry/delivery/reached.rs::an_address_that_is_not_a_collector_is_named",
 };
 
 pub static TELEMETRY_DELIVER_FLUSH_UNSTARTED: Cause = Cause {
@@ -107,7 +107,7 @@ pub static TELEMETRY_DELIVER_FLUSH_UNSTARTED: Cause = Cause {
     cause: "the process could not be started: {why}",
     observed: "{queued} event(s) stay queued",
     remedy: "run `{product} telemetry flush` yourself; the events wait until it runs",
-    test: "tests/telemetry/delivery.rs::a_flush_that_cannot_start_is_named",
+    test: "tests/telemetry/delivery/unreached.rs::a_flush_that_cannot_start_is_named",
 };
 
 pub static TELEMETRY_DELIVER: Operation = Operation {
@@ -176,13 +176,25 @@ pub static TELEMETRY_STORE_FILE_UNREADABLE: Cause = Cause {
     test: "tests/telemetry/consent.rs::a_damaged_consent_file_is_refused_and_nothing_is_sent",
 };
 
+pub static TELEMETRY_STORE_FILE_READ_REFUSED: Cause = Cause {
+    id: "file-read-refused",
+    code: Code::Config,
+    usage: false,
+    exit: None,
+    failed: "reading {what} from {path}",
+    cause: "the operating system refused the read, so what the file holds was never looked at",
+    observed: "{state}; the operating system answered {error}",
+    remedy: "let the user running {product} read it (chmod u+r {path}), or remove {path} so telemetry writes it again",
+    test: "tests/telemetry/store.rs::a_file_the_system_refuses_to_read_is_named_with_its_answer",
+};
+
 pub static TELEMETRY_STORE: Operation = Operation {
     id: "wisent-errors.telemetry.store",
     entries: &[],
     uses: &[],
     summary: "keep the files telemetry writes (the consent, the installation id, the queue, the last delivery, the keys of support reports) and read them back",
     docs: "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/telemetry.md",
-    causes: &[&TELEMETRY_STORE_STORE_UNWRITABLE, &TELEMETRY_STORE_FILE_UNREADABLE],
+    causes: &[&TELEMETRY_STORE_STORE_UNWRITABLE, &TELEMETRY_STORE_FILE_UNREADABLE, &TELEMETRY_STORE_FILE_READ_REFUSED],
     warnings: &[],
 };
 

@@ -31,8 +31,22 @@ final class ExplainedTests: XCTestCase {
 
     func testAnUndeclaredErrorIsSaidAsItsTypeAndValue() {
         let said = Undeclared(code: 7).explained
-        XCTAssertTrue(said.contains("Undeclared"), said)
-        XCTAssertTrue(said.contains("code: 7"), said)
+        XCTAssertEqual(said, String(reflecting: Undeclared(code: 7)))
+        XCTAssertTrue(said.hasSuffix("Undeclared(code: 7)"), said)
+    }
+
+    /// The decoder's or encoder's own words for `attempt`'s failure, read from its context.
+    private func debugDescription(_ attempt: () throws -> Void) -> String {
+        do {
+            try attempt()
+        } catch DecodingError.typeMismatch(_, let context) {
+            return context.debugDescription
+        } catch EncodingError.invalidValue(_, let context) {
+            return context.debugDescription
+        } catch {
+            return "another failure: \(error)"
+        }
+        return "no failure"
     }
 
     func testAMissingKeyNamesTheKeyAndWhereItWasMissing() throws {
@@ -45,16 +59,16 @@ final class ExplainedTests: XCTestCase {
     func testATypeMismatchNamesTheCodingPath() throws {
         let data = Data(#"{"name": "a", "items": [1, "two"]}"#.utf8)
         XCTAssertThrowsError(try JSONDecoder().decode(Shape.self, from: data)) { error in
-            XCTAssertTrue(error.explained.hasPrefix("items.1 is not Int"), error.explained)
+            let reason = debugDescription { _ = try JSONDecoder().decode(Shape.self, from: data) }
+            XCTAssertEqual(error.explained, "items.1 is not Int: \(reason)")
         }
     }
 
     func testAnEncodingFailureNamesTheValueThePathAndTheEncodersReason() throws {
         let value = ["prices": [1.5, Double.infinity]]
         XCTAssertThrowsError(try JSONEncoder().encode(value)) { error in
-            let said = error.explained
-            XCTAssertTrue(said.hasPrefix("Double inf cannot be encoded at prices.1: "), said)
-            XCTAssertFalse(said.contains("NSCocoaErrorDomain"), said)
+            let reason = debugDescription { _ = try JSONEncoder().encode(value) }
+            XCTAssertEqual(error.explained, "Double inf cannot be encoded at prices.1: \(reason)")
         }
     }
 

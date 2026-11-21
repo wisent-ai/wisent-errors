@@ -45,13 +45,11 @@ fn errors_queue_failures_and_not_commands() {
     );
     assert_eq!(event["properties"]["error_code"], "not_found");
     assert_eq!(event["properties"]["cause_id"], "pairs-unreadable");
-    let home = std::env::var("HOME").expect("HOME");
     let detail = event["properties"]["detail"].as_str().expect("a detail");
-    assert!(
-        !detail.contains(&home),
-        "the home directory is taken out: {detail}"
+    assert_eq!(
+        detail, "reading ~/pairs/calm.json: no such file",
+        "the home directory is taken out of what is queued"
     );
-    assert!(detail.contains("~/pairs/calm.json"), "{detail}");
 }
 
 #[test]
@@ -113,12 +111,18 @@ fn an_unknown_level_is_refused() {
         Level::parse("everything", "wisent-errors-test").expect_err("an unknown level is refused");
     case.note("refusal", json!(refused.detail));
     assert_eq!(refused.code.as_str(), "refused");
-    let detail = refused.detail.expect("a sentence");
-    assert!(detail.contains("got everything"), "{detail}");
+    assert_eq!(
+        refused.detail.as_deref(),
+        Some("setting the telemetry level to everything: telemetry knows the levels off, errors and usage; observed: got everything")
+    );
     assert_eq!(
         refused.remedy.as_deref(),
         Some("name one of off, errors or usage")
     );
+    for level in [Level::Off, Level::Errors, Level::Usage] {
+        let name = format!("{level:?}").to_lowercase();
+        assert_eq!(Level::parse(&format!(" {name} "), "wisent-errors-test").map_err(|refused| refused.detail), Ok(level));
+    }
 }
 
 #[test]
@@ -135,13 +139,37 @@ fn a_damaged_consent_file_is_refused_and_nothing_is_sent() {
         .level()
         .expect_err("a level that is none of the three is refused");
     case.note("refusal", json!(refused.detail));
-    let detail = refused.detail.expect("a sentence");
-    assert!(detail.contains("consent.json"), "{detail}");
-    assert!(detail.contains("sometimes"), "{detail}");
-    assert!(
-        detail.contains(&format!("the file holds {} bytes", damaged.len())),
-        "{detail}"
+    let path = state.join("consent.json");
+    assert_eq!(refused.code.as_str(), "config");
+    assert_eq!(
+        refused.detail.as_deref(),
+        Some(format!(
+            "reading the telemetry consent from {}: the file is not what telemetry wrote: level \"sometimes\" is not off, errors or usage; observed: the file holds {} bytes",
+            path.display(),
+            damaged.len()
+        ).as_str())
+    );
+    assert_eq!(
+        refused.remedy.as_deref(),
+        Some(format!("answer again, in an app's settings or with `wisent-errors-test telemetry on|off`, which rewrites it, or remove {}", path.display()).as_str())
     );
     telemetry.failure(&sample_failure(), None);
     assert_eq!(telemetry.status()["queued"], 0);
+    assert_eq!(std::fs::read_to_string(&path).expect("the damaged file"), damaged, "the refused file is left as it was");
+    // A file that is not JSON, or JSON but no object, is refused the same way.
+    for (text, why) in [
+        ("{", serde_json::from_str::<serde_json::Value>("{").expect_err("not JSON").to_string()),
+        ("[\"errors\"]", "it is not a JSON object".to_owned()),
+    ] {
+        std::fs::write(&path, text).expect("a damaged file");
+        let refused = telemetry.level().expect_err("a file that is no consent object is refused");
+        assert_eq!(
+            refused.detail.as_deref(),
+            Some(format!(
+                "reading the telemetry consent from {}: the file is not what telemetry wrote: {why}; observed: the file holds {} bytes",
+                path.display(),
+                text.len()
+            ).as_str())
+        );
+    }
 }

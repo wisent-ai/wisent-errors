@@ -5,8 +5,6 @@
 //! (`SUPPORT_AGENT_TOKEN`, whose role carries the `reply` capability); the
 //! service token is refused a reply (403 `Missing capability: reply`).
 
-use std::net::TcpListener;
-
 use serde_json::{json, Value};
 use wisent_errors::telemetry::{Level, Report, PUBLIC_SUPPORT};
 
@@ -112,26 +110,37 @@ fn a_report_without_a_description_is_refused_before_sending() {
         .expect_err("an empty description is refused");
     case.note("refusal", json!(refused.detail));
     assert_eq!(refused.code.as_str(), "refused");
-    assert!(refused
-        .remedy
-        .expect("a fix")
-        .contains("wisent-errors-test support report --description"));
+    assert_eq!(
+        refused.detail.as_deref(),
+        Some("filing a support report: the report has no description; observed: the description is empty")
+    );
+    assert_eq!(
+        refused.remedy.as_deref(),
+        Some("say what you were doing and what happened: in an app's Report a Problem window, or with `wisent-errors-test support report --description \"…\"`")
+    );
     assert!(telemetry.reports().expect("nothing kept").is_empty());
 }
 
 #[test]
 fn a_plain_http_support_address_is_refused_by_name() {
     let mut case = Case::new("support-plain-http");
-    std::env::set_var("WISENT_SUPPORT_URL", "http://support.example/v1/public/reports");
+    let address = "http://support.example.invalid/v1/public/reports";
+    std::env::set_var("WISENT_SUPPORT_URL", address);
     let telemetry = case.telemetry("wisent-errors-test-cli");
     let refused = telemetry
         .file_report(&report("something failed"))
         .expect_err("plain http to another host is refused");
     case.note("refusal", json!(refused.detail));
-    assert!(refused
-        .detail
-        .expect("a sentence")
-        .contains("WISENT_SUPPORT_URL holds http://support.example"));
+    assert_eq!(refused.code.as_str(), "config");
+    assert_eq!(
+        refused.detail.as_deref(),
+        Some(format!("reading the support address from WISENT_SUPPORT_URL: a support address must be https://, or http:// on a loopback host; observed: WISENT_SUPPORT_URL holds {address}").as_str())
+    );
+    assert_eq!(
+        refused.remedy.as_deref(),
+        Some("set WISENT_SUPPORT_URL to the https:// address of a support service's /v1/public/reports, or unset it")
+    );
+    assert!(telemetry.reports().expect("nothing kept").is_empty());
     std::env::remove_var("WISENT_SUPPORT_URL");
     assert_eq!(
         telemetry.support_address().expect("the public one"),
@@ -142,7 +151,8 @@ fn a_plain_http_support_address_is_refused_by_name() {
 #[test]
 fn a_report_support_refuses_says_why() {
     let mut case = Case::new("support-refused");
-    std::env::set_var("WISENT_SUPPORT_URL", support());
+    let address = support();
+    std::env::set_var("WISENT_SUPPORT_URL", &address);
     let telemetry = case.telemetry("wisent-errors-test-cli");
     let refused = telemetry
         .file_report(&Report {
@@ -152,35 +162,26 @@ fn a_report_support_refuses_says_why() {
         .expect_err("support refuses the email");
     case.note("refusal", json!(refused.detail));
     assert_eq!(refused.code.as_str(), "refused");
-    assert!(refused
-        .detail
-        .as_deref()
-        .expect("a sentence")
-        .contains("support refused HTTP 400: email \"not an address\" is not an email address"));
-    names_the_product(&refused);
+    assert_eq!(
+        refused.detail.as_deref(),
+        Some(format!("filing a support report at {address}: support refused HTTP 400: email \"not an address\" is not an email address; observed: nothing was filed").as_str())
+    );
+    assert_eq!(
+        refused.remedy.as_deref(),
+        Some("the answer is support's own reason: correct what it names and send the report again, from an app's Report a Problem window or with `wisent-errors-test support report`")
+    );
+    assert!(!refused.context.contains_key("wisent_errors.unfilled"), "{:?}", refused.context);
     assert!(telemetry.reports().expect("nothing kept").is_empty());
 }
 
-/// The remedy of a refused or unreachable report names the product's own
-/// `support report`, and no placeholder of the cause was left unfilled.
-fn names_the_product(refused: &wisent_errors::Failure) {
-    let remedy = refused.remedy.as_deref().expect("a fix");
-    assert!(remedy.contains("`wisent-errors-test support report`"), "{remedy}");
-    assert!(!refused.context.contains_key("wisent_errors.unfilled"), "{:?}", refused.context);
-}
+/// The discard port on loopback, where nothing listens on a host that runs
+/// no discard service: https://www.rfc-editor.org/rfc/rfc863
+const NOTHING_LISTENS: &str = "http://127.0.0.1:9/v1/public/reports";
 
 #[test]
 fn an_unreachable_support_files_nothing() {
     let mut case = Case::new("support-unreachable");
-    let port = TcpListener::bind("127.0.0.1:0")
-        .expect("a free port")
-        .local_addr()
-        .expect("its address")
-        .port();
-    std::env::set_var(
-        "WISENT_SUPPORT_URL",
-        format!("http://127.0.0.1:{port}/v1/public/reports"),
-    );
+    std::env::set_var("WISENT_SUPPORT_URL", NOTHING_LISTENS);
     let telemetry = case.telemetry("wisent-errors-test-cli");
     let refused = telemetry
         .file_report(&report("something failed"))
@@ -188,9 +189,15 @@ fn an_unreachable_support_files_nothing() {
     case.note("refusal", json!(refused.detail));
     assert_eq!(refused.code.as_str(), "infra_down");
     let detail = refused.detail.as_deref().expect("a sentence");
-    assert!(detail.contains(&format!("127.0.0.1:{port}")), "{detail}");
-    assert!(detail.contains("nothing was filed"), "{detail}");
-    names_the_product(&refused);
+    let why = detail
+        .strip_prefix(&format!("filing a support report at {NOTHING_LISTENS}: support could not be reached: "))
+        .and_then(|rest| rest.strip_suffix("; observed: nothing was filed"))
+        .unwrap_or_else(|| panic!("{detail}"));
+    assert!(why.contains("Connection refused"), "the transport's own words: {why}");
+    assert_eq!(
+        refused.remedy.as_deref(),
+        Some("send the report again once the network or support is back, from an app's Report a Problem window or with `wisent-errors-test support report`")
+    );
     assert!(telemetry.reports().expect("nothing kept").is_empty());
 }
 
@@ -208,7 +215,16 @@ fn an_address_that_is_not_support_is_named() {
         .file_report(&report("something failed"))
         .expect_err("the answer is not support's");
     case.note("refusal", json!(refused.detail));
-    let remedy = refused.remedy.expect("a fix");
-    assert!(remedy.contains(&elsewhere), "{remedy}");
-    assert!(remedy.contains("/v1/public/reports"), "{remedy}");
+    assert_eq!(refused.code.as_str(), "infra_down");
+    let detail = refused.detail.as_deref().expect("a sentence");
+    let (_answer, status) = detail
+        .strip_prefix(&format!("reading support's answer at {elsewhere}: the answer is not a support service's: "))
+        .and_then(|rest| rest.rsplit_once("; observed: HTTP "))
+        .unwrap_or_else(|| panic!("{detail}"));
+    assert!(status.parse::<u16>().is_ok(), "an HTTP status: {detail}");
+    assert_eq!(
+        refused.remedy.as_deref(),
+        Some(format!("check that {elsewhere} is a support service's /v1/public/reports").as_str())
+    );
+    assert!(telemetry.reports().expect("nothing kept").is_empty());
 }

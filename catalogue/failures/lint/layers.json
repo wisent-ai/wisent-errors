@@ -56,7 +56,7 @@
           "failed": "reading the operands of {program}",
           "cause": "it takes {expected} and was given {count}",
           "observed": "operands given: {operands}",
-          "remedy": "name exactly {expected}: {usage}",
+          "remedy": "name {expected}: {usage}",
           "tests": {"js": "tests/lint/arguments.mjs::a_wrong_number_of_operands_is_refused"}
         }
       ]

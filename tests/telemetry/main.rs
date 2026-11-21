@@ -10,8 +10,7 @@
 
 mod consent;
 mod delivery;
-mod events;
-mod signals;
+mod queued;
 mod store;
 mod support;
 
@@ -98,12 +97,15 @@ impl Drop for Case {
     }
 }
 
-/// The real collector the delivery cases send to.
+/// The real collector the delivery cases send to; without it they are
+/// blocked, never passed.
 pub fn collector() -> String {
-    std::env::var("WISENT_TELEMETRY_TEST_COLLECTOR").expect(
-        "set WISENT_TELEMETRY_TEST_COLLECTOR to the Echo app collector, \
-         https://<echo web>/api/analytics/mobile/collect: these cases run against the real one",
-    )
+    std::env::var("WISENT_TELEMETRY_TEST_COLLECTOR").unwrap_or_else(|_| {
+        panic!(
+            "blocked: WISENT_TELEMETRY_TEST_COLLECTOR names no collector; set it to the Echo app collector, \
+             https://<echo web>/api/analytics/mobile/collect: these cases run against the real one"
+        )
+    })
 }
 
 /// A failure the way a product raises one, with a home path and this

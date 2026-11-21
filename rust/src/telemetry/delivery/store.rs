@@ -86,36 +86,29 @@ pub(super) fn read_json_sized(
     let bytes = match fs::read(path) {
         Ok(bytes) => bytes,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => {
-            return Err(unreadable(
-                path,
-                what,
-                product,
-                service,
-                &error.to_string(),
-                0,
-            ))
-        }
+        Err(error) => return Err(read_refused(path, what, product, service, &error)),
     };
     match serde_json::from_slice::<Value>(&bytes) {
         Ok(value) if value.is_object() => Ok(Some((value, bytes.len()))),
-        Ok(_) => Err(unreadable(
-            path,
-            what,
-            product,
-            service,
-            "it is not a JSON object",
-            bytes.len(),
-        )),
-        Err(error) => Err(unreadable(
-            path,
-            what,
-            product,
-            service,
-            &error.to_string(),
-            bytes.len(),
-        )),
+        Ok(_) => Err(unreadable(path, what, product, service, "it is not a JSON object", bytes.len())),
+        Err(error) => Err(unreadable(path, what, product, service, &error.to_string(), bytes.len())),
     }
+}
+
+/// A file the operating system refused to read, named with what is at its
+/// path and what the operating system answered: what it holds is unknown.
+fn read_refused(path: &Path, what: &str, product: &str, service: &str, error: &std::io::Error) -> Failure {
+    let shown = path.display().to_string();
+    let state = match fs::metadata(path) {
+        Ok(entry) if entry.is_dir() => format!("{shown} is a directory"),
+        Ok(entry) => format!("{shown} is a file of {} bytes", entry.len()),
+        Err(examined) => format!("{shown} cannot be examined either: {examined}"),
+    };
+    own::TELEMETRY_STORE_FILE_READ_REFUSED.failure(
+        RECORD_POINT,
+        service,
+        &[("what", what), ("path", &shown), ("state", &state), ("error", &error.to_string()), ("product", product)],
+    )
 }
 
 fn unreadable(

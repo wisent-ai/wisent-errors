@@ -302,8 +302,10 @@ process group of its own: cancelling the caller sends the group SIGTERM, and a
 further `InstalledProgram.Stop.request()` sends it SIGKILL. The run ends on the
 program's exit; `Outcome.heldOpen` names a stream a process it left running
 still held. A product says the four failures (`missing`, `unverified`,
-`failedToStart`, `unfollowed`) in its own words
-(`tests/program/FleetSignatureTests.swift`, `InstalledProgramTests.swift`). An
+`failedToStart`, `unfollowed`) in its own words (`tests/program/AdmissionTests.swift`,
+`RunOutputTests.swift`, `RunStopTests.swift`: they run the Node.js-signed node
+`WISENT_PROGRAM_TEST_NODE` names and the fleet's stado `WISENT_PROGRAM_TEST_STADO`
+names, each copied into a home under `.build` and found there). An
 app that keeps a server running with Foundation's `Process` checks the file
 with `FleetSignature.verify(file:)` before it starts it, and the process with
 `FleetSignature.verify(process:)` before it reads its answer or sends it a

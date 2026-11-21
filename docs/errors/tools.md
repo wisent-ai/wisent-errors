@@ -67,7 +67,7 @@ Started through: `node codegen/generate.mjs`, `node codegen/generate.mjs --check
 - **What failed:** writing the generated {target}
 - **Cause:** the operating system refused to create or write the file, so the runtime keeps what an older catalogue wrote
 - **Observed state shown:** {state}; the operating system answered {error}
-- **Fix:** let the user running the generator write {target} and its directory, then generate again
+- **Fix:** let the user running the generator write {target_path} and its directory, then generate again
 - **Code:** `config`, exit 1
 - **Test:** JavaScript `tests/tools/generate.mjs::an_unwritable_generated_file_is_refused`
 
@@ -78,7 +78,7 @@ Started through: `node codegen/generate.mjs`, `node codegen/generate.mjs --check
 - **What failed:** removing the generated {target}, which no part of catalogue/failures/ writes any more
 - **Cause:** the operating system refused to remove the file, so the runtime still holds a declaration the catalogue no longer has
 - **Observed state shown:** {state}; its directory: {directory_state}; the operating system answered {error}
-- **Fix:** let the user running the generator write {directory}, or remove {target} yourself, then generate again
+- **Fix:** let the user running the generator write {directory_path}, or remove {target_path} yourself, then generate again
 - **Code:** `config`, exit 1
 - **Test:** JavaScript `tests/tools/generate.mjs::an_unremovable_stale_module_is_refused`
 

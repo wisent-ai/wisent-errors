@@ -25,7 +25,13 @@ A product gives one `diagnosis::Check` (feature `diagnosis`) per functionality
 of its catalogue that has an entry point:
 
 - `Probe::Run(fn)` tries it: `Ok` says what was observed working, `Err` is
-  the `Failure` a user would meet, with its detail and remedy.
+  the `Failure` a user would meet, with its detail and remedy. A `Failure`
+  without either is not printed with words standing in for them: the
+  diagnosis refuses it as
+  `wisent_errors.cli_output.diagnose.probe-failure-unexplained`
+  ([errors/cli-output.md](errors/cli-output.md)), naming the functionality,
+  what the envelope lacks, its point and its code, so the fix is to raise
+  the probe's failure from a declared cause.
 - `Probe::Skipped("why")` says why it is not tried: it changes the user's
   data, or it needs input only its own command carries.
 

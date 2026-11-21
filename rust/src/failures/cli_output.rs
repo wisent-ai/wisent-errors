@@ -83,10 +83,10 @@ pub static CLI_OUTPUT_READ_JSON_INPUT_WRONG_SHAPE: Cause = Cause {
     code: Code::Config,
     usage: false,
     exit: None,
-    failed: "decoding the JSON input {path} as {expected}",
+    failed: "decoding the JSON input {path}",
     cause: "the file is JSON but not the document the command reads: a field is missing, extra, or of another type",
     observed: "at line {line}, column {column}; the decoder answered {error}",
-    remedy: "give the document the fields {expected} declares, or name the file meant for this command",
+    remedy: "give {path} at line {line}, column {column} the value the decoder answered it expected there, or name the file meant for this command",
     test: "tests/cli-output/read_json.rs::an_input_of_the_wrong_shape_is_refused",
 };
 
@@ -143,5 +143,27 @@ pub static CLI_OUTPUT_PRINT: Operation = Operation {
     summary: "print a command's result as pretty JSON, or with --text as one path: value line per field, from the same document",
     docs: "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/cli-output.md",
     causes: &[&CLI_OUTPUT_PRINT_DOCUMENT_UNREPRESENTABLE, &CLI_OUTPUT_PRINT_OUTPUT_CLOSED, &CLI_OUTPUT_PRINT_OUTPUT_UNWRITABLE],
+    warnings: &[],
+};
+
+pub static CLI_OUTPUT_DIAGNOSE_PROBE_FAILURE_UNEXPLAINED: Cause = Cause {
+    id: "probe-failure-unexplained",
+    code: Code::Config,
+    usage: false,
+    exit: None,
+    failed: "trying {operation} for the diagnosis",
+    cause: "its probe failed with an envelope that carries {missing}, so the diagnosis could not say what failed or what fixes it",
+    observed: "failure_point {failure_point}, code {code}",
+    remedy: "raise the probe's failure from a declared cause of {operation}, which carries its detail and its remedy",
+    test: "tests/diagnosis/main.rs::a_probe_failing_without_saying_why_is_refused",
+};
+
+pub static CLI_OUTPUT_DIAGNOSE: Operation = Operation {
+    id: "wisent_errors.cli_output.diagnose",
+    entries: &["Rust: diagnosis::diagnose"],
+    uses: &[],
+    summary: "try every functionality a product's doctor checks and say each as working, failing with what failed and its fix, or not tried and why",
+    docs: "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/cli-output.md",
+    causes: &[&CLI_OUTPUT_DIAGNOSE_PROBE_FAILURE_UNEXPLAINED],
     warnings: &[],
 };

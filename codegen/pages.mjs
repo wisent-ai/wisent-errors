@@ -1,6 +1,7 @@
 // Render docs/errors/<area>.md: every failure this package declares of its
-// own, one page per part of catalogue/failures/, each cause anchored where
-// its refusal's `cause:` line points.
+// own, one page per area of catalogue/failures/ (an area may span parts in a
+// subfolder, as lint/commands.json and lint/layers.json), each cause anchored
+// where its refusal's `cause:` line points.
 
 const RUNTIMES = { rust: 'Rust', js: 'JavaScript', python: 'Python', swift: 'Swift' };
 

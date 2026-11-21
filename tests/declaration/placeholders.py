@@ -7,6 +7,7 @@ catalogue/declaration.json states for every runtime.
     python3 tests/declaration/placeholders.py
 """
 
+import json
 import sys
 import unittest
 from dataclasses import replace
@@ -38,18 +39,34 @@ class Placeholders(unittest.TestCase):
         self.assertEqual(fill("value {value:?}", {"value": "x", "value:?": "y"}), "value {value:?}")
 
     def test_every_placeholder_the_renderer_will_not_fill_is_refused(self):
-        problems = replace(CAUSE, failed="checking {Path} and {deal.title}", remedy="quote {name before passing it").problems()
-        self.assertEqual(len(problems), 3, problems)
-        path_problem, deal_problem, remedy_problem = problems
-        self.assertIn("write {path}", path_problem)
-        self.assertIn("write {deal_title}", deal_problem)
-        self.assertIn("`remedy` opens a placeholder at \"{name before passing it\" that no '}' closes", remedy_problem)
-        self.assertIn("`failed` holds a '}' at \"checking a} value\" that no '{' opened", replace(CAUSE, failed="checking a} value").problems()[0])
+        def malformed(placeholder, suggestion):
+            return f"cause value-unsafe: `failed` holds the placeholder {placeholder}, which the renderer never fills: a placeholder is a lowercase letter, then lowercase letters, digits and '_', between braces, with no format spec; write {suggestion} and have the raising site pass the value already formatted"
+
+        self.assertEqual(
+            replace(CAUSE, failed="checking {Path} and {deal.title}", remedy="quote {name before passing it").problems(),
+            [
+                malformed("{Path}", "{path}"),
+                malformed("{deal.title}", "{deal_title}"),
+                "cause value-unsafe: `remedy` opens a placeholder at \"{name before passing it\" that no '}' closes; close it as {name} or drop the '{'",
+            ],
+        )
+        self.assertEqual(
+            replace(CAUSE, failed="checking a} value").problems(),
+            ["cause value-unsafe: `failed` holds a '}' at \"checking a} value\" that no '{' opened; drop it, or open the placeholder it ends"],
+        )
 
     def test_a_cause_whose_why_is_only_the_raw_message_is_refused(self):
-        problems = replace(CAUSE, cause="{error}").problems()
-        self.assertIn("cause value-unsafe: `cause` names {error}, the raw text of the layer below; `cause` is the declaration's own words, so say it in words and move {error} into `observed`", problems)
-        self.assertTrue(any(problem.startswith('cause value-unsafe: `cause` is only "{error}", the text it wraps') for problem in problems), problems)
+        def wraps(quoted):
+            return f"cause value-unsafe: `cause` is only {quoted}, the text it wraps, so it says nothing of why; state the reason in words (the file is not JSON, the server refused the token) and move the wrapped text into `observed`"
+
+        self.assertEqual(
+            replace(CAUSE, cause="{error}").problems(),
+            [
+                "cause value-unsafe: `cause` names {error}, the raw text of the layer below; `cause` is the declaration's own words, so say it in words and move {error} into `observed`",
+                wraps('"{error}"'),
+            ],
+        )
+        self.assertEqual(replace(CAUSE, cause="{code}: {reason}").problems(), [wraps('"{code}: {reason}"')])
         self.assertEqual(replace(CAUSE, observed="the parser said {problem}").problems(), [])
 
     def test_the_renderer_reads_a_template_as_every_runtime_does(self):
@@ -59,9 +76,14 @@ class Placeholders(unittest.TestCase):
             self.assertTrue(is_placeholder_name(name), name)
         for name in PROBES["placeholder"]["invalid"]:
             self.assertFalse(is_placeholder_name(name), name)
-        for test in PROBES["test_path"]["valid"] + PROBES["test_path"]["invalid"]:
-            refused = any("is not tests/<area>/<file>::<test name>" in problem for problem in replace(CAUSE, test=test).problems())
-            self.assertEqual(refused, test in PROBES["test_path"]["invalid"], test)
+        for test in PROBES["test_path"]["valid"]:
+            self.assertEqual(replace(CAUSE, test=test).problems(), [], test)
+        for test in PROBES["test_path"]["invalid"]:
+            self.assertEqual(
+                replace(CAUSE, test=test).problems(),
+                [f"cause value-unsafe: test {json.dumps(test)} is not tests/<area>/<file>::<test name> (pattern ^tests/[^/:]+(?:/[^/:]+)+::[a-z0-9_]+$); name the real test that provokes it"],
+                test,
+            )
 
 
 if __name__ == "__main__":

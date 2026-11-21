@@ -145,7 +145,7 @@ status`:
 `collector` is `null` with `collector_source` saying why (`none`: neither the
 build nor `WISENT_TELEMETRY_COLLECTOR_URL` names one). `last_delivery.stopped`
 is the collector's own sentence for a refusal (`the collector refused HTTP 403:
-{"error":"Unknown mobile analytics app"}`), the transport error, or, for an
+{"operation":"echo.analytics.collect","cause":"app-undeclared",…}`), the transport error, or, for an
 answer of HTTP 500 and above, the collector's own failure (`the collector failed
 on its own side, HTTP 500: …`): such an event is not refused, nothing on the
 sending machine is to fix, and it goes out again on the next flush.

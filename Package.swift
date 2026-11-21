@@ -34,16 +34,21 @@ let package = Package(
             dependencies: ["WisentErrors"],
             path: "tests",
             sources: [
-                "envelope/BuildTests.swift", "declaration/PlaceholderTests.swift", "warnings/WarningTests.swift",
+                "envelope/EnvelopeBuildTests.swift", "declaration/DeclarationRuleTests.swift",
+                "warnings/WarningDeclarationTests.swift",
                 "explained/ExplainedTests.swift", "explained/DescribedTests.swift",
             ]
         ),
-        // Telemetry against the real Echo app collector (docs/telemetry.md).
+        // Telemetry and support reports, on disk and against the real Echo
+        // app collector and support service (docs/telemetry.md, docs/support.md).
         .testTarget(
             name: "TelemetryTests",
             dependencies: ["WisentErrors", "WisentTelemetryUI"],
             path: "tests/telemetry/swift"
         ),
+        // Runs of real programs copied into a home under .build: the node
+        // WISENT_PROGRAM_TEST_NODE names, which Node.js signs, and the fleet's
+        // stado WISENT_PROGRAM_TEST_STADO names.
         .testTarget(
             name: "WisentProgramTests",
             dependencies: ["WisentProgram"],

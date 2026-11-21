@@ -1,8 +1,10 @@
-// This package's own failure catalogue, read from the parts in
-// catalogue/failures/: one JSON file per area, each `{ area, operations }`.
-// A JSON file has no include of its own, so the catalogue is a directory and
-// this is the one loader that reads it, for the generator and for the
-// commands that raise these failures.
+// This package's own failure catalogue, read from the parts under
+// catalogue/failures/: JSON files at any depth (lint/commands.json,
+// lint/layers.json), each `{ area, operations }`, read in the order of their
+// paths below it. A JSON file has no include of its own, so the catalogue is
+// a directory and this is the one loader that reads it, for the generator
+// and for the commands that raise these failures. Subfolders keep each
+// folder small; an area may span several parts.
 //
 // The loader declares its own causes here, in code, because they are what it
 // says when the parts themselves cannot be read.
@@ -84,20 +86,35 @@ function shapeProblem(part) {
   return null;
 }
 
-/** Every part, in file name order, each `{ path, area, operations }`. */
-export function readParts(directory = FAILURES) {
-  let names;
+/** What `folder` holds, or the loader's refusal naming the folder that cannot be listed. */
+function listed(folder) {
   try {
-    names = readdirSync(directory);
+    return readdirSync(folder, { withFileTypes: true });
   } catch (error) {
-    throw new PartsError('parts-unlisted', { directory, state: stateOf(directory), error: error.message });
+    throw new PartsError('parts-unlisted', { directory: folder, state: stateOf(folder), error: error.message });
   }
-  const files = names.filter((name) => name.endsWith('.json')).sort();
-  if (files.length === 0) throw new PartsError('parts-absent', { directory, listing: names.length ? names.join(', ') : 'nothing' });
+}
+
+/** The .json parts among `entries` of `below` (relative to `directory`) and every folder under it, as `/`-joined paths below `directory`. */
+function partFiles(directory, below, entries) {
+  const files = [];
+  for (const entry of entries) {
+    const relative = below === '' ? entry.name : `${below}/${entry.name}`;
+    if (entry.isDirectory()) files.push(...partFiles(directory, relative, listed(join(directory, relative))));
+    else if (entry.name.endsWith('.json')) files.push(relative);
+  }
+  return files;
+}
+
+/** Every part at any depth, in the order of their paths below `directory`, each `{ path, file, area, operations }` (`file` is the path below it). */
+export function readParts(directory = FAILURES) {
+  const names = listed(directory);
+  const files = partFiles(directory, '', names).sort();
+  if (files.length === 0) throw new PartsError('parts-absent', { directory, listing: names.length ? names.map((entry) => entry.name).join(', ') : 'nothing' });
   const parts = [];
   const seen = new Map();
-  for (const name of files) {
-    const path = join(directory, name);
+  for (const file of files) {
+    const path = join(directory, file);
     let text;
     try {
       text = readFileSync(path, 'utf8');
@@ -121,7 +138,7 @@ export function readParts(directory = FAILURES) {
       }
       seen.set(operation.id, path);
     }
-    parts.push({ path, area: part.area, operations: part.operations });
+    parts.push({ path, file, area: part.area, operations: part.operations });
   }
   return parts;
 }

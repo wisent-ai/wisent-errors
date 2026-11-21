@@ -102,10 +102,15 @@ read:
 
 ## Test
 
-`swift test` runs `tests/telemetry/swift` against the real collector named by
-`WISENT_TELEMETRY_TEST_COLLECTOR`; without it the delivery case is skipped as
-blocked, never passed. `WISENT_TELEMETRY_TEST_FAILING_COLLECTOR` names a
-collector deployment that answers with a server error (an Echo that cannot
-reach its database); its case checks that the events stay queued under the
-collector's own failure, with no deployment remedy, and is skipped as blocked
-without it.
+`swift test --filter TelemetryTests` runs `tests/telemetry/swift`, each case
+in its own directory under the checkout's `.build`, named to the library by
+`WISENT_TELEMETRY_HOME`. `ConsentAndStoreTests`, `UnreachedDeliveryTests`,
+`SettingsWindowTests` and `SupportRefusalTests` need nothing beyond the
+machine. `ReachedDeliveryTests` runs against the real collector named by
+`WISENT_TELEMETRY_TEST_COLLECTOR`, with `WISENT_TELEMETRY_TEST_APP_ID` an app
+it declares; `WISENT_TELEMETRY_TEST_FAILING_COLLECTOR` names a collector
+deployment that answers with a server error (an Echo that cannot reach its
+database), whose case checks that the events stay queued under the
+collector's own failure. `SupportServiceTests` runs against the support
+service of [support.md](../support.md). A case whose variable is unset fails
+naming it, never passes.

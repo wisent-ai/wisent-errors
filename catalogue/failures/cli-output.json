@@ -73,10 +73,10 @@
           "id": "input-wrong-shape",
           "code": "config",
           "usage": false,
-          "failed": "decoding the JSON input {path} as {expected}",
+          "failed": "decoding the JSON input {path}",
           "cause": "the file is JSON but not the document the command reads: a field is missing, extra, or of another type",
           "observed": "at line {line}, column {column}; the decoder answered {error}",
-          "remedy": "give the document the fields {expected} declares, or name the file meant for this command",
+          "remedy": "give {path} at line {line}, column {column} the value the decoder answered it expected there, or name the file meant for this command",
           "tests": {"rust": "tests/cli-output/read_json.rs::an_input_of_the_wrong_shape_is_refused"}
         }
       ]
@@ -118,6 +118,26 @@
           "observed": "the write ended with {kind}: {error}",
           "remedy": "free space on the disk standard output is redirected to, or redirect it elsewhere, and run the command again",
           "tests": {"rust": "tests/cli-output/print.rs::an_unwritable_standard_output_is_refused"}
+        }
+      ]
+    },
+    {
+      "id": "wisent_errors.cli_output.diagnose",
+      "runtimes": ["rust"],
+      "entries": ["Rust: diagnosis::diagnose"],
+      "uses": [],
+      "summary": "try every functionality a product's doctor checks and say each as working, failing with what failed and its fix, or not tried and why",
+      "docs": "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/cli-output.md",
+      "causes": [
+        {
+          "id": "probe-failure-unexplained",
+          "code": "config",
+          "usage": false,
+          "failed": "trying {operation} for the diagnosis",
+          "cause": "its probe failed with an envelope that carries {missing}, so the diagnosis could not say what failed or what fixes it",
+          "observed": "failure_point {failure_point}, code {code}",
+          "remedy": "raise the probe's failure from a declared cause of {operation}, which carries its detail and its remedy",
+          "tests": {"rust": "tests/diagnosis/main.rs::a_probe_failing_without_saying_why_is_refused"}
         }
       ]
     }

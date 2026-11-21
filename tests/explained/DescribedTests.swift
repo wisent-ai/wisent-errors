@@ -32,18 +32,31 @@ final class DescribedTests: XCTestCase {
     func testATypeMismatchNamesTheCodingPath() {
         let data = Data(#"{"name": "a", "items": [1, "two"]}"#.utf8)
         XCTAssertThrowsError(try JSONDecoder().decodeDescribed(Shape.self, from: data)) { error in
-            XCTAssertTrue(
-                error.localizedDescription.hasPrefix("Shape could not be decoded: items.1 is not Int"),
-                error.localizedDescription)
+            var reason = "no failure"
+            do {
+                _ = try JSONDecoder().decode(Shape.self, from: data)
+            } catch DecodingError.typeMismatch(_, let context) {
+                reason = context.debugDescription
+            } catch {
+                reason = "another failure: \(error)"
+            }
+            XCTAssertEqual(error.localizedDescription, "Shape could not be decoded: items.1 is not Int: \(reason)")
         }
     }
 
     func testTextThatIsNotJSONSaysWhereItStopped() {
-        XCTAssertThrowsError(try JSONSerialization.describedObject(with: Data("{\"a\": tru}".utf8))) { error in
+        let text = Data("{\"a\": tru}".utf8)
+        // Foundation's own reason, asked of it the same way.
+        var foundation = "no failure"
+        do {
+            _ = try JSONSerialization.jsonObject(with: text)
+        } catch {
+            foundation = (error as NSError).userInfo[NSDebugDescriptionErrorKey] as? String ?? "no reason given"
+        }
+        XCTAssertThrowsError(try JSONSerialization.describedObject(with: text)) { error in
             XCTAssertTrue(error is DescribedJSONError, String(reflecting: error))
-            XCTAssertNotEqual(
-                error.localizedDescription, "The data couldn't be read because it isn't in the correct format.")
-            XCTAssertTrue(error.localizedDescription.contains("line 1, column"), error.localizedDescription)
+            XCTAssertEqual(error.localizedDescription, foundation)
+            XCTAssertTrue(foundation.contains("line 1, column"), foundation)
         }
     }
 

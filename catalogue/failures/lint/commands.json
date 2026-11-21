@@ -137,7 +137,7 @@
           "cause": "{count} line(s) write failure_point or error_code outside the package, so their derived fields can drift from the catalogue",
           "observed": "{sites}",
           "remedy": "build each envelope with wisent-errors; a log line already parsed, a field declaration or another API's own error_code is a reason to keep the line, and reading it decides which",
-          "tests": {"js": "tests/lint/handrolled.mjs::a_hand_built_envelope_is_listed"}
+          "tests": {"js": "tests/guard/handrolled.mjs::a_hand_built_envelope_is_listed"}
         }
       ]
     }

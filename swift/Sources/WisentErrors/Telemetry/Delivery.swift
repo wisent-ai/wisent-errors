@@ -31,7 +31,17 @@ extension WisentTelemetry {
         let events: [[String: Any]]
         do { events = try queued() } catch { return Delivered(sent: 0, remaining: 0, stopped: "\(error)", skipped: nil) }
         if Self.doNotTrack { return Delivered(sent: 0, remaining: events.count, stopped: nil, skipped: "DO_NOT_TRACK") }
-        switch (try? level()) ?? nil {
+        // A consent file telemetry did not write sends nothing, and the
+        // flush says why instead of reading it as unanswered.
+        let chosen: TelemetryLevel?
+        do {
+            chosen = try level()
+        } catch {
+            let delivered = Delivered(sent: 0, remaining: events.count, stopped: "\(error)", skipped: nil)
+            keep(delivered)
+            return delivered
+        }
+        switch chosen {
         case nil: return Delivered(sent: 0, remaining: events.count, stopped: nil, skipped: "unanswered")
         case .off?: return Delivered(sent: 0, remaining: events.count, stopped: nil, skipped: "off")
         default: break

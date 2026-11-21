@@ -80,10 +80,10 @@ Started through: `Rust: cli_output::read_json`. Uses: none.
 
 ### `wisent_errors.cli_output.read_json.input-wrong-shape`
 
-- **What failed:** decoding the JSON input {path} as {expected}
+- **What failed:** decoding the JSON input {path}
 - **Cause:** the file is JSON but not the document the command reads: a field is missing, extra, or of another type
 - **Observed state shown:** at line {line}, column {column}; the decoder answered {error}
-- **Fix:** give the document the fields {expected} declares, or name the file meant for this command
+- **Fix:** give {path} at line {line}, column {column} the value the decoder answered it expected there, or name the file meant for this command
 - **Code:** `config`, exit 1
 - **Test:** Rust `tests/cli-output/read_json.rs::an_input_of_the_wrong_shape_is_refused`
 
@@ -125,3 +125,20 @@ Started through: `Rust: cli_output::output`. Uses: none.
 - **Fix:** free space on the disk standard output is redirected to, or redirect it elsewhere, and run the command again
 - **Code:** `infra_down`, exit 69
 - **Test:** Rust `tests/cli-output/print.rs::an_unwritable_standard_output_is_refused`
+
+## `wisent_errors.cli_output.diagnose`
+
+try every functionality a product's doctor checks and say each as working, failing with what failed and its fix, or not tried and why
+
+Started through: `Rust: diagnosis::diagnose`. Uses: none.
+
+<a id="wisent_errors-cli_output-diagnose-probe-failure-unexplained"></a>
+
+### `wisent_errors.cli_output.diagnose.probe-failure-unexplained`
+
+- **What failed:** trying {operation} for the diagnosis
+- **Cause:** its probe failed with an envelope that carries {missing}, so the diagnosis could not say what failed or what fixes it
+- **Observed state shown:** failure_point {failure_point}, code {code}
+- **Fix:** raise the probe's failure from a declared cause of {operation}, which carries its detail and its remedy
+- **Code:** `config`, exit 1
+- **Test:** Rust `tests/diagnosis/main.rs::a_probe_failing_without_saying_why_is_refused`

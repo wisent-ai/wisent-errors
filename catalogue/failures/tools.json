@@ -66,7 +66,7 @@
           "failed": "writing the generated {target}",
           "cause": "the operating system refused to create or write the file, so the runtime keeps what an older catalogue wrote",
           "observed": "{state}; the operating system answered {error}",
-          "remedy": "let the user running the generator write {target} and its directory, then generate again",
+          "remedy": "let the user running the generator write {target_path} and its directory, then generate again",
           "tests": {"js": "tests/tools/generate.mjs::an_unwritable_generated_file_is_refused"}
         },
         {
@@ -76,7 +76,7 @@
           "failed": "removing the generated {target}, which no part of catalogue/failures/ writes any more",
           "cause": "the operating system refused to remove the file, so the runtime still holds a declaration the catalogue no longer has",
           "observed": "{state}; its directory: {directory_state}; the operating system answered {error}",
-          "remedy": "let the user running the generator write {directory}, or remove {target} yourself, then generate again",
+          "remedy": "let the user running the generator write {directory_path}, or remove {target_path} yourself, then generate again",
           "tests": {"js": "tests/tools/generate.mjs::an_unremovable_stale_module_is_refused"}
         }
       ]

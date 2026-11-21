@@ -91,7 +91,8 @@ for (const target of targets) {
   try {
     existing = readFileSync(target.path, 'utf8');
   } catch (error) {
-    if (error.code !== 'ENOENT') refuse('wisent_errors.lint.input', error.code === 'EISDIR' ? 'input-is-directory' : 'input-not-permitted', { what: 'the generated file', path: name, state: stateOf(target.path), error: error.message });
+    // The absolute path, so the `chmod u+r` its fix names works from any directory.
+    if (error.code !== 'ENOENT') refuse('wisent_errors.lint.input', error.code === 'EISDIR' ? 'input-is-directory' : 'input-not-permitted', { what: 'the generated file', path: target.path, state: stateOf(target.path), error: error.message });
   }
   if (existing === target.body) {
     console.log(`unchanged  ${name}`);
@@ -106,7 +107,8 @@ for (const target of targets) {
     mkdirSync(dirname(target.path), { recursive: true });
     writeFileSync(target.path, target.body);
   } catch (error) {
-    refuse(GENERATE, 'generated-unwritable', { target: name, state: stateOf(target.path), error: error.message });
+    // The fix names the absolute path, so it works from any directory.
+    refuse(GENERATE, 'generated-unwritable', { target: name, target_path: target.path, state: stateOf(target.path), error: error.message });
   }
   console.log(`written    ${name}`);
 }
@@ -134,8 +136,8 @@ for (const path of stale) {
   try {
     unlinkSync(path);
   } catch (error) {
-    const directory = relative(ROOT, dirname(path));
-    refuse(GENERATE, 'generated-unremovable', { target: name, state: stateOf(path), directory, directory_state: stateOf(dirname(path)), error: error.message });
+    // The fix names absolute paths, so it works from any directory.
+    refuse(GENERATE, 'generated-unremovable', { target: name, target_path: path, directory_path: dirname(path), state: stateOf(path), directory_state: stateOf(dirname(path)), error: error.message });
   }
   console.log(`removed    ${name}`);
 }

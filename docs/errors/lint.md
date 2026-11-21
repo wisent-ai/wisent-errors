@@ -136,7 +136,7 @@ Started through: `node ci/no-handrolled-envelope.mjs`. Uses: `wisent_errors.lint
 - **Observed state shown:** {sites}
 - **Fix:** build each envelope with wisent-errors; a log line already parsed, a field declaration or another API's own error_code is a reason to keep the line, and reading it decides which
 - **Code:** `refused`, exit 1
-- **Test:** JavaScript `tests/lint/handrolled.mjs::a_hand_built_envelope_is_listed`
+- **Test:** JavaScript `tests/guard/handrolled.mjs::a_hand_built_envelope_is_listed`
 
 ## `wisent_errors.lint.arguments`
 
@@ -195,7 +195,7 @@ Started through: run only by the functionalities that use it. Uses: none.
 - **What failed:** reading the operands of {program}
 - **Cause:** it takes {expected} and was given {count}
 - **Observed state shown:** operands given: {operands}
-- **Fix:** name exactly {expected}: {usage}
+- **Fix:** name {expected}: {usage}
 - **Code:** `refused`, exit 2
 - **Test:** JavaScript `tests/lint/arguments.mjs::a_wrong_number_of_operands_is_refused`
 
