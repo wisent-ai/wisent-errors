@@ -81,7 +81,7 @@ def _shown(value: Any) -> str:
 
 def _text(value: Any, field: str, point: str) -> str:
     if not isinstance(value, str):
-        raise DeclaredError(ENVELOPE_BUILD, "field-not-text", {"point": point, "field": field, "kind": _kind(value), "shown": _shown(value)})
+        raise DeclaredError(ENVELOPE_BUILD, "field-not-text", {"point": point, "field": field, "kind": _kind(value), "shown": _shown(value), "conversion": "str(error)"})
     return value.strip()
 
 

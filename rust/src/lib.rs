@@ -34,7 +34,7 @@ pub mod diagnosis;
 
 pub use codes::{Code, GenericSentence, Severity, FAILURE_POINT_PATTERN, GENERIC_SENTENCES};
 pub use invalid::Invalid;
-pub use operation::{catalogue_problems, Cause, Declared, Operation};
+pub use operation::{catalogue_problems, Cause, Class, Declared, Operation};
 pub use warning::{Hazard, Warning};
 
 /// Identifiers a reader needs to find the subject: a host, a subscription, a job.

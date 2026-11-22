@@ -1,6 +1,7 @@
 // Render docs/errors/<area>.md: every failure this package declares of its
-// own, one page per part of catalogue/failures/, each cause anchored where
-// its refusal's `cause:` line points.
+// own, one page per area of catalogue/failures/ (an area may span parts in a
+// subfolder, as lint/commands.json and lint/layers.json), each cause anchored
+// where its refusal's `cause:` line points.
 
 const RUNTIMES = { rust: 'Rust', js: 'JavaScript', python: 'Python', swift: 'Swift' };
 
@@ -21,13 +22,16 @@ function section(operation) {
     // EX_UNAVAILABLE, 69 (https://man.freebsd.org/cgi/man.cgi?query=sysexits); anything else exits its
     // declared status or 1, a failure (https://pubs.opengroup.org/onlinepubs/9799919799/functions/exit.html).
     const exit = cause.usage ? 2 : ['rate_limit', 'timeout', 'infra_down'].includes(cause.code) ? 69 : cause.exit ?? 1;
+    // The class the refusal prints, as rust/src/operation/causes/class.rs's `Class::of` names it: a
+    // usage cause is `usage`, whatever code it carries.
+    const kind = cause.usage ? 'usage' : cause.code;
     text +=
       `\n<a id="${operation.id.replaceAll('.', '-')}-${cause.id}"></a>\n\n### \`${operation.id}.${cause.id}\`\n\n` +
       `- **What failed:** ${cause.failed}\n` +
       `- **Cause:** ${cause.cause}\n` +
       `- **Observed state shown:** ${cause.observed}\n` +
       `- **Fix:** ${cause.remedy}\n` +
-      `- **Code:** \`${cause.code}\`, exit ${exit}\n` +
+      `- **Class:** \`${kind}\`, exit ${exit}\n` +
       `- **Test:** ${tests}\n`;
   }
   return text;

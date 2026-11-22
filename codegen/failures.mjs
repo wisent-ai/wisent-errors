@@ -2,10 +2,12 @@
 // declarations each runtime raises its own failures from: the same causes,
 // the same sentences, in every runtime that can meet them.
 //
-// Rust and Swift get one module per part of the catalogue, every cause a
-// named declaration its raising site refers to, so no generated file grows
-// past what a reader holds as the catalogue grows. JavaScript and Python hold
-// one frozen object per operation and stay one file each.
+// Rust and Swift get one module per area of the catalogue (the parts of one
+// area, as lint/commands.json and lint/layers.json, join into it), every cause
+// a named declaration its raising site refers to, so no generated file grows
+// past what a reader holds as the catalogue grows; its banner names every part
+// by its path below catalogue/failures/. JavaScript and Python hold one frozen
+// object per operation and stay one file each.
 
 import { constant } from './declaration.mjs';
 
@@ -32,7 +34,8 @@ export const swiftFile = (area) => `OwnFailures${pascal(area)}.swift`;
 
 /**
  * One runtime's operations grouped by the part declaring them, in the parts'
- * order, each `{ area, source, operations }`.
+ * order, each `{ area, source, operations }`: `source` names every part of
+ * the area by its path below the repository (catalogue/failures/lint/commands.json).
  */
 export function byArea(operations, parts) {
   const declaring = new Map();
@@ -42,11 +45,13 @@ export function byArea(operations, parts) {
   const areas = new Map();
   for (const operation of operations) {
     const part = declaring.get(operation.id);
-    const area = areas.get(part.area) ?? { area: part.area, source: `catalogue/failures/${part.path.split('/').pop()}`, operations: [] };
+    // fallback: an area's first operation starts its entry with no files or operations yet.
+    const area = areas.get(part.area) ?? { area: part.area, files: [], operations: [] };
+    if (!area.files.includes(part.file)) area.files.push(part.file);
     area.operations.push(operation);
     areas.set(part.area, area);
   }
-  return [...areas.values()];
+  return [...areas.values()].map(({ files, ...area }) => ({ ...area, source: files.map((file) => `catalogue/failures/${file}`).join(', ') }));
 }
 
 export function failuresJs({ operations, banner }) {

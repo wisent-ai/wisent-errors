@@ -6,9 +6,11 @@
 //! part of catalogue/failures/, each declaration named here.
 
 mod cli_output;
+mod command;
 mod envelope;
 mod telemetry;
 
 pub use cli_output::*;
+pub use command::*;
 pub use envelope::*;
 pub use telemetry::*;

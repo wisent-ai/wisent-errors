@@ -3,16 +3,24 @@
   "product": "wisent-errors",
   "releases": false,
   "reason": "The repository is a source library its dependents resolve from git: npm and cargo by a pinned commit, SwiftPM by a version tag, pip by a pinned commit (docs/maintaining/pinning.md). Its version tags mark revisions; it builds and publishes no registry package, binary or image and hosts nothing, so it declares no versioned artifact publisher.",
+  "test_products": [{"product": "stado", "surface": "cli", "release": {"version": "0.23.71", "source_commit": "3b711d6bc83221f2cb9b656ddc8dca1244670fb3"}}],
+  "env": {
+    "WISENT_PROGRAM_TEST_STADO": "~/.local/bin/stado",
+    "WISENT_PROGRAM_TEST_NODE": "~/.local/bin/node",
+    "WISENT_TELEMETRY_TEST_COLLECTOR": "https://telemetry.wisent.com/api/analytics/mobile/collect",
+    "WISENT_TELEMETRY_TEST_APP_ID": "wisent-telemetry-test"
+  },
   "quality": [
     {"name": "checks", "argv": ["node", "ci/check.mjs"], "kind": "test"},
-    {"name": "rust-warnings", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--test", "warnings"], "kind": "test"},
+    {"name": "rust-warnings", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--features", "cli-output,telemetry,diagnosis", "--test", "warnings"], "kind": "test"},
     {"name": "rust-declaration", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--test", "declaration"], "kind": "test"},
     {"name": "rust-envelope", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--test", "envelope"], "kind": "test"},
     {"name": "rust-declared", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--test", "declared"], "kind": "test"},
-    {"name": "rust-cli-output-read", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--test", "cli-output-read"], "kind": "test"},
-    {"name": "rust-cli-output-print", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--test", "cli-output-print"], "kind": "test"},
-    {"name": "rust-diagnosis", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--test", "diagnosis"], "kind": "test"},
-    {"name": "rust-telemetry-delivery-local", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--test", "telemetry", "--", "delivery::a_collector_that_closes_without_answering_ends_the_flush_and_keeps_the_events", "delivery::the_last_delivery_says_when_in_local_time_with_its_offset", "delivery::an_unreachable_collector_keeps_the_events"], "kind": "test"},
-    {"name": "swift-envelope-and-program", "argv": ["swift", "test", "--filter", "WisentErrorsTests|WisentProgramTests"], "kind": "test"}
+    {"name": "rust-cli-output-read", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--features", "cli-output", "--test", "cli-output-read"], "kind": "test"},
+    {"name": "rust-cli-output-print", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--features", "cli-output", "--test", "cli-output-print"], "kind": "test"},
+    {"name": "rust-diagnosis", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--features", "cli-output,telemetry,diagnosis", "--test", "diagnosis"], "kind": "test"},
+    {"name": "rust-errors-page", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--features", "cli-output,telemetry,diagnosis", "--test", "errors"], "kind": "test"},
+    {"name": "rust-telemetry-local-and-collector", "argv": ["kompilator", "test", "--manifest-path", "rust/Cargo.toml", "--features", "cli-output,telemetry,diagnosis", "--test", "telemetry", "--", "the_command_line_says_which_word_it_cannot_read", "consent::", "store::", "queued::", "delivery::unreached::", "delivery::reached::an_event_reaches_the_collector", "delivery::reached::an_app_the_collector_does_not_declare_stays_queued_with_its_refusal", "delivery::reached::an_address_that_is_not_a_collector_is_named", "support::support_report_refuses_what_it_cannot_file_before_anything_is_kept", "support::support_report_names_an_address_that_is_not_support", "support::support_status_names_a_key_file_it_did_not_write", "support::support_report_names_the_status_of_an_answer_that_files_nothing"], "kind": "test"},
+    {"name": "swift-envelope-and-program", "argv": ["swift", "test", "--filter", "EnvelopeBuildTests|DeclarationRuleTests|WarningDeclarationTests|ExplainedTests|DescribedTests|AdmissionTests|RunOutputTests|RunStopTests|ConsentAndStoreTests|UnreachedDeliveryTests|SupportRefusalTests|ReachedDeliveryTests"], "kind": "test"}
   ]
 }

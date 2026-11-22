@@ -28,12 +28,16 @@ import { declarationJs, declarationPython, declarationRust, declarationSwift } f
 import { byArea, failuresJs, failuresPython, failuresRust, failuresRustModule, failuresSwift, failuresSwiftNamespace, rustModule, swiftFile } from './failures.mjs';
 import { pages } from './pages.mjs';
 import { PARTS, operationsFor, readParts } from './parts.mjs';
+import { Words } from '../ci/support/arguments.mjs';
 import { guarded, refuse } from '../ci/support/refuse.mjs';
 import { holding, listDirectory, readJsonInput, stateOf } from '../ci/support/input.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-const CHECK = process.argv.includes('--check');
+// Read through the arguments layer: a misspelt `--check` was ignored, and the generator wrote where it was asked to compare.
+const words = new Words('codegen/generate.mjs', 'node codegen/generate.mjs [--check]', process.argv.slice(2));
+const CHECK = words.flag('--check');
+words.operands('no operand', (count) => count === 0);
 const GENERATE = 'wisent_errors.codegen.generate';
 
 const catalogue = readJsonInput(join(ROOT, 'catalogue', 'codes.json'), 'the vocabulary', 'an object with codes, severities, upstream_status, exit_code, generic_sentences and failure_point', holding('codes', 'severities', 'upstream_status', 'exit_code', 'generic_sentences', 'failure_point'));
@@ -91,7 +95,8 @@ for (const target of targets) {
   try {
     existing = readFileSync(target.path, 'utf8');
   } catch (error) {
-    if (error.code !== 'ENOENT') refuse('wisent_errors.lint.input', error.code === 'EISDIR' ? 'input-is-directory' : 'input-not-permitted', { what: 'the generated file', path: name, state: stateOf(target.path), error: error.message });
+    // The absolute path, so the `chmod u+r` its fix names works from any directory.
+    if (error.code !== 'ENOENT') refuse('wisent_errors.lint.input', error.code === 'EISDIR' ? 'input-is-directory' : 'input-not-permitted', { what: 'the generated file', path: target.path, state: stateOf(target.path), error: error.message });
   }
   if (existing === target.body) {
     console.log(`unchanged  ${name}`);
@@ -106,7 +111,8 @@ for (const target of targets) {
     mkdirSync(dirname(target.path), { recursive: true });
     writeFileSync(target.path, target.body);
   } catch (error) {
-    refuse(GENERATE, 'generated-unwritable', { target: name, state: stateOf(target.path), error: error.message });
+    // The fix names the absolute path, so it works from any directory.
+    refuse(GENERATE, 'generated-unwritable', { target: name, target_path: target.path, state: stateOf(target.path), error: error.message });
   }
   console.log(`written    ${name}`);
 }
@@ -134,8 +140,8 @@ for (const path of stale) {
   try {
     unlinkSync(path);
   } catch (error) {
-    const directory = relative(ROOT, dirname(path));
-    refuse(GENERATE, 'generated-unremovable', { target: name, state: stateOf(path), directory, directory_state: stateOf(dirname(path)), error: error.message });
+    // The fix names absolute paths, so it works from any directory.
+    refuse(GENERATE, 'generated-unremovable', { target: name, target_path: path, directory_path: dirname(path), state: stateOf(path), directory_state: stateOf(dirname(path)), error: error.message });
   }
   console.log(`removed    ${name}`);
 }
