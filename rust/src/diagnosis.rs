@@ -11,6 +11,7 @@
 
 use serde_json::{json, Value};
 
+use crate::failures as own;
 use crate::{Failure, Operation};
 
 /// How one functionality is tried.
@@ -32,8 +33,35 @@ pub struct Check {
 /// What the diagnosis found for one functionality.
 pub enum State {
     Works(String),
-    Fails(Failure),
+    Fails(Failed),
     Skipped(&'static str),
+}
+
+/// A functionality that failed, with what failed and what fixes it: the
+/// probe's own failure when it says both, the diagnosis's refusal of it
+/// (`wisent_errors.cli_output.diagnose.probe-failure-unexplained`) when it
+/// does not. Only [`diagnose`] makes one, so every failure printed says both.
+pub struct Failed {
+    failure: Failure,
+    detail: String,
+    remedy: String,
+}
+
+impl Failed {
+    /// The envelope, as the probe or the diagnosis raised it.
+    pub fn failure(&self) -> &Failure {
+        &self.failure
+    }
+
+    /// What failed, why, and the state observed.
+    pub fn detail(&self) -> &str {
+        &self.detail
+    }
+
+    /// What fixes it.
+    pub fn remedy(&self) -> &str {
+        &self.remedy
+    }
 }
 
 pub struct Finding {
@@ -50,12 +78,38 @@ pub fn diagnose(checks: &[Check]) -> Vec<Finding> {
             state: match &check.probe {
                 Probe::Run(probe) => match probe() {
                     Ok(observed) => State::Works(observed),
-                    Err(failure) => State::Fails(failure),
+                    Err(failure) => State::Fails(failed(check.operation, failure)),
                 },
                 Probe::Skipped(why) => State::Skipped(why),
             },
         })
         .collect()
+}
+
+/// The probe's failure when it says what failed and what fixes it, or the
+/// diagnosis's declared refusal of one that does not.
+fn failed(operation: &Operation, failure: Failure) -> Failed {
+    let missing = match (&failure.detail, &failure.remedy) {
+        (Some(detail), Some(remedy)) => {
+            let (detail, remedy) = (detail.clone(), remedy.clone());
+            return Failed { failure, detail, remedy };
+        }
+        (None, Some(_)) => "no detail",
+        (Some(_), None) => "no remedy",
+        (None, None) => "neither a detail nor a remedy",
+    };
+    let cause = &own::CLI_OUTPUT_DIAGNOSE_PROBE_FAILURE_UNEXPLAINED;
+    let values = [
+        ("operation", operation.id),
+        ("missing", missing),
+        ("failure_point", failure.failure_point.as_str()),
+        ("code", failure.code.as_str()),
+    ];
+    Failed {
+        detail: cause.sentence(&values),
+        remedy: cause.fix(&values),
+        failure: cause.failure(own::CLI_OUTPUT_DIAGNOSE.id, &failure.service, &values),
+    }
 }
 
 /// Every way `checks` and the catalogue `operations` disagree: a
@@ -78,7 +132,11 @@ pub fn problems(operations: &[&'static Operation], checks: &[Check]) -> Vec<Stri
                 operation.id
             )),
             [_] => {}
-            many => problems.push(format!("{} is checked {} times", operation.id, many.len())),
+            many => problems.push(format!(
+                "{} is checked {} times, so the diagnosis would try it more than once and print each answer: keep one Check for it, a Probe::Run or a Probe::Skipped, and drop the others",
+                operation.id,
+                many.len()
+            )),
         }
     }
     for check in checks {
@@ -86,9 +144,11 @@ pub fn problems(operations: &[&'static Operation], checks: &[Check]) -> Vec<Stri
             .iter()
             .any(|operation| operation.id == check.operation.id)
         {
+            let declared: Vec<&str> = operations.iter().map(|operation| operation.id).collect();
             problems.push(format!(
-                "{} is checked but the catalogue does not declare it",
-                check.operation.id
+                "{} is checked but the catalogue does not declare it; the catalogue declares {}: declare it in the catalogue, or drop its Check",
+                check.operation.id,
+                declared.join(", ")
             ));
         }
     }
@@ -114,14 +174,7 @@ pub fn render(findings: &[Finding]) -> String {
             let id = finding.operation.id;
             match &finding.state {
                 State::Works(observed) => format!("ok      {id}: {observed}"),
-                State::Fails(failure) => format!(
-                    "failed  {id}: {}; fix: {}",
-                    failure
-                        .detail
-                        .as_deref()
-                        .unwrap_or("it failed and said nothing more"),
-                    failure.remedy.as_deref().unwrap_or("no remedy is declared")
-                ),
+                State::Fails(failed) => format!("failed  {id}: {}; fix: {}", failed.detail(), failed.remedy()),
                 State::Skipped(why) => format!("skipped {id}: {why}"),
             }
         })
@@ -140,13 +193,13 @@ pub fn to_json(findings: &[Finding]) -> Value {
                     State::Works(observed) => {
                         json!({"operation": id, "state": "works", "observed": observed})
                     }
-                    State::Fails(failure) => json!({
+                    State::Fails(failed) => json!({
                         "operation": id,
                         "state": "fails",
-                        "failure_point": failure.failure_point,
-                        "error_code": failure.code.as_str(),
-                        "detail": failure.detail,
-                        "remedy": failure.remedy,
+                        "failure_point": failed.failure().failure_point,
+                        "error_code": failed.failure().code.as_str(),
+                        "detail": failed.detail(),
+                        "remedy": failed.remedy(),
                     }),
                     State::Skipped(why) => json!({"operation": id, "state": "skipped", "why": why}),
                 }

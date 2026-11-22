@@ -4,15 +4,55 @@
     "reason": "the operating system stops a read part way only when the device under the file goes away during it (a network share dropping, a disk failing); no file a test can write locally is read that way"
   },
   {
-    "test": "tests/cli-output/print.rs::a_closed_standard_output_is_refused",
-    "reason": "output() writes to the standard output of the process that calls it, which the test harness holds open; the crate ships no program a test could start with a closed standard output"
-  },
-  {
-    "test": "tests/cli-output/print.rs::an_unwritable_standard_output_is_refused",
-    "reason": "standard output refuses a write only behind a full disk or a vanished device, and the test harness holds its own standard output open on neither"
-  },
-  {
     "test": "tests/tools/parts.mjs::a_raised_cause_no_part_declares_is_refused",
     "reason": "a command raises a cause no part declares only through a defect in this repository's own command code; no input, file or state provokes it"
+  },
+  {
+    "test": "tests/diagnosis/main.rs::a_probe_failing_without_saying_why_is_refused",
+    "reason": "the diagnosis refuses a probe whose failure carries no detail or no remedy; every probe of `wisent-errors doctor` raises a declared cause, which carries both, so only a defect in a product's own probe code provokes it, and no input, file or state of the command does"
+  },
+  {
+    "test": "tests/explained/ExplainedTests.swift::test_an_interrupted_read_is_refused",
+    "reason": "`wisent-errors-swift envelope read` and `declaration check` are stopped part way through reading a file they may read only when the device under it goes away during the read (a network share dropping, a disk failing); no file a test can write locally is read that way"
+  },
+  {
+    "test": "tests/program/RunOutputTests.swift::test_a_run_whose_end_cannot_be_followed_is_refused",
+    "reason": "`wisent-errors-swift program run` sets SIGCHLD back to its default before it starts the program, so nothing else reaps it, and the program's process group is its own child's; waiting for, reading, writing to or signalling the program then fails only through a defect of WisentProgram or of the system, which no input, file or state of the command provokes"
+  },
+  {
+    "test": "tests/envelope/build.py::test_a_blank_detail_is_refused",
+    "reason": "the Python runtime's failure(), raise_failure and failure_or_fallback can be driven only by a Python interpreter, and the operator forbids running Python on the fleet, so no gate can run a Python test (tests/envelope/build.py is removed); the same declared cause, with the same catalogue sentence, is provoked by the other runtimes' tests the catalogue names for it (tests/envelope/build.mjs for every one, and tests/envelope/build.rs and tests/envelope/EnvelopeBuildTests.swift for the failure-point and service causes), and python/wisent_errors/failures.py is held to the catalogue by node codegen/generate.mjs --check"
+  },
+  {
+    "test": "tests/envelope/build.py::test_a_character_outside_the_grammar_is_refused",
+    "reason": "the Python runtime's failure(), raise_failure and failure_or_fallback can be driven only by a Python interpreter, and the operator forbids running Python on the fleet, so no gate can run a Python test (tests/envelope/build.py is removed); the same declared cause, with the same catalogue sentence, is provoked by the other runtimes' tests the catalogue names for it (tests/envelope/build.mjs for every one, and tests/envelope/build.rs and tests/envelope/EnvelopeBuildTests.swift for the failure-point and service causes), and python/wisent_errors/failures.py is held to the catalogue by node codegen/generate.mjs --check"
+  },
+  {
+    "test": "tests/envelope/build.py::test_a_dangling_separator_is_refused",
+    "reason": "the Python runtime's failure(), raise_failure and failure_or_fallback can be driven only by a Python interpreter, and the operator forbids running Python on the fleet, so no gate can run a Python test (tests/envelope/build.py is removed); the same declared cause, with the same catalogue sentence, is provoked by the other runtimes' tests the catalogue names for it (tests/envelope/build.mjs for every one, and tests/envelope/build.rs and tests/envelope/EnvelopeBuildTests.swift for the failure-point and service causes), and python/wisent_errors/failures.py is held to the catalogue by node codegen/generate.mjs --check"
+  },
+  {
+    "test": "tests/envelope/build.py::test_a_field_that_is_not_text_is_refused",
+    "reason": "the Python runtime's failure(), raise_failure and failure_or_fallback can be driven only by a Python interpreter, and the operator forbids running Python on the fleet, so no gate can run a Python test (tests/envelope/build.py is removed); the same declared cause, with the same catalogue sentence, is provoked by the other runtimes' tests the catalogue names for it (tests/envelope/build.mjs for every one, and tests/envelope/build.rs and tests/envelope/EnvelopeBuildTests.swift for the failure-point and service causes), and python/wisent_errors/failures.py is held to the catalogue by node codegen/generate.mjs --check"
+  },
+  {
+    "test": "tests/envelope/build.py::test_a_segment_starting_with_no_letter_is_refused",
+    "reason": "the Python runtime's failure(), raise_failure and failure_or_fallback can be driven only by a Python interpreter, and the operator forbids running Python on the fleet, so no gate can run a Python test (tests/envelope/build.py is removed); the same declared cause, with the same catalogue sentence, is provoked by the other runtimes' tests the catalogue names for it (tests/envelope/build.mjs for every one, and tests/envelope/build.rs and tests/envelope/EnvelopeBuildTests.swift for the failure-point and service causes), and python/wisent_errors/failures.py is held to the catalogue by node codegen/generate.mjs --check"
+  },
+  {
+    "test": "tests/envelope/build.py::test_an_empty_point_is_refused",
+    "reason": "the Python runtime's failure(), raise_failure and failure_or_fallback can be driven only by a Python interpreter, and the operator forbids running Python on the fleet, so no gate can run a Python test (tests/envelope/build.py is removed); the same declared cause, with the same catalogue sentence, is provoked by the other runtimes' tests the catalogue names for it (tests/envelope/build.mjs for every one, and tests/envelope/build.rs and tests/envelope/EnvelopeBuildTests.swift for the failure-point and service causes), and python/wisent_errors/failures.py is held to the catalogue by node codegen/generate.mjs --check"
+  },
+  {
+    "test": "tests/envelope/build.py::test_an_empty_segment_is_refused",
+    "reason": "the Python runtime's failure(), raise_failure and failure_or_fallback can be driven only by a Python interpreter, and the operator forbids running Python on the fleet, so no gate can run a Python test (tests/envelope/build.py is removed); the same declared cause, with the same catalogue sentence, is provoked by the other runtimes' tests the catalogue names for it (tests/envelope/build.mjs for every one, and tests/envelope/build.rs and tests/envelope/EnvelopeBuildTests.swift for the failure-point and service causes), and python/wisent_errors/failures.py is held to the catalogue by node codegen/generate.mjs --check"
+  },
+  {
+    "test": "tests/envelope/build.py::test_an_empty_service_is_refused",
+    "reason": "the Python runtime's failure(), raise_failure and failure_or_fallback can be driven only by a Python interpreter, and the operator forbids running Python on the fleet, so no gate can run a Python test (tests/envelope/build.py is removed); the same declared cause, with the same catalogue sentence, is provoked by the other runtimes' tests the catalogue names for it (tests/envelope/build.mjs for every one, and tests/envelope/build.rs and tests/envelope/EnvelopeBuildTests.swift for the failure-point and service causes), and python/wisent_errors/failures.py is held to the catalogue by node codegen/generate.mjs --check"
+  },
+  {
+    "test": "tests/envelope/build.py::test_an_off_catalogue_code_is_refused",
+    "reason": "the Python runtime's failure(), raise_failure and failure_or_fallback can be driven only by a Python interpreter, and the operator forbids running Python on the fleet, so no gate can run a Python test (tests/envelope/build.py is removed); the same declared cause, with the same catalogue sentence, is provoked by the other runtimes' tests the catalogue names for it (tests/envelope/build.mjs for every one, and tests/envelope/build.rs and tests/envelope/EnvelopeBuildTests.swift for the failure-point and service causes), and python/wisent_errors/failures.py is held to the catalogue by node codegen/generate.mjs --check"
   }
 ]

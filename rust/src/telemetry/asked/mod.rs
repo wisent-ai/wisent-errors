@@ -145,6 +145,22 @@ impl Telemetry {
         })
     }
 
+    /// Whether this product's telemetry directory can be written now, as a
+    /// product's `doctor` tries it: a probe file written whole beside the
+    /// queue and removed again, which makes the directory when it is not
+    /// there yet. Answers the directory, cleaned as status shows it, or the
+    /// store's refusal naming the file and what the system answered.
+    pub fn check_writable(&self) -> Result<String, Failure> {
+        const WHAT: &str = "the doctor's probe";
+        let Some(directory) = self.directory.as_ref() else {
+            return Err(self.no_home(WHAT));
+        };
+        let probe = directory.join("doctor-probe.json");
+        store::write_json(&probe, WHAT, &json!({ "written_at": store::now() }), self.product.id)?;
+        std::fs::remove_file(&probe).map_err(|error| self.unwritable(WHAT, &probe, &error))?;
+        Ok(format!("{} can be written", self.cleaner.clean(&directory.display().to_string())))
+    }
+
     pub(super) fn no_home(&self, what: &str) -> Failure {
         own::TELEMETRY_STORE_STORE_UNWRITABLE.failure(
             store::RECORD_POINT,

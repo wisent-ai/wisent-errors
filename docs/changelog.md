@@ -2,6 +2,315 @@
 
 ## Unreleased
 
+### A catalogue page names a usage cause by the class its refusal prints, `usage`
+
+- `Operation::markdown` is what `stado errors show --markdown` prints. It
+  said a usage cause under its declared code (`Code: config, exit 2`),
+  which reads as a misconfigured deployment when the refusal is the
+  command line's own. It now prints `Class: usage, exit 2; retrying
+  unchanged will not help`, and every other cause's line reads `Class:
+  <code>`.
+- The class comes from `wisent_errors::Class`, the one source: `Class::of`
+  gives `usage` for a usage cause whatever code it carries, otherwise the
+  code, with its `as_str`, `retryable`, `severity` and `summary`.
+  `wisent_errors::operation::USAGE_SUMMARY` is its usage summary. Stado's
+  `primitives::failure::Class` can re-export it and keep only its own line
+  format.
+- The generated pages docs/errors/*.md (codegen/pages.mjs) print the same
+  `Class:` line.
+- `wisent-errors errors page` prints the command's own catalogue as
+  `Operation::markdown` renders it. `tests/errors/page.rs` compares the
+  whole page with one rendered from catalogue/failures on disk. That
+  catalogue holds usage causes declared `refused` and `not_found`. The new
+  gate is `rust-errors-page`.
+
+### A product's CI holds its doctor and its warnings to the rules through `wisent-errors doctor check` and `warnings check`
+
+- `wisent-errors doctor check <errors-list.json> <doctor.json>` holds the
+  findings a product's `doctor --json` printed to the functionalities its
+  `errors list --json` declares, through `diagnosis::problems`. It refuses
+  a functionality with an entry point and no check, one checked twice, and
+  a check of one the catalogue does not declare as
+  `wisent_errors.command.check.doctor-incomplete`, each problem numbered.
+- `wisent-errors warnings check <warnings-list.json>` holds each warning a
+  product's `warnings list` printed to the declaration rules: a warning
+  declared twice, an empty field, a malformed test path, and an unknown
+  hazard (read with `Hazard::parse`). It refuses them as
+  `wisent_errors.command.check.warnings-invalid`.
+- A file either command cannot read is refused as
+  `wisent_errors.cli_output.read_json` refuses it. A document that is not
+  what the named command prints is refused as `input-shape-invalid`, naming
+  the place and what it holds.
+- `wisent-errors errors list` prints the command's own failure catalogue.
+- `Operation::warning_problems` is public: the warning lines of
+  `Operation::problems` alone, which `warnings check` uses. It replaces the
+  crate-private `declaration_problems`.
+- These rules lost their in-process Rust tests when the tests moved onto
+  the binary. They are tested again through it:
+  `tests/diagnosis/main.rs::doctor_check_holds_the_findings_to_the_errors_list`
+  and
+  `tests/warnings/declaration.rs::warnings_check_holds_each_warning_to_the_declaration_rules`.
+
+### `wisent-errors-swift`, the Swift package's command line, and the Swift tests run it as a process
+
+- `Package.swift` ships an executable, `wisent-errors-swift`
+  (`swift/Sources/wisent-errors-swift`), driving the three libraries the way
+  an app drives them: `envelope build|read`, `declaration cause|check`,
+  `telemetry status|set|failure|show|flush|settings`, `support
+  report|status` and `program run <name> [-- <arguments>]`, which runs an
+  installed program through `WisentProgram`, hands its output on as it
+  comes, stops its whole process group on SIGTERM or SIGINT and kills it on
+  a second. Its refusals are printed in the three lines of the package's
+  other commands and exit with the cause's status; its own are declared in
+  `catalogue/failures/swift-cli.json` (`wisent_errors.swift_cli.arguments`,
+  `input`, `envelope_build`, `declaration_cause`, `declaration_check`,
+  `settings_window`, `program_run`). docs/guides/swift-reporter.md lists
+  every command.
+- Every Swift test runs it as a process, from the products directory `swift
+  test` builds it into (`tests/swift-cli/CommandCase.swift`), its environment
+  cleared and given only `HOME`, `TMPDIR`, `XDG_*` and the product's own
+  variables inside a directory of the case's own under `.build`: one test per
+  command and its story, the exit status, the whole refusal and the files on
+  disk read back after each step. The Swift test targets are one,
+  `WisentErrorsTests`, depending on the executable. Admission is checked
+  against real files' real signatures (an unsigned script, a copy of
+  `/bin/sh`, the fleet's stado under another product's name), the settings
+  window is driven through the Accessibility API, and the collector and
+  support stay the real ones, named by the same variables. Each Swift
+  `tests` pointer in `catalogue/failures/` names the test that now provokes
+  its cause; a file read stopped part way and a run whose end cannot be
+  followed, which no input provokes, are listed in
+  `tests/untested-causes.json`.
+
+### Telemetry and support errors carry their declared refusal whole
+
+- `TelemetryError`'s `unwritable`, `unreadable` and `collectorInvalid` and
+  every `SupportError` case carried the refusal as one joined sentence, so a
+  command could print it only as that line. Each now carries a
+  `DeclaredRefusal` (the functionality, the cause and the values its
+  sentences name), whose `description` is the same sentence, `lines` the
+  three lines a command prints and `exitCode(failureExit:)` the cause's
+  status; `TelemetryError.refusal`, `SupportError.refusal`,
+  `Invalid.refusal` and `WisentTelemetry.Delivered.refusal` hand it on. A
+  consumer matching `.unwritable(let sentence)` reads `refusal.description`.
+
+### A failure reported under a damaged consent file says so
+
+- `WisentTelemetry.failure` read a consent file telemetry did not write as
+  no answer and queued nothing without a word. It still queues nothing, and
+  now says the file's own refusal on stderr, naming the file, what it holds
+  and how to answer again.
+
+### `wisent-errors`, the crate's command line, and its tests run it as a process
+
+- The Rust crate ships a program, `wisent-errors` (`[[bin]]`, built with
+  `cli-output`, `telemetry` and `diagnosis`): the `telemetry status|level|on|
+  off|failure|command|help|show|events|export|flush` and `support
+  report|status` commands every product CLI carries from the crate, run for
+  the product a JSON file named with `--product` describes (`id`, `app_id`,
+  `version`, and optionally the `flush` command started in the background
+  after a reported failure or command), a `doctor` over those
+  functionalities, and `warnings list|page`. A result is printed through
+  `cli_output::output`; a refusal is the three lines every command of the
+  package says, its cause a declared one, its exit status the cause's.
+  docs/command-line.md is its page.
+- Its own refusals are declared in `catalogue/failures/command.json`
+  (`wisent_errors.command.arguments`: no command, an unknown one, a missing
+  or extra operand, an unknown option, an option without its value, a
+  number or a code it cannot read; `wisent_errors.command.product`: no
+  product file, or a field of it that is not what it should be).
+- `tests/telemetry/`, `tests/diagnosis/main.rs` and
+  `tests/warnings/declaration.rs` no longer call the library: each runs the
+  program with its environment cleared and a home of the case's own under
+  `CARGO_TARGET_TMPDIR`, one test per command and its refusals, and reads
+  the exit status, the whole refusal and the store on disk back after every
+  step. The collector and support they reach stay the real ones, named by
+  the same variables. `tests/cli-output/print.rs` is one test of the print's
+  whole story. Each Rust `tests` pointer in `catalogue/failures/` names the
+  test that now provokes its cause; the diagnosis's
+  `probe-failure-unexplained`, which only a product's own probe code meets,
+  is listed in `tests/untested-causes.json`.
+
+### An export that cannot be written names the file, not the telemetry directory
+
+- `Telemetry::export` (`telemetry export <file>`) refused a file it could not
+  write as `store-unwritable`, saying the telemetry directory could not be
+  written and telling the user to make it writable or set
+  `WISENT_TELEMETRY_HOME`, neither of which helps. It is now its own cause,
+  `wisent-errors.telemetry.export.export-unwritable`: the file, how many
+  events, what the system answered and what is where the file would go,
+  fixed by naming a file in a directory the user can write; the events stay
+  queued. `telemetry::operations()` lists the export.
+
+### A collector's or support's answer quoted in a refusal stays on one line
+
+- A refusal quoting an answer that was not the collector's or support's (a
+  `robots.txt`, an HTML error page) carried the answer's line ends into its
+  sentence, so a command's three-line refusal broke into many. The answer
+  is now quoted on one line: JSON as its compact form, anything else as a
+  JSON string.
+
+### Each node command's test tells its whole story as a process with a cleared environment
+
+- Every node command of the package has one test of its whole story: its
+  success and each refusal it gives, one step each, started with
+  `process.execPath` in a case directory under `target/real-tests/`, with
+  the environment cleared to PATH and a HOME, TMPDIR and XDG_* inside the
+  case. After every step the test asserts the exit status and the whole of
+  stdout and stderr, then reads the case's files back byte for byte and its
+  home back empty. The tests are `tests/lint/scan.mjs`,
+  `tests/lint/catalogue.mjs`, `tests/lint/input.mjs`, `tests/lint/paths.mjs`,
+  `tests/lint/arguments.mjs`, `tests/guard/handrolled.mjs`,
+  `tests/warnings/standard.mjs`, `tests/tools/errors.mjs`,
+  `tests/tools/parts.mjs`, `tests/tools/census.mjs`,
+  `tests/tools/inventory.mjs` and `tests/tools/generate.mjs`.
+  `tests/ship/check.mjs` runs `node ci/check.mjs` on a copy of the package
+  whose schema names a code the catalogue lacks. Each cause's `js` test
+  pointer in `catalogue/failures/` names the test that now provokes it.
+- `node codegen/generate.mjs` reads its words through
+  `wisent_errors.lint.arguments`, as every other command does. A misspelt
+  `--chek` was ignored, so the generator wrote the files it had been asked
+  only to compare. Now an option it lacks is refused with `option-unknown`
+  and an operand with `operands-miscounted`, each naming
+  `node codegen/generate.mjs [--check]`.
+- A JSON input whose decoder stopped at an unexpected token now has its
+  line and column named. V8 gives no position for such a token, only the
+  text around it, so the refusal read "a place the decoder did not name".
+  The quoted text's line breaks are written as `\n`, so the refusal keeps to
+  its three lines; a catalogue part that is not JSON says its decoder answer
+  on one line too.
+- A `scan` baseline of the wrong shape names the entry that breaks it: a
+  path holding a number instead of its sentences, or a count that is not a
+  number.
+- A `--sources` path of `catalogue` that does not exist is refused as
+  `path-absent`, naming the directory meant to hold it. It used to be
+  `path-unreadable`, whose `chmod` cannot fix a typo.
+- `codegen/parts.mjs` points the loader's causes a part on disk can provoke
+  at `tests/tools/parts.mjs::errors_reads_every_part_or_refuses_the_one_it_cannot`.
+
+### The declaration rules are tested through the command a product's CI runs, in node
+
+- `tests/declaration/placeholders.py` is gone: it called the Python
+  runtime's template internals in-process, and the gates run no Python.
+  `tests/declaration/listing.mjs` takes its story: a product's listing,
+  printed through `catalogue`, is run through `node ci/error-standard.mjs
+  catalogue` as a process. It covers each placeholder, raw-message and
+  test-path probe of catalogue/declaration.json. For each it asserts the
+  whole output and exit status, then reads the listing back unchanged and
+  the case's HOME and TMPDIR empty.
+- `tests/envelope/build.py` is gone too: no gate may run Python. Each
+  envelope refusal it provoked in the Python runtime is provoked, with the
+  same catalogue sentence, by `tests/envelope/build.mjs`, and the
+  failure-point and service ones also by `tests/envelope/build.rs` and
+  `wisent-errors-swift envelope build`
+  (`tests/envelope/EnvelopeBuildTests.swift`). Its nine `python` pointers
+  stay in catalogue/failures/envelope.json, so the Python runtime keeps those
+  causes, and are listed in tests/untested-causes.json with that reason. The
+  Python runtime's raising code (`failure`, `raise_failure`,
+  `failure_or_fallback`) has no test until a gate runs Python;
+  `python/wisent_errors/failures.py` is still held to the catalogue by
+  `node codegen/generate.mjs --check`.
+
+### The gates are handed the stado, node and collector the Swift cases run
+
+- `.wisent-release.json` declares what every queued gate's run is given:
+  Stado's CLI as a test product, `WISENT_PROGRAM_TEST_STADO` and
+  `WISENT_PROGRAM_TEST_NODE` naming that stado and the Node.js release Stado
+  links into the run's home (`~/.local/bin/stado`, `~/.local/bin/node`), and
+  `WISENT_TELEMETRY_TEST_COLLECTOR` and `WISENT_TELEMETRY_TEST_APP_ID` naming
+  the public Echo collector and `wisent-telemetry-test`, the app
+  echo-deployment's `sources/apps.json` declares for these cases. The
+  WisentProgram cases failed every gate with `WISENT_PROGRAM_TEST_NODE is not
+  set`. A collector that fails on its side
+  (`WISENT_TELEMETRY_TEST_FAILING_COLLECTOR`) and a support service whose agent
+  API a gate reaches (`WISENT_SUPPORT_TEST_URL`,
+  `WISENT_SUPPORT_TEST_AGENT_TOKEN`) exist nowhere a gate host reaches, so
+  `ReachedDeliveryTests`' failing-collector case and `SupportServiceTests`
+  still name their variable.
+
+### The manifest's test comment names kompilator
+
+- `rust/Cargo.toml` says the `cli_output`, `telemetry` and `diagnosis` tests
+  run in every `kompilator test`.
+
+### The tools journeys keep their temporary files in their own case
+
+- `tests/tools/census.mjs` and `tests/tools/inventory.mjs` run git and the
+  tools with `TMPDIR` set to the case's own home under `target/real-tests`,
+  as they already set HOME there, so nothing they start writes to the system
+  temporary directory.
+
+### A JSON input of the wrong shape is refused in words, not by a Rust type
+
+- `cli_output::read_json`'s `input-wrong-shape` refusal named the Rust type
+  the input was decoded into (`alloc::vec::Vec<crate::Record>`), which a
+  person running the command cannot act on. It now names the file and the
+  line and column where the decoder stopped, and its fix is to give that
+  place the value the decoder answered it expected there.
+  `ReadJsonError::Parse` no longer carries `expected`.
+
+### Every command's tests compare the whole refusal, and success paths are tested
+
+- The tests of `ci/error-standard.mjs` (`scan`, `catalogue`, `errors`),
+  `ci/warning-standard.mjs`, `ci/no-handrolled-envelope.mjs`,
+  `ci/find-implementations.mjs`, `codegen/generate.mjs` and
+  `tests/inventory.mjs` compare each run's whole stdout and stderr and its
+  exit status, with what the operating system, git and the decoder answer
+  read by asking them the same way, instead of matching a part of a
+  sentence. New cases cover what passes: a clean tree and an allowed
+  baseline for `scan`, `--sources` and an entry the inventory lacks for
+  `catalogue`, the package's own listing for `errors`, an adopted, a stale
+  and a detached checkout for the census, the listed lines of a committed
+  revision for the inventory, a written-back file for the generator, and a
+  clean tree, a clean file and the package's own source for the guard.
+- The guard's test moved to `tests/guard/handrolled.mjs`; the Rust delivery
+  tests are split into `tests/telemetry/delivery/reached.rs` and
+  `unreached.rs`, and the queue's into `tests/telemetry/queued/`, so no test
+  folder holds more than five files. The catalogue's test pointers name the
+  new files.
+- Delivery, consent and support refusals are compared whole in Rust, the
+  collector's and support's own words being the one part read as part; an
+  unreachable collector or support is the discard port on loopback.
+- Each runtime's envelope tests build a whole envelope, render and chain it,
+  and salvage a malformed one, beside the refusals.
+- A Python field that is not text was told to pass `String(error.message)`,
+  JavaScript's spelling; `field-not-text` now names each runtime's own
+  (`{conversion}`: `String(error.message)` in JavaScript, `str(error)` in
+  Python).
+- A telemetry file the operating system refuses to read (no permission, a
+  directory in its place) was refused in Rust as "not what telemetry wrote"
+  holding 0 bytes, and thrown in Swift as the bare system error. Both now
+  refuse with the declared `wisent-errors.telemetry.store.file-read-refused`,
+  naming what is at the path and what the operating system answered.
+- A Swift flush read a damaged consent file as unanswered and said nothing;
+  it now stops with the file's own refusal, kept in `delivery.json`.
+- A census or inventory with no git to start said `PATH ;` for an empty
+  PATH; it now says `PATH holds ""`, or `PATH is unset`.
+- The generator's refusal of a generated file it may not read names the
+  file by its absolute path, so its `chmod u+r` works from any directory;
+  the fixes of `generated-unwritable` and `generated-unremovable` name the
+  file and its directory by absolute path too (`{target_path}`,
+  `{directory_path}`), while what failed keeps the repository-relative name.
+- A diagnosis probe failing with an envelope that carried no detail or no
+  remedy was printed with filler ("it failed and said nothing more", "no
+  remedy is declared"). `diagnosis::diagnose` now refuses it with the
+  declared `wisent_errors.cli_output.diagnose.probe-failure-unexplained`,
+  naming the functionality, what the envelope lacks, its point and its code;
+  `State::Fails` holds a `Failed` whose detail and remedy are always said.
+  A consumer matching `State::Fails(failure)` reads `failed.failure()`,
+  `failed.detail()` and `failed.remedy()`.
+- Echo's collector answers an undeclared app with its declared cause
+  `app-undeclared`, so `collector-refused`'s fix names that cause, where it
+  named the words "Unknown mobile analytics app" Echo no longer says; the
+  Rust test compares the collector's operation, cause, sentence and fix
+  whole.
+- The package's own failure catalogue may keep parts in subfolders of
+  `catalogue/failures/`: `codegen/parts.mjs` reads every `.json` at any depth
+  in path order and refuses a subfolder it cannot list with `parts-unlisted`
+  naming it. The lint parts moved to `catalogue/failures/lint/commands.json`
+  and `lint/layers.json`, so no catalogue folder holds more than five files;
+  a generated banner names each part by its path below `catalogue/failures/`.
+
 ### `WisentProgram` runs only the program the fleet signed
 
 - `InstalledProgram` ran the program the product's variable named, else the

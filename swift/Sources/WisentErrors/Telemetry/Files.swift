@@ -16,14 +16,32 @@ extension WisentTelemetry {
             data = try Data(contentsOf: path)
         } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {
             return nil
+        } catch {
+            throw TelemetryError.unreadable(OwnFailures.telemetryStore.refusal(OwnFailures.telemetryStoreFileReadRefused, [
+                "what": what, "path": path.path, "state": Self.stateOf(path), "error": error.explained, "product": product.id,
+            ]))
         }
         guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
-            throw TelemetryError.unreadable(OwnFailures.telemetryStoreFileUnreadable.refusal([
+            throw TelemetryError.unreadable(OwnFailures.telemetryStore.refusal(OwnFailures.telemetryStoreFileUnreadable, [
                 "what": what, "path": path.path, "why": "it is not a JSON object",
                 "bytes": String(data.count), "product": product.id,
             ]))
         }
         return (object, data.count)
+    }
+
+    /// What is at `path`, as the refusal of a read says it.
+    static func stateOf(_ path: URL) -> String {
+        do {
+            let values = try path.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey])
+            switch (values.isDirectory, values.fileSize) {
+            case (true?, _): return "\(path.path) is a directory"
+            case (_, let size?): return "\(path.path) is a file of \(size) bytes"
+            default: return "\(path.path) is neither a file nor a directory"
+            }
+        } catch {
+            return "\(path.path) cannot be examined either: \(error.explained)"
+        }
     }
 
     func writeObject(_ object: [String: Any], to path: URL, what: String) throws {
@@ -35,7 +53,7 @@ extension WisentTelemetry {
             defer { lock.unlock() }
             try data.write(to: path, options: .atomic)
         } catch {
-            throw TelemetryError.unwritable(OwnFailures.telemetryStoreStoreUnwritable.refusal([
+            throw TelemetryError.unwritable(OwnFailures.telemetryStore.refusal(OwnFailures.telemetryStoreStoreUnwritable, [
                 "what": what, "path": path.path, "why": error.explained, "directory": folder.path,
             ]))
         }
@@ -49,7 +67,7 @@ extension WisentTelemetry {
         } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError {
             return
         } catch {
-            throw TelemetryError.unwritable(OwnFailures.telemetryStoreStoreUnwritable.refusal([
+            throw TelemetryError.unwritable(OwnFailures.telemetryStore.refusal(OwnFailures.telemetryStoreStoreUnwritable, [
                 "what": what, "path": path.path, "why": error.explained,
                 "directory": path.deletingLastPathComponent().path,
             ]))

@@ -3,7 +3,7 @@
 //! what only a product's whole catalogue shows.
 
 use super::template::fill;
-use super::{Cause, Operation};
+use super::{Cause, Class, Operation};
 use crate::declaration as rules;
 use crate::render::escape;
 use crate::{Code, Failure};
@@ -61,7 +61,7 @@ impl Operation {
                     .map(|problem| format!("operation {id}: {problem}")),
             );
         }
-        problems.extend(crate::warning::declaration_problems(self));
+        problems.extend(self.warning_problems());
         problems
     }
 
@@ -119,7 +119,11 @@ impl Operation {
             self.causes.len()
         );
         for cause in self.causes {
-            let retry = if cause.code.retryable() {
+            // The class its refusal prints: a usage cause is `usage`, whatever
+            // code it carries, so the page never reads a mistyped command
+            // line as a misconfigured deployment.
+            let class = Class::of(cause);
+            let retry = if class.retryable() {
                 "retrying unchanged can help"
             } else {
                 "retrying unchanged will not help"
@@ -130,7 +134,7 @@ impl Operation {
                  - **Cause:** {cause_text}\n\
                  - **Observed state shown:** {observed}\n\
                  - **Fix:** {remedy}\n\
-                 - **Code:** `{code}`, exit {exit}; {retry}\n\
+                 - **Class:** `{class}`, exit {exit}; {retry}\n\
                  - **Test:** `{test}`\n",
                 anchor = cause.anchor(self),
                 operation = self.id,
@@ -139,7 +143,6 @@ impl Operation {
                 cause_text = cause.cause,
                 observed = cause.observed,
                 remedy = cause.remedy,
-                code = cause.code,
                 exit = cause.exit_code(failure_exit),
                 test = cause.test,
             ));

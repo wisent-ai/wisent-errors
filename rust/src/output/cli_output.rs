@@ -37,8 +37,6 @@ pub enum ReadJsonError {
     Parse {
         path: PathBuf,
         source: serde_json::Error,
-        /// The type the file was decoded as.
-        expected: &'static str,
         bytes: usize,
         /// The line the decoder stopped at, as the file holds it.
         line_text: String,
@@ -113,10 +111,9 @@ impl ReadJsonError {
                     std::env::current_dir().map_or_else(|error| format!("a working directory that cannot be read ({error})"), |dir| dir.display().to_string()),
                 ),
             ],
-            Self::Parse { path, source, expected, bytes, line_text } => vec![
+            Self::Parse { path, source, bytes, line_text } => vec![
                 ("path", path.display().to_string()),
                 ("error", source.to_string()),
-                ("expected", (*expected).to_owned()),
                 ("bytes", bytes.to_string()),
                 ("line", source.line().to_string()),
                 ("column", source.column().to_string()),
@@ -162,7 +159,6 @@ pub fn read_json<T: DeserializeOwned>(path: impl AsRef<Path>) -> Result<T, ReadJ
             .map_or_else(String::new, str::to_owned);
         ReadJsonError::Parse {
             path: path.to_path_buf(),
-            expected: std::any::type_name::<T>(),
             bytes: input.len(),
             line_text,
             source,

@@ -40,6 +40,9 @@ export function stateOf(path) {
   }
 }
 
+/** What PATH is, for the refusal of a program that could not be started: unset, or what it holds, quoted so an empty one reads as empty. */
+export const pathVariable = () => (process.env.PATH === undefined ? 'is unset' : `holds ${JSON.stringify(process.env.PATH)}`);
+
 /** What the directory meant to hold `path` holds, for a refusal of an absent path. */
 export function parentOf(path) {
   const parent = dirname(resolve(path));
@@ -72,12 +75,13 @@ export function describe(value) {
 
 /**
  * Where the decoder stopped in `text`, as `line L, column C: <that line>`,
- * read from the position V8 names (`at position N`) or the end for input cut
- * short; a decoder that names neither is said as such.
+ * read from the position V8 names (`at position N`), the end for input cut
+ * short, or the text V8 quotes around an unexpected token (tokenAt); a
+ * decoder that names none of these is said as such.
  */
 export function stopOf(text, message) {
   const named = /position (?<position>\d+)/.exec(message);
-  const at = named ? Number(named.groups.position) : /end of (JSON )?input/i.test(message) ? text.length : null;
+  const at = named ? Number(named.groups.position) : /end of (JSON )?input/i.test(message) ? text.length : tokenAt(text, message);
   if (at === null) return 'a place the decoder did not name';
   const before = text.slice(0, at).split('\n');
   const line = before.length;
@@ -85,6 +89,39 @@ export function stopOf(text, message) {
   const shown = text.split('\n')[line - 1] ?? '';
   return `line ${line}, column ${column}: ${JSON.stringify(shown)}`;
 }
+
+/**
+ * Where an unexpected token stands in `text`. V8 names no position for one; it
+ * quotes the whole text when it is shorter than 21 characters, else up to 10
+ * characters each side of the token, `...` marking a cut
+ * (https://github.com/v8/v8/blob/main/src/json/json-parser.cc,
+ * ReportUnexpectedToken). The token is the 11th character of a quote cut on
+ * the left and the 10th from the end of one cut only on the right; in a whole
+ * quote it is where a prefix of the text first stops being JSON cut short.
+ * Null when the message is no such quote.
+ */
+function tokenAt(text, message) {
+  const quoted = /^Unexpected token '[\s\S]', (?<left>\.\.\.)?"(?<context>[\s\S]*)"(?<right>\.\.\.)? is not valid JSON$/.exec(message);
+  if (quoted === null) return null;
+  const { left, context, right } = quoted.groups;
+  if (left !== undefined) {
+    const start = text.indexOf(context);
+    return start < 0 ? null : start + 10;
+  }
+  if (right !== undefined) return context.length - 10;
+  for (let end = 1; end <= text.length; end += 1) {
+    try {
+      JSON.parse(text.slice(0, end));
+    } catch (error) {
+      // discarded: a prefix cut short fails too; only the first unexpected token is where the text stops
+      if (error.message.startsWith('Unexpected token ')) return end - 1;
+    }
+  }
+  return null;
+}
+
+/** A decoder's answer on one line: V8 quotes the text it stopped in, line breaks and all, which would break a refusal's three lines. */
+export const oneLine = (answer) => answer.replaceAll('\n', '\\n');
 
 /**
  * One JSON input file. `accept(value)` answers what the value holds that is
@@ -98,7 +135,7 @@ export function readJsonInput(path, what, expected, accept = () => null) {
   } catch (error) {
     // The start shown is the file's first line, where a reader looks first,
     // not a chosen number of characters.
-    return refuse(INPUT, 'input-not-json', { what, path, expected, bytes: String(Buffer.byteLength(text)), stop: stopOf(text, error.message), quoted_start: JSON.stringify(text.split('\n')[0]), error: error.message });
+    return refuse(INPUT, 'input-not-json', { what, path, expected, bytes: String(Buffer.byteLength(text)), stop: stopOf(text, error.message), quoted_start: JSON.stringify(text.split('\n')[0]), error: oneLine(error.message) });
   }
   const found = accept(value);
   if (found !== null) refuse(INPUT, 'input-wrong-shape', { what, path, expected, found });
@@ -125,20 +162,27 @@ export function openDirectory(path, what) {
   return entry;
 }
 
-/** The names in a directory a command walks, refused when it cannot be listed. */
+/**
+ * The names in a directory a command walks, refused when it cannot be listed.
+ * Nothing at the path is refused as absent, not as a listing the operating
+ * system refused: a path `--sources` names that does not exist is a typo, and
+ * `chmod` cannot fix it.
+ */
 export function listDirectory(path, what) {
   try {
     return readdirSync(path, { withFileTypes: true });
   } catch (error) {
+    if (error.code === 'ENOENT') return refuse(PATHS, 'path-absent', { what, path, parent: parentOf(path), cwd: process.cwd() });
     return refuse(PATHS, 'path-unreadable', { what, path, state: stateOf(path), error: error.message });
   }
 }
 
-/** One file of a tree a command walks, refused when it cannot be read. */
+/** One file of a tree a command walks, refused when it cannot be read, or as absent when nothing is at the path. */
 export function readTreeFile(path, what) {
   try {
     return readFileSync(path, 'utf8');
   } catch (error) {
+    if (error.code === 'ENOENT') return refuse(PATHS, 'path-absent', { what, path, parent: parentOf(path), cwd: process.cwd() });
     return refuse(PATHS, 'path-unreadable', { what, path, state: stateOf(path), error: error.message });
   }
 }

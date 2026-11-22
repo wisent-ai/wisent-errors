@@ -20,7 +20,7 @@ extension WisentTelemetry {
         while runtime.hasSuffix("/") { runtime.removeLast() }
         guard !runtime.isEmpty else { return (Self.publicSupport, "wisent-errors") }
         guard let url = URL(string: runtime), Self.supportAcceptable(url) else {
-            throw SupportError.addressInvalid(OwnFailures.supportExchangeSupportAddressInvalid.refusal(["address": runtime]))
+            throw SupportError.addressInvalid(OwnFailures.supportExchange.refusal(OwnFailures.supportExchangeSupportAddressInvalid, ["address": runtime]))
         }
         return (url, "WISENT_SUPPORT_URL")
     }
@@ -39,7 +39,7 @@ extension WisentTelemetry {
     public func fileReport(subject: String?, description: String, email: String?, withFailure: Bool) async throws -> [String: Any] {
         let description = description.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !description.isEmpty else {
-            throw SupportError.descriptionEmpty(OwnFailures.supportReportSupportDescriptionEmpty.refusal(["product": product.id]))
+            throw SupportError.descriptionEmpty(OwnFailures.supportReport.refusal(OwnFailures.supportReportSupportDescriptionEmpty, ["product": product.id]))
         }
         let address = try supportAddress().url
         guard let folder = file("support") else { throw TelemetryError.noHome }
@@ -66,7 +66,7 @@ extension WisentTelemetry {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let answer = try await exchange(request, doing: "filing a support report", observed: "nothing was filed")
         guard let id = answer["id"] as? String, let key = answer["access_key"] as? String else {
-            throw SupportError.answerUnreadable(OwnFailures.supportExchangeSupportAnswerUnreadable.refusal([
+            throw SupportError.answerUnreadable(OwnFailures.supportExchange.refusal(OwnFailures.supportExchangeSupportAnswerUnreadable, [
                 "address": address.absoluteString, "answer": "\(answer)", "status": "201",
             ]))
         }
@@ -137,7 +137,7 @@ extension WisentTelemetry {
             }.resume()
         }
         if let failure {
-            throw SupportError.unreachable(OwnFailures.supportExchangeSupportUnreachable.refusal([
+            throw SupportError.unreachable(OwnFailures.supportExchange.refusal(OwnFailures.supportExchangeSupportUnreachable, [
                 "doing": doing, "address": address, "why": failure, "observed": observed, "product": product.id,
             ]))
         }
@@ -146,32 +146,36 @@ extension WisentTelemetry {
         if (200..<300).contains(status), let object { return object }
         let error = object?["error"] as? [String: Any]
         if !(200..<300).contains(status), let reason = (error?["message"] ?? error?["code"]) as? String {
-            throw SupportError.refused(OwnFailures.supportExchangeSupportRefused.refusal([
+            throw SupportError.refused(OwnFailures.supportExchange.refusal(OwnFailures.supportExchangeSupportRefused, [
                 "doing": doing, "address": address, "status": String(status), "answer": reason, "observed": observed,
                 "product": product.id,
             ]))
         }
-        throw SupportError.answerUnreadable(OwnFailures.supportExchangeSupportAnswerUnreadable.refusal([
+        throw SupportError.answerUnreadable(OwnFailures.supportExchange.refusal(OwnFailures.supportExchangeSupportAnswerUnreadable, [
             "address": address, "answer": text, "status": String(status),
         ]))
     }
 }
 
-/// Why a support report could not be filed or read, as the sentence it says:
-/// the refusal of a declared cause of catalogue/failures/telemetry.json
-/// (`OwnFailures.supportReport…`, `OwnFailures.supportExchange…`).
+/// Why a support report could not be filed or read: the refusal of a
+/// declared cause of catalogue/failures/telemetry.json
+/// (`OwnFailures.supportReport…`, `OwnFailures.supportExchange…`), said as
+/// its sentence.
 public enum SupportError: Error, CustomStringConvertible, Sendable {
-    case descriptionEmpty(String)
-    case addressInvalid(String)
-    case refused(String)
-    case unreachable(String)
-    case answerUnreadable(String)
+    case descriptionEmpty(DeclaredRefusal)
+    case addressInvalid(DeclaredRefusal)
+    case refused(DeclaredRefusal)
+    case unreachable(DeclaredRefusal)
+    case answerUnreadable(DeclaredRefusal)
 
-    public var description: String {
+    public var description: String { refusal.description }
+
+    /// The declared refusal it carries.
+    public var refusal: DeclaredRefusal {
         switch self {
-        case .descriptionEmpty(let sentence), .addressInvalid(let sentence), .refused(let sentence),
-             .unreachable(let sentence), .answerUnreadable(let sentence):
-            return sentence
+        case .descriptionEmpty(let refusal), .addressInvalid(let refusal), .refused(let refusal),
+             .unreachable(let refusal), .answerUnreadable(let refusal):
+            return refusal
         }
     }
 }

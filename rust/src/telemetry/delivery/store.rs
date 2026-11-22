@@ -40,8 +40,7 @@ pub(super) fn write_json(
     value: &Value,
     service: &str,
 ) -> Result<(), Failure> {
-    let directory = path.parent().unwrap_or(path);
-    let unwritable = |error: std::io::Error| {
+    write_whole(path, value).map_err(|error| {
         own::TELEMETRY_STORE_STORE_UNWRITABLE.failure(
             RECORD_POINT,
             service,
@@ -49,19 +48,41 @@ pub(super) fn write_json(
                 ("what", what),
                 ("path", &path.display().to_string()),
                 ("why", &error.to_string()),
-                ("directory", &directory.display().to_string()),
+                ("directory", &directory_of(path).display().to_string()),
             ],
         )
-    };
-    fs::create_dir_all(directory).map_err(unwritable)?;
+    })
+}
+
+/// The directory `path` is written in: `.` for a bare file name.
+pub(super) fn directory_of(path: &Path) -> &Path {
+    match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    }
+}
+
+/// What is at `directory`, for a refusal of a file that could not be
+/// written in it.
+pub(super) fn directory_state(directory: &Path) -> String {
+    let shown = directory.display();
+    match fs::metadata(directory) {
+        Ok(found) if found.is_dir() => format!("{shown} is a directory"),
+        Ok(_) => format!("{shown} is a file, not a directory"),
+        Err(error) => format!("{shown} cannot be examined: {error}"),
+    }
+}
+
+/// [`write_json`]'s write, answering what the system said.
+pub(super) fn write_whole(path: &Path, value: &Value) -> std::io::Result<()> {
+    fs::create_dir_all(directory_of(path))?;
     let mut partial = path.as_os_str().to_os_string();
     partial.push(".partial");
     let partial = PathBuf::from(partial);
-    let mut file = fs::File::create(&partial).map_err(unwritable)?;
+    let mut file = fs::File::create(&partial)?;
     file.write_all(value.to_string().as_bytes())
-        .and_then(|()| file.sync_all())
-        .map_err(unwritable)?;
-    fs::rename(&partial, path).map_err(unwritable)
+        .and_then(|()| file.sync_all())?;
+    fs::rename(&partial, path)
 }
 
 /// The JSON object at `path`, `None` when there is no file, and the refusal
@@ -86,36 +107,29 @@ pub(super) fn read_json_sized(
     let bytes = match fs::read(path) {
         Ok(bytes) => bytes,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => {
-            return Err(unreadable(
-                path,
-                what,
-                product,
-                service,
-                &error.to_string(),
-                0,
-            ))
-        }
+        Err(error) => return Err(read_refused(path, what, product, service, &error)),
     };
     match serde_json::from_slice::<Value>(&bytes) {
         Ok(value) if value.is_object() => Ok(Some((value, bytes.len()))),
-        Ok(_) => Err(unreadable(
-            path,
-            what,
-            product,
-            service,
-            "it is not a JSON object",
-            bytes.len(),
-        )),
-        Err(error) => Err(unreadable(
-            path,
-            what,
-            product,
-            service,
-            &error.to_string(),
-            bytes.len(),
-        )),
+        Ok(_) => Err(unreadable(path, what, product, service, "it is not a JSON object", bytes.len())),
+        Err(error) => Err(unreadable(path, what, product, service, &error.to_string(), bytes.len())),
     }
+}
+
+/// A file the operating system refused to read, named with what is at its
+/// path and what the operating system answered: what it holds is unknown.
+fn read_refused(path: &Path, what: &str, product: &str, service: &str, error: &std::io::Error) -> Failure {
+    let shown = path.display().to_string();
+    let state = match fs::metadata(path) {
+        Ok(entry) if entry.is_dir() => format!("{shown} is a directory"),
+        Ok(entry) => format!("{shown} is a file of {} bytes", entry.len()),
+        Err(examined) => format!("{shown} cannot be examined either: {examined}"),
+    };
+    own::TELEMETRY_STORE_FILE_READ_REFUSED.failure(
+        RECORD_POINT,
+        service,
+        &[("what", what), ("path", &shown), ("state", &state), ("error", &error.to_string()), ("product", product)],
+    )
 }
 
 fn unreadable(
@@ -140,6 +154,17 @@ fn unreadable(
 }
 
 pub(super) const RECORD_POINT: &str = "wisent-errors.telemetry.record";
+
+/// An answer a refusal quotes, on one line, so the refusal stays one
+/// sentence: JSON as its compact form, anything else, such as a page of
+/// text, quoted as a JSON string with its line ends escaped.
+pub(super) fn one_line(answer: &str) -> String {
+    match serde_json::from_str::<Value>(answer) {
+        Ok(document) => document.to_string(),
+        // discarded: an answer that is not JSON is quoted as the text it is, which is what the refusal shows.
+        Err(_) => Value::String(answer.to_owned()).to_string(),
+    }
+}
 
 /// A random version-4 UUID, or `None` when the system has no randomness to
 /// give, in which case nothing is queued under a made-up id.

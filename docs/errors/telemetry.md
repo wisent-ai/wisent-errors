@@ -24,8 +24,25 @@ Started through: `<product> telemetry on|off`, `Telemetry::ask`, `Telemetry::set
 - **Cause:** telemetry knows the levels off, errors and usage
 - **Observed state shown:** got {level}
 - **Fix:** name one of off, errors or usage
-- **Code:** `refused`, exit 2
-- **Test:** Rust `tests/telemetry/consent.rs::an_unknown_level_is_refused`
+- **Class:** `usage`, exit 2
+- **Test:** Rust `tests/telemetry/consent.rs::telemetry_level_keeps_the_answer_and_asks_before_dropping_waiting_events`
+
+## `wisent-errors.telemetry.export`
+
+write every queued event to a file the user names, as it would be sent, for a machine with no network
+
+Started through: `<product> telemetry export`, `Telemetry::export`. Uses: `wisent-errors.telemetry.store`.
+
+<a id="wisent-errors-telemetry-export-export-unwritable"></a>
+
+### `wisent-errors.telemetry.export.export-unwritable`
+
+- **What failed:** writing the {count} queued event(s) to {path}
+- **Cause:** the file could not be written: {why}
+- **Observed state shown:** {state}; the events stay queued
+- **Fix:** name a file in a directory this user can write, as in `{product} telemetry export ./events.json`
+- **Class:** `config`, exit 1
+- **Test:** Rust `tests/telemetry/store.rs::telemetry_export_writes_the_queue_as_it_will_be_sent`
 
 ## `wisent-errors.telemetry.deliver`
 
@@ -41,8 +58,8 @@ Started through: Rust `<product> telemetry flush`, Rust `Telemetry::flush`, Rust
 - **Cause:** a collector address must be https://, or http:// on a loopback host
 - **Observed state shown:** {source} holds {address}
 - **Fix:** set WISENT_TELEMETRY_COLLECTOR_URL to the https:// address of the Echo app collector, or unset it
-- **Code:** `config`, exit 1
-- **Test:** Rust `tests/telemetry/delivery.rs::a_plain_http_collector_is_refused_by_name`, Swift `tests/telemetry/swift/TelemetryTests.swift::testAPlainHttpCollectorIsRefusedByName`
+- **Class:** `config`, exit 1
+- **Test:** Rust `tests/telemetry/delivery/unreached.rs::a_plain_http_collector_is_refused_by_name`, Swift `tests/telemetry/swift/DeliveryTests.swift::test_telemetry_flush_keeps_what_no_collector_took_with_why`
 
 <a id="wisent-errors-telemetry-deliver-collector-refused"></a>
 
@@ -51,9 +68,9 @@ Started through: Rust `<product> telemetry flush`, Rust `Telemetry::flush`, Rust
 - **What failed:** sending event {event} to {collector}
 - **Cause:** the collector refused HTTP {status}: {answer}
 - **Observed state shown:** {queued} event(s) stay queued
-- **Fix:** the answer names what the collector refuses; when it is Unknown mobile analytics app, declare app {app} in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON; the events are sent again on the next flush
-- **Code:** `refused`, exit 1
-- **Test:** Rust `tests/telemetry/delivery.rs::an_app_the_collector_does_not_declare_stays_queued_with_its_refusal`, Swift `tests/telemetry/swift/TelemetryTests.swift::testAnAppTheCollectorDoesNotDeclareStaysQueuedWithItsRefusal`
+- **Fix:** the answer names what the collector refuses and how to fix it; when its cause is app-undeclared, declare app {app} in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON with its collector URL and an analytics backend; the events are sent again on the next flush
+- **Class:** `refused`, exit 1
+- **Test:** Rust `tests/telemetry/delivery/reached.rs::an_app_the_collector_does_not_declare_stays_queued_with_its_refusal`, Swift `tests/telemetry/swift/DeliveryTests.swift::test_telemetry_flush_delivers_to_the_real_collector_or_keeps_its_refusal`
 
 <a id="wisent-errors-telemetry-deliver-collector-failed"></a>
 
@@ -63,8 +80,8 @@ Started through: Rust `<product> telemetry flush`, Rust `Telemetry::flush`, Rust
 - **Cause:** the collector failed on its own side, HTTP {status}: {answer}
 - **Observed state shown:** {queued} event(s) stay queued
 - **Fix:** nothing on this machine is to fix: the events are sent again on the next flush; a collector that keeps failing is reported with `{product} support report`, or from an app's Help → Report a Problem
-- **Code:** `infra_down`, exit 69
-- **Test:** Rust `tests/telemetry/delivery.rs::a_collector_failing_on_its_side_keeps_the_events_with_its_own_failure`, Swift `tests/telemetry/swift/TelemetryTests.swift::testACollectorFailingOnItsSideKeepsTheEventsWithItsOwnFailure`
+- **Class:** `infra_down`, exit 69
+- **Test:** Rust `tests/telemetry/delivery/reached.rs::a_collector_failing_on_its_side_keeps_the_events_with_its_own_failure`, Swift `tests/telemetry/swift/DeliveryTests.swift::test_telemetry_flush_keeps_the_events_a_collector_failing_on_its_side_did_not_take`
 
 <a id="wisent-errors-telemetry-deliver-collector-unreachable"></a>
 
@@ -74,8 +91,8 @@ Started through: Rust `<product> telemetry flush`, Rust `Telemetry::flush`, Rust
 - **Cause:** the collector could not be reached: {why}
 - **Observed state shown:** {queued} event(s) stay queued
 - **Fix:** nothing to do: the events are sent on the next flush once the network or the collector is back
-- **Code:** `infra_down`, exit 69
-- **Test:** Rust `tests/telemetry/delivery.rs::an_unreachable_collector_keeps_the_events`, Swift `tests/telemetry/swift/TelemetryTests.swift::testAnUnreachableCollectorKeepsTheEvents`
+- **Class:** `infra_down`, exit 69
+- **Test:** Rust `tests/telemetry/delivery/unreached.rs::an_unreachable_collector_keeps_the_events`, Swift `tests/telemetry/swift/DeliveryTests.swift::test_telemetry_flush_keeps_what_no_collector_took_with_why`
 
 <a id="wisent-errors-telemetry-deliver-collector-answer-unreadable"></a>
 
@@ -85,8 +102,8 @@ Started through: Rust `<product> telemetry flush`, Rust `Telemetry::flush`, Rust
 - **Cause:** the answer is not the collector's {accepted}: {answer}
 - **Observed state shown:** HTTP {status} from {collector}
 - **Fix:** check that {collector} is the Echo app collector, /api/analytics/mobile/collect
-- **Code:** `infra_down`, exit 69
-- **Test:** Rust `tests/telemetry/delivery.rs::an_address_that_is_not_a_collector_is_named`, Swift `tests/telemetry/swift/TelemetryTests.swift::testAnAddressThatIsNotACollectorIsNamed`
+- **Class:** `infra_down`, exit 69
+- **Test:** Rust `tests/telemetry/delivery/reached.rs::an_address_that_is_not_a_collector_is_named`, Swift `tests/telemetry/swift/DeliveryTests.swift::test_telemetry_flush_delivers_to_the_real_collector_or_keeps_its_refusal`
 
 <a id="wisent-errors-telemetry-deliver-flush-unstarted"></a>
 
@@ -96,8 +113,8 @@ Started through: Rust `<product> telemetry flush`, Rust `Telemetry::flush`, Rust
 - **Cause:** the process could not be started: {why}
 - **Observed state shown:** {queued} event(s) stay queued
 - **Fix:** run `{product} telemetry flush` yourself; the events wait until it runs
-- **Code:** `config`, exit 1
-- **Test:** Rust `tests/telemetry/delivery.rs::a_flush_that_cannot_start_is_named`
+- **Class:** `config`, exit 1
+- **Test:** Rust `tests/telemetry/delivery/unreached.rs::a_flush_that_cannot_start_is_named`
 
 ## `wisent-errors.support.report`
 
@@ -113,8 +130,8 @@ Started through: Rust `<product> support report`, Rust `Telemetry::file_report`,
 - **Cause:** the report has no description
 - **Observed state shown:** the description is empty
 - **Fix:** say what you were doing and what happened: in an app's Report a Problem window, or with `{product} support report --description "…"`
-- **Code:** `refused`, exit 2
-- **Test:** Rust `tests/telemetry/support.rs::a_report_without_a_description_is_refused_before_sending`, Swift `tests/telemetry/swift/SupportTests.swift::testAReportWithoutADescriptionIsRefusedBeforeSending`
+- **Class:** `usage`, exit 2
+- **Test:** Rust `tests/telemetry/support.rs::support_report_refuses_what_it_cannot_file_before_anything_is_kept`, Swift `tests/telemetry/swift/SupportReportTests.swift::test_support_report_refuses_what_cannot_be_filed_and_files_nothing`
 
 ## `wisent-errors.support.status`
 
@@ -136,8 +153,8 @@ Started through: run only by the functionalities that use it. Uses: none.
 - **Cause:** the telemetry directory could not be written: {why}
 - **Observed state shown:** directory {directory}
 - **Fix:** make {directory} writable by this user, or name a writable one with WISENT_TELEMETRY_HOME
-- **Code:** `config`, exit 1
-- **Test:** Rust `tests/telemetry/store.rs::an_unwritable_directory_is_named_and_nothing_is_lost_silently`, Swift `tests/telemetry/swift/TelemetryTests.swift::testAnUnwritableDirectoryIsNamedAndNothingIsLostSilently`
+- **Class:** `config`, exit 1
+- **Test:** Rust `tests/telemetry/consent.rs::telemetry_level_keeps_the_answer_and_asks_before_dropping_waiting_events`, Swift `tests/telemetry/swift/ConsentAndStoreTests.swift::test_telemetry_set_keeps_the_answer_the_app_and_the_command_line_share`
 
 <a id="wisent-errors-telemetry-store-file-unreadable"></a>
 
@@ -147,8 +164,19 @@ Started through: run only by the functionalities that use it. Uses: none.
 - **Cause:** the file is not what telemetry wrote: {why}
 - **Observed state shown:** the file holds {bytes} bytes
 - **Fix:** answer again, in an app's settings or with `{product} telemetry on|off`, which rewrites it, or remove {path}
-- **Code:** `config`, exit 1
-- **Test:** Rust `tests/telemetry/consent.rs::a_damaged_consent_file_is_refused_and_nothing_is_sent`, Swift `tests/telemetry/swift/TelemetryTests.swift::testADamagedConsentFileIsRefusedAndNothingIsSent`
+- **Class:** `config`, exit 1
+- **Test:** Rust `tests/telemetry/queued/events.rs::telemetry_show_prints_the_queue_each_event_as_declared`, Swift `tests/telemetry/swift/ConsentAndStoreTests.swift::test_telemetry_failure_queues_only_what_the_user_agreed_to_send`
+
+<a id="wisent-errors-telemetry-store-file-read-refused"></a>
+
+### `wisent-errors.telemetry.store.file-read-refused`
+
+- **What failed:** reading {what} from {path}
+- **Cause:** the operating system refused the read, so what the file holds was never looked at
+- **Observed state shown:** {state}; the operating system answered {error}
+- **Fix:** let the user running {product} read it (chmod u+r {path}), or remove {path} so telemetry writes it again
+- **Class:** `config`, exit 1
+- **Test:** Rust `tests/telemetry/queued/events.rs::telemetry_show_prints_the_queue_each_event_as_declared`, Swift `tests/telemetry/swift/DeliveryTests.swift::test_telemetry_show_prints_the_queue_exactly_as_it_will_go`
 
 ## `wisent-errors.support.exchange`
 
@@ -164,8 +192,8 @@ Started through: run only by the functionalities that use it. Uses: none.
 - **Cause:** a support address must be https://, or http:// on a loopback host
 - **Observed state shown:** WISENT_SUPPORT_URL holds {address}
 - **Fix:** set WISENT_SUPPORT_URL to the https:// address of a support service's /v1/public/reports, or unset it
-- **Code:** `config`, exit 1
-- **Test:** Rust `tests/telemetry/support.rs::a_plain_http_support_address_is_refused_by_name`, Swift `tests/telemetry/swift/SupportTests.swift::testAPlainHttpSupportAddressIsRefusedByName`
+- **Class:** `config`, exit 1
+- **Test:** Rust `tests/telemetry/support.rs::support_report_refuses_what_it_cannot_file_before_anything_is_kept`, Swift `tests/telemetry/swift/SupportReportTests.swift::test_support_report_refuses_what_cannot_be_filed_and_files_nothing`
 
 <a id="wisent-errors-support-exchange-support-refused"></a>
 
@@ -175,8 +203,8 @@ Started through: run only by the functionalities that use it. Uses: none.
 - **Cause:** support refused HTTP {status}: {answer}
 - **Observed state shown:** {observed}
 - **Fix:** the answer is support's own reason: correct what it names and send the report again, from an app's Report a Problem window or with `{product} support report`
-- **Code:** `refused`, exit 1
-- **Test:** Rust `tests/telemetry/support.rs::a_report_support_refuses_says_why`, Swift `tests/telemetry/swift/SupportTests.swift::testAReportSupportRefusesSaysWhyAndKeepsNothing`
+- **Class:** `refused`, exit 1
+- **Test:** Rust `tests/telemetry/support.rs::support_report_files_with_the_real_support_and_keeps_its_key`, Swift `tests/telemetry/swift/SupportReportTests.swift::test_support_report_files_to_the_real_service_or_says_what_it_refused`
 
 <a id="wisent-errors-support-exchange-support-unreachable"></a>
 
@@ -186,8 +214,8 @@ Started through: run only by the functionalities that use it. Uses: none.
 - **Cause:** support could not be reached: {why}
 - **Observed state shown:** {observed}
 - **Fix:** send the report again once the network or support is back, from an app's Report a Problem window or with `{product} support report`
-- **Code:** `infra_down`, exit 69
-- **Test:** Rust `tests/telemetry/support.rs::an_unreachable_support_files_nothing`, Swift `tests/telemetry/swift/SupportTests.swift::testAnUnreachableSupportFilesNothing`
+- **Class:** `infra_down`, exit 69
+- **Test:** Rust `tests/telemetry/support.rs::support_report_refuses_what_it_cannot_file_before_anything_is_kept`, Swift `tests/telemetry/swift/SupportReportTests.swift::test_support_report_refuses_what_cannot_be_filed_and_files_nothing`
 
 <a id="wisent-errors-support-exchange-support-answer-unreadable"></a>
 
@@ -197,5 +225,5 @@ Started through: run only by the functionalities that use it. Uses: none.
 - **Cause:** the answer is not a support service's: {answer}
 - **Observed state shown:** HTTP {status}
 - **Fix:** check that {address} is a support service's /v1/public/reports
-- **Code:** `infra_down`, exit 69
-- **Test:** Rust `tests/telemetry/support.rs::an_address_that_is_not_support_is_named`, Swift `tests/telemetry/swift/SupportTests.swift::testAnAddressThatIsNotSupportIsNamed`
+- **Class:** `infra_down`, exit 69
+- **Test:** Rust `tests/telemetry/support.rs::support_report_names_an_address_that_is_not_support`, Swift `tests/telemetry/swift/SupportReportTests.swift::test_support_report_files_to_the_real_service_or_says_what_it_refused`

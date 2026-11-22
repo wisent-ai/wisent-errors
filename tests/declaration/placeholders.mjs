@@ -31,26 +31,31 @@ test('a_format_spec_placeholder_is_refused_naming_the_cause_and_the_placeholder'
 test('every_placeholder_the_renderer_will_not_fill_is_refused', () => {
   const texts = { failed: 'checking {Path} and {deal.title}', remedy: 'quote {name before passing it' };
   const problems = causeProblems({ ...CAUSE, ...texts });
-  assert.equal(problems.length, 3, problems.join('\n'));
-  const [pathProblem, dealProblem, remedyProblem] = problems;
-  assert.match(pathProblem, /`failed` holds the placeholder \{Path\}, .* write \{path\}/);
-  assert.match(dealProblem, /`failed` holds the placeholder \{deal\.title\}, .* write \{deal_title\}/);
-  assert.match(remedyProblem, /`remedy` opens a placeholder at "\{name before passing it" that no '\}' closes; close it as \{name\} or drop the '\{'/);
-  const [unopened] = causeProblems({ ...CAUSE, failed: 'checking a} value' });
-  assert.match(unopened, /`failed` holds a '\}' at "checking a\} value" that no '\{' opened/);
+  const malformed = (kind, field, placeholder, suggestion) =>
+    `${kind}: \`${field}\` holds the placeholder ${placeholder}, which the renderer never fills: a placeholder is a lowercase letter, then lowercase letters, digits and '_', between braces, with no format spec; write ${suggestion} and have the raising site pass the value already formatted`;
+  assert.deepEqual(problems, [
+    malformed('cause value-unsafe', 'failed', '{Path}', '{path}'),
+    malformed('cause value-unsafe', 'failed', '{deal.title}', '{deal_title}'),
+    "cause value-unsafe: `remedy` opens a placeholder at \"{name before passing it\" that no '}' closes; close it as {name} or drop the '{'",
+  ]);
+  assert.deepEqual(causeProblems({ ...CAUSE, failed: 'checking a} value' }), [
+    "cause value-unsafe: `failed` holds a '}' at \"checking a} value\" that no '{' opened; drop it, or open the placeholder it ends",
+  ]);
 });
 
 test('a_cause_whose_why_is_only_the_raw_message_is_refused', () => {
-  const problems = causeProblems({ ...CAUSE, cause: '{error}' });
-  assert.ok(problems.includes("cause value-unsafe: `cause` names {error}, the raw text of the layer below; `cause` is the declaration's own words, so say it in words and move {error} into `observed`"), problems.join('\n'));
-  assert.ok(problems.some((problem) => problem.startsWith('cause value-unsafe: `cause` is only "{error}", the text it wraps, so it says nothing of why')), problems.join('\n'));
-  assert.ok(causeProblems({ ...CAUSE, cause: '{code}: {reason}' }).some((problem) => problem.includes('`cause` is only "{code}: {reason}"')));
+  const wraps = (quoted) => `cause value-unsafe: \`cause\` is only ${quoted}, the text it wraps, so it says nothing of why; state the reason in words (the file is not JSON, the server refused the token) and move the wrapped text into \`observed\``;
+  assert.deepEqual(causeProblems({ ...CAUSE, cause: '{error}' }), [
+    "cause value-unsafe: `cause` names {error}, the raw text of the layer below; `cause` is the declaration's own words, so say it in words and move {error} into `observed`",
+    wraps('"{error}"'),
+  ]);
+  assert.deepEqual(causeProblems({ ...CAUSE, cause: '{code}: {reason}' }), [wraps('"{code}: {reason}"')]);
   assert.deepEqual(causeProblems({ ...CAUSE, observed: 'the parser said {problem}' }), []);
 });
 
 test('a_warning_holding_a_placeholder_the_renderer_never_fills_is_refused', () => {
   const warning = { id: 'removed', hazard: 'irreversible', effect: '{id:?} is removed', consequence: 'nothing restores it', safeguard: 'keep a copy', confirm: 'rerun with --yes', test: 'tests/purge/purge.sh::purge_asks' };
-  assert.match(warningProblems(warning)[0], /^warning removed: `effect` holds the placeholder \{id:\?\}, which the renderer never fills/);
+  assert.deepEqual(warningProblems(warning), ["warning removed: `effect` holds the placeholder {id:?}, which the renderer never fills: a placeholder is a lowercase letter, then lowercase letters, digits and '_', between braces, with no format spec; write {id} and have the raising site pass the value already formatted"]);
 });
 
 test('the_renderer_reads_a_template_as_every_runtime_does', () => {
@@ -60,6 +65,10 @@ test('the_renderer_reads_a_template_as_every_runtime_does', () => {
   for (const name of PROBES.placeholder.invalid) assert.ok(!isPlaceholderName(name), name);
   for (const id of PROBES.cause_id.valid) assert.ok(CAUSE_ID.test(id), id);
   for (const id of PROBES.cause_id.invalid) assert.ok(!CAUSE_ID.test(id), id);
-  for (const path of PROBES.test_path.valid) assert.ok(TEST_PATH.test(path), path);
-  for (const path of PROBES.test_path.invalid) assert.ok(!TEST_PATH.test(path), path);
+  for (const path of PROBES.test_path.valid) assert.deepEqual(causeProblems({ ...CAUSE, test: path }), [], path);
+  for (const path of PROBES.test_path.invalid) {
+    assert.deepEqual(causeProblems({ ...CAUSE, test: path }), [
+      `cause value-unsafe: test ${JSON.stringify(path)} is not tests/<area>/<file>::<test name> (pattern ^tests/[^/:]+(?:/[^/:]+)+::[a-z0-9_]+$); name the real test that provokes it`,
+    ], path);
+  }
 });

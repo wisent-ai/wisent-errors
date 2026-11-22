@@ -1,147 +1,93 @@
-//! What the user agreed to decides what is queued, and nothing else does.
+//! `wisent-errors --product <file> telemetry level <off|errors|usage>` (and
+//! its spellings `telemetry on`, the errors level, and `telemetry off`): the
+//! user's answer kept in `consent.json`, and what the command refuses.
+//!
+//!   kompilator test --manifest-path rust/Cargo.toml --features cli-output,telemetry,diagnosis --test telemetry consent::
+//!
+//! - Rule 4: the command line runs as a process (`Case::run`, main.rs); the
+//!   events it would drop are queued by its own `telemetry failure`, never
+//!   written by hand.
+//! - Rule 5: after every step the case reads back the exit status, the whole
+//!   refusal or warning on stderr, and `consent.json` and the queue on disk:
+//!   a refused level writes nothing, an unconfirmed `off` leaves the consent
+//!   byte-identical and the event waiting, a confirmed one removes the queue.
 
-use std::time::Duration;
+use serde_json::json;
 
-use serde_json::{json, Value};
-use wisent_errors::telemetry::Level;
+use crate::{refusal, Case, FAILURE, PRODUCT, USAGE};
 
-use crate::{sample_failure, Case, FAILURE, SUCCESS};
-
-#[test]
-fn nothing_is_queued_before_the_user_answers() {
-    let mut case = Case::new("unanswered");
-    let telemetry = case.telemetry("wisent-errors-test-cli");
-    telemetry.failure(&sample_failure(), Some("pairs-unreadable"));
-    telemetry.command("pairs import", FAILURE, Duration::from_millis(5));
-    let status = telemetry.status();
-    case.note("status", status.clone());
-    assert_eq!(status["level"], "unanswered");
-    assert_eq!(status["queued"], 0);
-    assert!(
-        !case.root.join("state").join("installation.json").exists(),
-        "no id is made before consent"
-    );
+/// Queue one failure through the command, as a product reports one.
+fn queue_failure(case: &mut Case) {
+    case.run(&["telemetry", "failure", "example-product.pairs.import", "not_found", "--detail", "the pairs file is not there"]).succeeded();
 }
 
+/// `telemetry level` without a level or with an unknown one, each level kept
+/// and read back, `off` refused until `--yes` while events wait, and a
+/// telemetry directory that cannot be written.
 #[test]
-fn errors_queue_failures_and_not_commands() {
-    let mut case = Case::new("errors-level");
-    let telemetry = case.telemetry("wisent-errors-test-cli");
-    telemetry
-        .set_level(Level::Errors)
-        .expect("the level is kept");
-    telemetry.failure(&sample_failure(), Some("pairs-unreadable"));
-    telemetry.command("pairs import", FAILURE, Duration::from_millis(5));
-    let queued = telemetry.queued().expect("the queue reads");
-    case.note("queued", Value::Array(queued.clone()));
-    let [event] = queued.as_slice() else {
-        panic!("one event is queued: {queued:?}");
-    };
-    assert_eq!(event["eventName"], "failure");
-    assert_eq!(event["appId"], "wisent-errors-test-cli");
-    assert_eq!(
-        event["properties"]["failure_point"],
-        "wisent-errors-test.pairs.import"
-    );
-    assert_eq!(event["properties"]["error_code"], "not_found");
-    assert_eq!(event["properties"]["cause_id"], "pairs-unreadable");
-    let home = std::env::var("HOME").expect("HOME");
-    let detail = event["properties"]["detail"].as_str().expect("a detail");
-    assert!(
-        !detail.contains(&home),
-        "the home directory is taken out: {detail}"
-    );
-    assert!(detail.contains("~/pairs/calm.json"), "{detail}");
-}
+fn telemetry_level_keeps_the_answer_and_asks_before_dropping_waiting_events() {
+    let mut case = Case::new("consent");
 
-#[test]
-fn usage_queues_commands_without_their_arguments() {
-    let mut case = Case::new("usage-level");
-    let telemetry = case.telemetry("wisent-errors-test-cli");
-    telemetry
-        .set_level(Level::Usage)
-        .expect("the level is kept");
-    telemetry.command("pairs import", SUCCESS, Duration::from_millis(42));
-    let queued = telemetry.queued().expect("the queue reads");
-    case.note("queued", Value::Array(queued.clone()));
-    let [event] = queued.as_slice() else {
-        panic!("one event is queued: {queued:?}");
-    };
-    assert_eq!(event["eventName"], "cli.command");
-    assert_eq!(
-        event["properties"],
-        json!({ "command": "pairs import", "exit_status": SUCCESS, "duration_ms": 42 })
-    );
-}
+    case.run(&["telemetry", "level"]).refused(USAGE, &refusal(
+        "reading the operands of `wisent-errors telemetry level`: the command takes one level: off, errors or usage and was given none; observed: its operands were []",
+        "give one level: off, errors or usage, as in `wisent-errors --product <file> telemetry level <off|errors|usage> [--yes]`",
+        "wisent_errors.command.arguments", "operand-missing", "command",
+    ));
+    case.run(&["telemetry", "level", "everything"]).refused(USAGE, &refusal(
+        "setting the telemetry level to everything: telemetry knows the levels off, errors and usage; observed: got everything",
+        "name one of off, errors or usage",
+        "wisent-errors.telemetry.consent", "level-unknown", "telemetry",
+    ));
+    assert!(!case.state.exists(), "a refused level keeps nothing: {}", case.state.display());
 
-#[test]
-fn do_not_track_turns_every_level_off() {
-    let mut case = Case::new("do-not-track");
-    let telemetry = case.telemetry("wisent-errors-test-cli");
-    telemetry
-        .set_level(Level::Usage)
-        .expect("the level is kept");
-    std::env::set_var("DO_NOT_TRACK", "1");
-    telemetry.failure(&sample_failure(), None);
-    let status = telemetry.status();
-    std::env::remove_var("DO_NOT_TRACK");
-    case.note("status", status.clone());
-    assert_eq!(status["do_not_track"], true);
-    assert_eq!(status["queued"], 0);
-}
+    let status = case.run(&["telemetry", "level", "errors"]).succeeded();
+    assert_eq!(status["level"], "errors");
+    let consent = case.json("consent.json");
+    assert_eq!(consent["level"], "errors");
+    assert!(consent["answered_at"].is_string(), "{consent}");
 
-#[test]
-fn turning_off_drops_what_was_waiting() {
-    let mut case = Case::new("turned-off");
-    let telemetry = case.telemetry("wisent-errors-test-cli");
-    telemetry
-        .set_level(Level::Errors)
-        .expect("the level is kept");
-    telemetry.failure(&sample_failure(), None);
-    assert_eq!(telemetry.queued().expect("the queue reads").len(), 1);
-    telemetry.set_level(Level::Off).expect("the level is kept");
-    let status = telemetry.status();
-    case.note("status", status.clone());
-    assert_eq!(status["level"], "off");
-    assert_eq!(status["queued"], 0);
-}
+    // One event waits; turning telemetry off would drop it.
+    queue_failure(&mut case);
+    assert_eq!(case.queued().len(), 1);
+    let kept = case.read("consent.json");
+    let queue = case.state.join("queue");
+    let warned = vec![
+        format!(
+            "Warning: turning telemetry off removes the 1 event(s) waiting in {}; nothing sends them afterwards and nothing brings them back, so the failures they record never reach the maintainers of {PRODUCT}; nothing was done. Before confirming: keep them with `{PRODUCT} telemetry export <file>`, which writes them as they would have been sent, or send them first with `{PRODUCT} telemetry flush`. To go ahead: rerun with --yes",
+            queue.display()
+        ),
+        "warning: wisent-errors.telemetry.consent.queue-dropped; https://github.com/wisent-ai/wisent-errors/blob/main/docs/command-line.md#wisent-errors-telemetry-consent-warning-queue-dropped".to_owned(),
+    ];
+    for words in [&["telemetry", "off"][..], &["telemetry", "level", "off"][..]] {
+        case.run(words).refused(USAGE, &warned);
+        assert_eq!(case.read("consent.json"), kept, "an unconfirmed off keeps the answer as it was");
+        assert_eq!(case.queued().len(), 1, "an unconfirmed off drops nothing");
+    }
 
-#[test]
-fn an_unknown_level_is_refused() {
-    let mut case = Case::new("unknown-level");
-    let refused =
-        Level::parse("everything", "wisent-errors-test").expect_err("an unknown level is refused");
-    case.note("refusal", json!(refused.detail));
-    assert_eq!(refused.code.as_str(), "refused");
-    let detail = refused.detail.expect("a sentence");
-    assert!(detail.contains("got everything"), "{detail}");
-    assert_eq!(
-        refused.remedy.as_deref(),
-        Some("name one of off, errors or usage")
-    );
-}
+    let status = case.run(&["telemetry", "off", "--yes"]).succeeded();
+    assert_eq!((&status["level"], &status["queued"]), (&json!("off"), &json!(0)));
+    assert_eq!(case.json("consent.json")["level"], "off");
+    assert!(!queue.exists(), "a confirmed off removes the queue");
+    // Nothing waits now, so off asks for nothing.
+    case.run(&["telemetry", "off"]).succeeded();
 
-#[test]
-fn a_damaged_consent_file_is_refused_and_nothing_is_sent() {
-    let mut case = Case::new("damaged-consent");
-    let telemetry = case.telemetry("wisent-errors-test-cli");
-    let state = case.root.join("state");
-    std::fs::create_dir_all(&state).expect("the state directory");
-    // Spaced and with a second key, so the file is longer than its object
-    // written again compactly: the refusal must name the file's own size.
-    let damaged = "{ \"level\" : \"sometimes\",\n  \"answered_at\" : \"never\" }\n";
-    std::fs::write(state.join("consent.json"), damaged).expect("a damaged file");
-    let refused = telemetry
-        .level()
-        .expect_err("a level that is none of the three is refused");
-    case.note("refusal", json!(refused.detail));
-    let detail = refused.detail.expect("a sentence");
-    assert!(detail.contains("consent.json"), "{detail}");
-    assert!(detail.contains("sometimes"), "{detail}");
-    assert!(
-        detail.contains(&format!("the file holds {} bytes", damaged.len())),
-        "{detail}"
-    );
-    telemetry.failure(&sample_failure(), None);
-    assert_eq!(telemetry.status()["queued"], 0);
+    assert_eq!(case.run(&["telemetry", "on"]).succeeded()["level"], "errors");
+    assert_eq!(case.json("consent.json")["level"], "errors");
+    assert_eq!(case.run(&["telemetry", "level", "usage"]).succeeded()["level"], "usage");
+    assert_eq!(case.json("consent.json")["level"], "usage");
+
+    // A telemetry directory below a file cannot be made: the answer is refused
+    // naming where it would have been kept.
+    let blocker = case.root.join("a-file");
+    std::fs::write(&blocker, "not a directory").expect("the blocking file");
+    let home = blocker.join("telemetry");
+    case.set("WISENT_TELEMETRY_HOME", &home);
+    let os = std::fs::create_dir_all(&home).expect_err("a directory under a file cannot be made").to_string();
+    case.run(&["telemetry", "level", "errors"]).refused(FAILURE, &refusal(
+        &format!("keeping the telemetry consent in {}: the telemetry directory could not be written: {os}; observed: directory {}", home.join("consent.json").display(), home.display()),
+        &format!("make {} writable by this user, or name a writable one with WISENT_TELEMETRY_HOME", home.display()),
+        "wisent-errors.telemetry.store", "store-unwritable", "telemetry",
+    ));
+    assert_eq!(std::fs::read_to_string(&blocker).expect("the blocking file"), "not a directory");
+    assert!(!home.exists(), "nothing was written below the file");
 }

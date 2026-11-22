@@ -1,7 +1,7 @@
 // Why an envelope could not be built, as the declared causes of
 // `wisent_errors.envelope.build` say it (OwnFailures.envelopeBuild, generated
 // into OwnFailuresEnvelope.swift from catalogue/failures/ and raised by
-// tests/envelope/BuildTests.swift): which segment of the point broke the
+// tests/envelope/EnvelopeBuildTests.swift): which segment of the point broke the
 // grammar, the character found, a point that would pass, and the fallback
 // that never refuses.
 
@@ -39,6 +39,9 @@ public enum Invalid: Error, Equatable, Sendable {
 
     /// What failed, why, what was found and what fixes it, as one line.
     public var message: String { cause.refusal(values) }
+
+    /// The refusal of `wisent_errors.envelope.build` this is, kept whole.
+    public var refusal: DeclaredRefusal { OwnFailures.envelopeBuild.refusal(cause, values) }
 }
 
 private func pointValues(_ point: String) -> [String: String] {

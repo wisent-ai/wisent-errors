@@ -229,7 +229,7 @@ fn exchange(
                     own::SUPPORT_EXCHANGE_SUPPORT_ANSWER_UNREADABLE.failure(
                         point,
                         product,
-                        &[("address", address), ("answer", &text), ("status", &status)],
+                        &[("address", address), ("answer", &store::one_line(&text)), ("status", &status)],
                     )
                 })
         }
@@ -251,7 +251,7 @@ fn exchange(
                 None => Err(own::SUPPORT_EXCHANGE_SUPPORT_ANSWER_UNREADABLE.failure(
                     point,
                     product,
-                    &[("address", address), ("answer", &text), ("status", &status)],
+                    &[("address", address), ("answer", &store::one_line(&text)), ("status", &status)],
                 )),
             }
         }

@@ -102,7 +102,7 @@ public final class WisentTelemetry: @unchecked Sendable {
         }
         let text = read.object["level"] as? String ?? ""
         guard let level = TelemetryLevel(rawValue: text) else {
-            throw TelemetryError.unreadable(OwnFailures.telemetryStoreFileUnreadable.refusal([
+            throw TelemetryError.unreadable(OwnFailures.telemetryStore.refusal(OwnFailures.telemetryStoreFileUnreadable, [
                 "what": "the telemetry consent", "path": path.path,
                 "why": "level \"\(text)\" is not off, errors or usage",
                 "bytes": String(read.bytes), "product": product.id,
@@ -120,9 +120,18 @@ public final class WisentTelemetry: @unchecked Sendable {
         }
     }
 
+    /// The level that applies now: off under `DO_NOT_TRACK`, and off for a
+    /// consent file that cannot be read, whose refusal is said on stderr
+    /// instead of being taken for an unanswered question.
     private func effective() -> TelemetryLevel {
         if Self.doNotTrack { return .off }
-        return ((try? level()) ?? nil) ?? .off
+        do {
+            // fallback: an unanswered question sends nothing, the same as off.
+            return try level() ?? .off
+        } catch {
+            Self.say(error)
+            return .off
+        }
     }
 
     // MARK: Collector
@@ -142,7 +151,7 @@ public final class WisentTelemetry: @unchecked Sendable {
             return (Self.publicCollector, "wisent-errors")
         }
         guard let url = URL(string: address), Self.acceptable(url) else {
-            throw TelemetryError.collectorInvalid(OwnFailures.telemetryDeliverCollectorInvalid.refusal([
+            throw TelemetryError.collectorInvalid(OwnFailures.telemetryDeliver.refusal(OwnFailures.telemetryDeliverCollectorInvalid, [
                 "source": "WISENT_TELEMETRY_COLLECTOR_URL", "address": address,
             ]))
         }

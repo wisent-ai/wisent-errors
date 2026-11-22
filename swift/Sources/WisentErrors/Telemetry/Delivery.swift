@@ -20,8 +20,25 @@ extension WisentTelemetry {
     public struct Delivered: Sendable {
         public let sent: Int
         public let remaining: Int
+        /// Why it stopped, as one sentence: `refusal`'s, or `TelemetryError.noHome`'s.
         public let stopped: String?
         public let skipped: String?
+        /// The declared refusal that stopped it, when one did.
+        public let refusal: DeclaredRefusal?
+
+        init(sent: Int, remaining: Int, skipped: String? = nil) {
+            (self.sent, self.remaining, self.stopped, self.skipped, self.refusal) = (sent, remaining, nil, skipped, nil)
+        }
+
+        /// Stopped by what a reader or writer of the store threw: a `TelemetryError`.
+        init(sent: Int, remaining: Int, stoppedBy error: Error) {
+            (self.sent, self.remaining, self.stopped, self.skipped) = (sent, remaining, "\(error)", nil)
+            self.refusal = (error as? TelemetryError)?.refusal
+        }
+
+        init(sent: Int, remaining: Int, refused refusal: DeclaredRefusal) {
+            (self.sent, self.remaining, self.stopped, self.skipped, self.refusal) = (sent, remaining, refusal.description, nil, refusal)
+        }
     }
 
     /// Send every queued event oldest first, dropping each the collector
@@ -29,30 +46,44 @@ extension WisentTelemetry {
     /// outcome is kept in `delivery.json`.
     public func flush() async -> Delivered {
         let events: [[String: Any]]
-        do { events = try queued() } catch { return Delivered(sent: 0, remaining: 0, stopped: "\(error)", skipped: nil) }
-        if Self.doNotTrack { return Delivered(sent: 0, remaining: events.count, stopped: nil, skipped: "DO_NOT_TRACK") }
-        switch (try? level()) ?? nil {
-        case nil: return Delivered(sent: 0, remaining: events.count, stopped: nil, skipped: "unanswered")
-        case .off?: return Delivered(sent: 0, remaining: events.count, stopped: nil, skipped: "off")
+        do { events = try queued() } catch { return Delivered(sent: 0, remaining: 0, stoppedBy: error) }
+        if Self.doNotTrack { return Delivered(sent: 0, remaining: events.count, skipped: "DO_NOT_TRACK") }
+        // A consent file telemetry did not write sends nothing, and the
+        // flush says why instead of reading it as unanswered.
+        let chosen: TelemetryLevel?
+        do {
+            chosen = try level()
+        } catch {
+            let delivered = Delivered(sent: 0, remaining: events.count, stoppedBy: error)
+            keep(delivered)
+            return delivered
+        }
+        switch chosen {
+        case nil: return Delivered(sent: 0, remaining: events.count, skipped: "unanswered")
+        case .off?: return Delivered(sent: 0, remaining: events.count, skipped: "off")
         default: break
         }
         let target: URL
         do {
             target = try collector().url
         } catch {
-            let delivered = Delivered(sent: 0, remaining: events.count, stopped: "\(error)", skipped: nil)
+            let delivered = Delivered(sent: 0, remaining: events.count, stoppedBy: error)
             keep(delivered)
             return delivered
         }
         var sent = 0
-        var stopped: String?
+        var stopped: Delivered?
         for (index, event) in events.enumerated() {
+            // fallback: an event without an id is sent and named as "", and its file is never found to remove.
             let eventID = event["eventId"] as? String ?? ""
             let waiting = events.count - index
             let values = [
                 "event": eventID, "collector": target.absoluteString, "queued": String(waiting),
                 "app": product.appID, "product": product.id, "accepted": "{\"ok\": true}",
             ]
+            let refused = { (cause: Cause, answer: [String: String]) in
+                Delivered(sent: sent, remaining: events.count - sent, refused: OwnFailures.telemetryDeliver.refusal(cause, values.merging(answer) { $1 }))
+            }
             switch await post(event, to: target) {
             case .accepted:
                 sent += 1
@@ -61,20 +92,21 @@ extension WisentTelemetry {
                     try remove(path, what: "the sent event \(eventID)")
                     continue
                 } catch {
-                    stopped = "\(error)"
+                    stopped = Delivered(sent: sent, remaining: events.count - sent, stoppedBy: error)
                 }
             case .refused(let status, let answer):
-                stopped = OwnFailures.telemetryDeliverCollectorRefused.refusal(values.merging(["status": String(status), "answer": answer]) { $1 })
+                stopped = refused(OwnFailures.telemetryDeliverCollectorRefused, ["status": String(status), "answer": answer])
             case .failed(let status, let answer):
-                stopped = OwnFailures.telemetryDeliverCollectorFailed.refusal(values.merging(["status": String(status), "answer": answer]) { $1 })
+                stopped = refused(OwnFailures.telemetryDeliverCollectorFailed, ["status": String(status), "answer": answer])
             case .notCollector(let status, let answer):
-                stopped = OwnFailures.telemetryDeliverCollectorAnswerUnreadable.refusal(values.merging(["status": String(status), "answer": answer]) { $1 })
+                stopped = refused(OwnFailures.telemetryDeliverCollectorAnswerUnreadable, ["status": String(status), "answer": answer])
             case .unreachable(let cause):
-                stopped = OwnFailures.telemetryDeliverCollectorUnreachable.refusal(values.merging(["why": cause]) { $1 })
+                stopped = refused(OwnFailures.telemetryDeliverCollectorUnreachable, ["why": cause])
             }
             break
         }
-        let delivered = Delivered(sent: sent, remaining: events.count - sent, stopped: stopped, skipped: nil)
+        // fallback: no stop means every event went.
+        let delivered = stopped ?? Delivered(sent: sent, remaining: events.count - sent)
         keep(delivered)
         return delivered
     }
