@@ -88,7 +88,7 @@ impl Telemetry {
             "email": report.email.map(str::trim).filter(|email| !email.is_empty()),
             "failure": failure,
         });
-        let answer = exchange(
+        let (answer, status) = exchange(
             ureq::post(&address).set("content-type", "application/json"),
             Some(&body),
             &address,
@@ -107,7 +107,7 @@ impl Telemetry {
                 &[
                     ("address", &address),
                     ("answer", &answer.to_string()),
-                    ("status", "201"),
+                    ("status", &status),
                 ],
             ));
         };
@@ -152,7 +152,7 @@ impl Telemetry {
             if path.extension().and_then(|e| e.to_str()) != Some("json") {
                 continue;
             }
-            if let Some(report) = store::read_json(&path, "a support report's key", product, product)? {
+            if let Some(report) = store::read_key(&path, product)? {
                 kept.push(report);
             }
         }
@@ -173,7 +173,7 @@ impl Telemetry {
                     product,
                     STATUS_POINT,
                 ) {
-                    Ok(state) => state,
+                    Ok((state, _)) => state,
                     Err(failure) => json!({
                         "id": id,
                         "subject": report["subject"],
@@ -195,8 +195,9 @@ impl Telemetry {
     }
 }
 
-/// One request to support and its JSON answer, or the refusal that names
-/// what was being done, at which address, and why it stopped.
+/// One request to support, its JSON answer and the HTTP status it came with,
+/// or the refusal that names what was being done, at which address, and why
+/// it stopped.
 fn exchange(
     request: ureq::Request,
     body: Option<&Value>,
@@ -205,7 +206,7 @@ fn exchange(
     observed: &str,
     product: &str,
     point: &str,
-) -> Result<Value, Failure> {
+) -> Result<(Value, String), Failure> {
     let answer = match body {
         Some(body) => request.send_string(&body.to_string()),
         None => request.call(),
@@ -222,16 +223,14 @@ fn exchange(
         Ok(response) => {
             let status = response.status().to_string();
             let text = read_answer(response, &common, product, point)?;
-            serde_json::from_str::<Value>(&text)
-                .ok()
-                .filter(Value::is_object)
-                .ok_or_else(|| {
-                    own::SUPPORT_EXCHANGE_SUPPORT_ANSWER_UNREADABLE.failure(
-                        point,
-                        product,
-                        &[("address", address), ("answer", &text), ("status", &status)],
-                    )
-                })
+            match serde_json::from_str::<Value>(&text).ok().filter(Value::is_object) {
+                Some(answer) => Ok((answer, status)),
+                None => Err(own::SUPPORT_EXCHANGE_SUPPORT_ANSWER_UNREADABLE.failure(
+                    point,
+                    product,
+                    &[("address", address), ("answer", &store::one_line(&text)), ("status", &status)],
+                )),
+            }
         }
         Err(ureq::Error::Status(status, response)) => {
             let text = read_answer(response, &common, product, point)?;
@@ -251,7 +250,7 @@ fn exchange(
                 None => Err(own::SUPPORT_EXCHANGE_SUPPORT_ANSWER_UNREADABLE.failure(
                     point,
                     product,
-                    &[("address", address), ("answer", &text), ("status", &status)],
+                    &[("address", address), ("answer", &store::one_line(&text)), ("status", &status)],
                 )),
             }
         }

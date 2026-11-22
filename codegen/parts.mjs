@@ -1,8 +1,10 @@
-// This package's own failure catalogue, read from the parts in
-// catalogue/failures/: one JSON file per area, each `{ area, operations }`.
-// A JSON file has no include of its own, so the catalogue is a directory and
-// this is the one loader that reads it, for the generator and for the
-// commands that raise these failures.
+// This package's own failure catalogue, read from the parts under
+// catalogue/failures/: JSON files at any depth (lint/commands.json,
+// lint/layers.json), each `{ area, operations }`, read in the order of their
+// paths below it. A JSON file has no include of its own, so the catalogue is
+// a directory and this is the one loader that reads it, for the generator
+// and for the commands that raise these failures. Subfolders keep each
+// folder small; an area may span several parts.
 //
 // The loader declares its own causes here, in code, because they are what it
 // says when the parts themselves cannot be read.
@@ -17,6 +19,8 @@ const DOCS = 'https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/t
 const cause = (id, failed, why, observed, remedy, test) => ({
   id, code: 'config', usage: false, exit: null, failed, cause: why, observed, remedy, test: `tests/tools/parts.mjs::${test}`,
 });
+// The test that provokes every cause a part on disk can provoke, one copy of the package broken step by step.
+const READ = 'errors_reads_every_part_or_refuses_the_one_it_cannot';
 
 /** The loader's own functionality and every way it fails. */
 export const PARTS = Object.freeze({
@@ -27,13 +31,13 @@ export const PARTS = Object.freeze({
   docs: DOCS,
   warnings: [],
   causes: [
-    cause('parts-unlisted', 'listing the failure catalogue parts in {directory}', 'the directory cannot be listed, so no part of the catalogue can be read', '{state}; the operating system answered {error}', 'restore it with `git checkout -- catalogue/failures`, or let the user running the command read it', 'an_unlisted_parts_directory_is_refused'),
-    cause('parts-absent', 'reading the failure catalogue parts in {directory}', 'the directory holds no .json part, so this package would declare none of its own failures', 'it holds {listing}', 'restore the parts with `git checkout -- catalogue/failures`', 'a_parts_directory_with_no_part_is_refused'),
-    cause('part-unreadable', 'reading the failure catalogue part {path}', 'the part is listed but cannot be read', '{state}; the operating system answered {error}', 'let the user running the command read it (chmod u+r {path}), or restore it with `git checkout -- {path}`', 'an_unreadable_part_is_refused'),
-    cause('part-not-json', 'reading the failure catalogue part {path}', 'the part is not JSON', '{bytes} bytes; the decoder answered {error}', 'correct the JSON of {path}; `jq . {path}` points at the place it stops parsing', 'a_part_that_is_not_json_is_refused'),
-    cause('part-wrong-shape', 'reading the failure catalogue part {path}', 'the part is JSON but not an object with an area and a list of operations, each with an id, runtimes, entries (one list, or one list per runtime) and causes carrying their tests', 'at {where} it holds {found}', 'write {path} as an object with "area" and "operations", the way the other parts are written', 'a_part_of_the_wrong_shape_is_refused'),
-    cause('operation-declared-twice', 'reading the failure catalogue parts in {directory}', 'the operation {operation} is declared in both {first} and {second}', '{parts} part(s) read', 'keep {operation} in one part and delete it from the other', 'an_operation_declared_in_two_parts_is_refused'),
-    cause('uses-undeclared', 'joining the failure catalogue parts in {directory}', 'the operation {operation} uses {used}, which no part declares', 'declared operations: {declared}', 'declare {used} in a part, or take it out of the uses of {operation}', 'a_use_no_part_declares_is_refused'),
+    cause('parts-unlisted', 'listing the failure catalogue parts in {directory}', 'the directory cannot be listed, so no part of the catalogue can be read', '{state}; the operating system answered {error}', 'restore it with `git checkout -- catalogue/failures`, or let the user running the command read it', READ),
+    cause('parts-absent', 'reading the failure catalogue parts in {directory}', 'the directory holds no .json part, so this package would declare none of its own failures', 'it holds {listing}', 'restore the parts with `git checkout -- catalogue/failures`', READ),
+    cause('part-unreadable', 'reading the failure catalogue part {path}', 'the part is listed but cannot be read', '{state}; the operating system answered {error}', 'let the user running the command read it (chmod u+r {path}), or restore it with `git checkout -- {path}`', READ),
+    cause('part-not-json', 'reading the failure catalogue part {path}', 'the part is not JSON', '{bytes} bytes; the decoder answered {error}', 'correct the JSON of {path}; `jq . {path}` points at the place it stops parsing', READ),
+    cause('part-wrong-shape', 'reading the failure catalogue part {path}', 'the part is JSON but not an object with an area and a list of operations, each with an id, runtimes, entries (one list, or one list per runtime) and causes carrying their tests', 'at {where} it holds {found}', 'write {path} as an object with "area" and "operations", the way the other parts are written', READ),
+    cause('operation-declared-twice', 'reading the failure catalogue parts in {directory}', 'the operation {operation} is declared in both {first} and {second}', '{parts} part(s) read', 'keep {operation} in one part and delete it from the other', READ),
+    cause('uses-undeclared', 'joining the failure catalogue parts in {directory}', 'the operation {operation} uses {used}, which no part declares', 'declared operations: {declared}', 'declare {used} in a part, or take it out of the uses of {operation}', READ),
     cause('raised-undeclared', 'raising {raised}', 'the command raises a cause that no part of catalogue/failures/ declares, so it has no sentence, code or test', '{declared}', 'declare {raised} in its part of catalogue/failures/, or raise the cause that is declared', 'a_raised_cause_no_part_declares_is_refused'),
   ],
 });
@@ -84,20 +88,35 @@ function shapeProblem(part) {
   return null;
 }
 
-/** Every part, in file name order, each `{ path, area, operations }`. */
-export function readParts(directory = FAILURES) {
-  let names;
+/** What `folder` holds, or the loader's refusal naming the folder that cannot be listed. */
+function listed(folder) {
   try {
-    names = readdirSync(directory);
+    return readdirSync(folder, { withFileTypes: true });
   } catch (error) {
-    throw new PartsError('parts-unlisted', { directory, state: stateOf(directory), error: error.message });
+    throw new PartsError('parts-unlisted', { directory: folder, state: stateOf(folder), error: error.message });
   }
-  const files = names.filter((name) => name.endsWith('.json')).sort();
-  if (files.length === 0) throw new PartsError('parts-absent', { directory, listing: names.length ? names.join(', ') : 'nothing' });
+}
+
+/** The .json parts among `entries` of `below` (relative to `directory`) and every folder under it, as `/`-joined paths below `directory`. */
+function partFiles(directory, below, entries) {
+  const files = [];
+  for (const entry of entries) {
+    const relative = below === '' ? entry.name : `${below}/${entry.name}`;
+    if (entry.isDirectory()) files.push(...partFiles(directory, relative, listed(join(directory, relative))));
+    else if (entry.name.endsWith('.json')) files.push(relative);
+  }
+  return files;
+}
+
+/** Every part at any depth, in the order of their paths below `directory`, each `{ path, file, area, operations }` (`file` is the path below it). */
+export function readParts(directory = FAILURES) {
+  const names = listed(directory);
+  const files = partFiles(directory, '', names).sort();
+  if (files.length === 0) throw new PartsError('parts-absent', { directory, listing: names.length ? names.map((entry) => entry.name).join(', ') : 'nothing' });
   const parts = [];
   const seen = new Map();
-  for (const name of files) {
-    const path = join(directory, name);
+  for (const file of files) {
+    const path = join(directory, file);
     let text;
     try {
       text = readFileSync(path, 'utf8');
@@ -108,7 +127,8 @@ export function readParts(directory = FAILURES) {
     try {
       part = JSON.parse(text);
     } catch (error) {
-      throw new PartsError('part-not-json', { path, bytes: String(Buffer.byteLength(text)), error: error.message });
+      // One line: V8 quotes the text it stopped in, line breaks and all, which would break the refusal's three lines.
+      throw new PartsError('part-not-json', { path, bytes: String(Buffer.byteLength(text)), error: error.message.replaceAll('\n', '\\n') });
     }
     const wrong = shapeProblem(part);
     if (wrong !== null) {
@@ -121,7 +141,7 @@ export function readParts(directory = FAILURES) {
       }
       seen.set(operation.id, path);
     }
-    parts.push({ path, area: part.area, operations: part.operations });
+    parts.push({ path, file, area: part.area, operations: part.operations });
   }
   return parts;
 }

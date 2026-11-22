@@ -177,7 +177,7 @@ public struct Failure: Sendable, Equatable {
 private let firstPrintableScalar: UInt32 = 0x20
 
 /// JSON quoting of one value, as every runtime quotes a value in a sentence.
-func jsonQuote(_ value: String) -> String { escape(value) }
+public func jsonQuote(_ value: String) -> String { escape(value) }
 
 private func escape(_ value: String) -> String {
     var out = "\""

@@ -98,14 +98,61 @@ read:
 | `JSONDecoder().decodeDescribed(T.self, from: data)` | `DescribedDecodingError` | `<T> could not be decoded: <reason>`, the reason `explained` gives |
 | `JSONSerialization.describedObject(with: data)` | `DescribedJSONError` | the character and position where the text stopped being JSON |
 
-`swift test --filter "ExplainedTests|DescribedTests"` runs their tests.
+`wisent-errors-swift envelope read` and `declaration check` (below) say every
+file they cannot read this way; `swift test --filter "ExplainedTests|DescribedTests"`
+runs their tests.
+
+## The command line: `wisent-errors-swift`
+
+The package's executable target drives the three libraries the way an app
+drives them, so a product without an app, an operator at a terminal or a
+product's CI uses them without writing Swift (`swift build --product
+wisent-errors-swift`). Each refusal is a declared cause of
+`catalogue/failures/swift-cli.json` (or the library's own, of
+`envelope.json` and `telemetry.json`), printed on stderr in three lines --
+`Error: <failed>: <cause>; observed: <observed>`, `fix: <remedy>`,
+`cause: <operation>.<cause>; <page>#<anchor>` -- and the command exits with
+the cause's status: 2 for a usage refusal, 69 for a retryable one, else 1.
+
+| command | what it does |
+|---|---|
+| `envelope build --point P --code C --service S [--impact …] [--detail …] [--remedy …] [--context K=V]… [--fallback] [--out FILE]` | builds one envelope (`Failure`, or `Failure.orFallback` with `--fallback`), prints it as JSON and writes it to `FILE` |
+| `envelope read FILE` | reads an envelope back and prints `render()`, then its `chain()` |
+| `declaration cause --id … --code … --failed … --cause … --observed … --remedy … --test … [--exit N] [--usage] [--value K=V]…` | holds one cause to the declaration rules: each problem a line, or the refusal it says with the values given, the placeholders they leave unfilled and its exit status |
+| `declaration check FILE` | holds every functionality of a product's `errors list --json` listing to the same rules: a bare array of functionalities, or the object Stado prints with them under `operations` |
+| `telemetry status\|set <off\|errors\|usage>\|failure\|show\|flush\|settings --product ID --app APP [--app-version V]` | the product's telemetry, the files its app keeps: its status, the user's answer, a failure reported as the app reports it, the queue as it will go, sending it, and the telemetry section of the app's Settings in a window of its own |
+| `support report --product ID --app APP --description … [--subject …] [--email …] [--with-failure]`, `support status` | files a report as Help → Report a Problem files it, and reads support's answer to each report filed |
+| `program run NAME [--identifier ID --team TEAM] [--set K=V]… [--withhold PREFIX]… [--stdin] [-- ARGUMENTS]` | runs the installed program through `WisentProgram`: found only in `$HOME/.local/bin` then `$HOME/.stado/bin`, admitted only when its publisher signed it, its output handed on as it comes; SIGTERM or SIGINT stops its whole process group, a second kills it; exits with its status, or 128 + the signal that ended it |
+
+Its telemetry is the product's, under `WISENT_TELEMETRY_HOME`, else
+`$XDG_STATE_HOME/<product>/telemetry`, else `~/.local/state/<product>/telemetry`;
+`WISENT_TELEMETRY_COLLECTOR_URL`, `WISENT_SUPPORT_URL` and `DO_NOT_TRACK` are
+read as an app reads them. `telemetry settings` needs a logged-in macOS
+session; outside one it is refused saying so.
 
 ## Test
 
-`swift test` runs `tests/telemetry/swift` against the real collector named by
-`WISENT_TELEMETRY_TEST_COLLECTOR`; without it the delivery case is skipped as
-blocked, never passed. `WISENT_TELEMETRY_TEST_FAILING_COLLECTOR` names a
+`swift test` builds `wisent-errors-swift` beside the test bundle, and every
+Swift case runs it as a process (`tests/swift-cli/CommandCase.swift`), its
+environment cleared and given only `HOME`, `TMPDIR` and `XDG_*` inside a
+directory of the case's own under the checkout's `.build`, and the product's
+own variables the case names (`WISENT_TELEMETRY_HOME`,
+`WISENT_TELEMETRY_COLLECTOR_URL`, `WISENT_SUPPORT_URL`, `DO_NOT_TRACK`).
+`EnvelopeBuildTests`, `ExplainedTests`, `DescribedTests`,
+`DeclarationRuleTests`, `ConsentAndStoreTests`, `UnreachedDeliveryTests` and
+`SupportRefusalTests` need nothing beyond the machine.
+`AdmissionTests`, `RunOutputTests` and `RunStopTests` run real programs
+installed into the case's home: the Node.js-signed node
+`WISENT_PROGRAM_TEST_NODE` names and the fleet's stado
+`WISENT_PROGRAM_TEST_STADO` names (`.wisent-release.json` installs it through
+its `test_products`). `SettingsWindowTests` drives the window through the
+Accessibility API, so it needs a logged-in session and the Accessibility
+permission for the process running the tests. `ReachedDeliveryTests` runs
+against the real collector named by `WISENT_TELEMETRY_TEST_COLLECTOR`, with
+`WISENT_TELEMETRY_TEST_APP_ID` an app it declares;
+`FailingDeliveryTests` against `WISENT_TELEMETRY_TEST_FAILING_COLLECTOR`, a
 collector deployment that answers with a server error (an Echo that cannot
-reach its database); its case checks that the events stay queued under the
-collector's own failure, with no deployment remedy, and is skipped as blocked
-without it.
+reach its database), whose case checks that the events stay queued under the
+collector's own failure. `SupportServiceTests` runs against the support
+service of [support.md](../support.md). A case whose variable or capability
+is missing fails naming it, never passes.

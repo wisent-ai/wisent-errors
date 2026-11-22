@@ -4,26 +4,54 @@
 import Foundation
 
 extension WisentTelemetry {
-    func readObject(_ path: URL, what: String) throws -> [String: Any]? {
-        try readSizedObject(path, what: what)?.object
+    /// The JSON object at `path`, nil when there is no file; a file the
+    /// system will not read is refused as `refused`, and one that holds
+    /// something else as `damaged`, the causes whose fixes say what reads or
+    /// writes that file again.
+    func readObject(
+        _ path: URL, what: String, damaged: Cause = OwnFailures.telemetryStoreFileUnreadable,
+        refused: Cause = OwnFailures.telemetryStoreFileReadRefused
+    ) throws -> [String: Any]? {
+        try readSizedObject(path, what: what, damaged: damaged, refused: refused)?.object
     }
 
-    /// ``readObject(_:what:)`` with how many bytes the file held, for a
-    /// refusal of what the object says that names the file's own size.
-    func readSizedObject(_ path: URL, what: String) throws -> (object: [String: Any], bytes: Int)? {
+    /// ``readObject(_:what:damaged:refused:)`` with how many bytes the file
+    /// held, for a refusal of what the object says that names the file's own size.
+    func readSizedObject(
+        _ path: URL, what: String, damaged: Cause = OwnFailures.telemetryStoreFileUnreadable,
+        refused: Cause = OwnFailures.telemetryStoreFileReadRefused
+    ) throws -> (object: [String: Any], bytes: Int)? {
         let data: Data
         do {
             data = try Data(contentsOf: path)
         } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {
             return nil
+        } catch {
+            throw TelemetryError.unreadable(OwnFailures.telemetryStore.refusal(refused, [
+                "what": what, "path": path.path, "state": Self.stateOf(path), "error": error.explained, "product": product.id,
+            ]))
         }
         guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
-            throw TelemetryError.unreadable(OwnFailures.telemetryStoreFileUnreadable.refusal([
+            throw TelemetryError.unreadable(OwnFailures.telemetryStore.refusal(damaged, [
                 "what": what, "path": path.path, "why": "it is not a JSON object",
                 "bytes": String(data.count), "product": product.id,
             ]))
         }
         return (object, data.count)
+    }
+
+    /// What is at `path`, as the refusal of a read says it.
+    static func stateOf(_ path: URL) -> String {
+        do {
+            let values = try path.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey])
+            switch (values.isDirectory, values.fileSize) {
+            case (true?, _): return "\(path.path) is a directory"
+            case (_, let size?): return "\(path.path) is a file of \(size) bytes"
+            default: return "\(path.path) is neither a file nor a directory"
+            }
+        } catch {
+            return "\(path.path) cannot be examined either: \(error.explained)"
+        }
     }
 
     func writeObject(_ object: [String: Any], to path: URL, what: String) throws {
@@ -35,7 +63,7 @@ extension WisentTelemetry {
             defer { lock.unlock() }
             try data.write(to: path, options: .atomic)
         } catch {
-            throw TelemetryError.unwritable(OwnFailures.telemetryStoreStoreUnwritable.refusal([
+            throw TelemetryError.unwritable(OwnFailures.telemetryStore.refusal(OwnFailures.telemetryStoreStoreUnwritable, [
                 "what": what, "path": path.path, "why": error.explained, "directory": folder.path,
             ]))
         }
@@ -49,7 +77,7 @@ extension WisentTelemetry {
         } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError {
             return
         } catch {
-            throw TelemetryError.unwritable(OwnFailures.telemetryStoreStoreUnwritable.refusal([
+            throw TelemetryError.unwritable(OwnFailures.telemetryStore.refusal(OwnFailures.telemetryStoreStoreUnwritable, [
                 "what": what, "path": path.path, "why": error.explained,
                 "directory": path.deletingLastPathComponent().path,
             ]))
