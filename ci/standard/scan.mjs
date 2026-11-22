@@ -24,9 +24,17 @@ function* sourceFiles(directory) {
   }
 }
 
-const isBaseline = (value) =>
-  value !== null && typeof value === 'object' && !Array.isArray(value) &&
-  Object.values(value).every((sentences) => sentences !== null && typeof sentences === 'object' && Object.values(sentences).every(Number.isInteger));
+/** What a baseline holds that is not `{"<path>": {"<sentence>": <count>}}`, naming the entry that breaks it, or null when it is one. */
+function baselineFlaw(value) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return describe(value);
+  for (const [path, sentences] of Object.entries(value)) {
+    if (sentences === null || typeof sentences !== 'object' || Array.isArray(sentences)) return `${describe(value)}, whose ${JSON.stringify(path)} holds ${describe(sentences)} instead of its sentences`;
+    for (const [sentence, count] of Object.entries(sentences)) {
+      if (!Number.isInteger(count)) return `${describe(value)}, whose ${JSON.stringify(path)} gives ${JSON.stringify(sentence)} ${describe(count)} instead of a count`;
+    }
+  }
+  return null;
+}
 
 /** `{ files, findings, refused, stale }` for the directories, held to `baselinePath` when given. */
 export function scanSources(directories, baselinePath) {
@@ -48,7 +56,7 @@ export function scanSources(directories, baselinePath) {
   }
   const baseline = baselinePath === null
     ? {}
-    : readJsonInput(baselinePath, 'the baseline', '{"<path>": {"<sentence>": <count>}}', (value) => (isBaseline(value) ? null : describe(value)));
+    : readJsonInput(baselinePath, 'the baseline', '{"<path>": {"<sentence>": <count>}}', baselineFlaw);
   const counts = {};
   for (const finding of findings) {
     counts[finding.path] ??= {};

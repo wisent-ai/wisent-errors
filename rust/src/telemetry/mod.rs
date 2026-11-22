@@ -6,11 +6,13 @@
 //! Two rules carry it. Nothing is queued before the user answers, and nothing
 //! here ever changes the product's own result: every failure of telemetry is
 //! said once on stderr, starting with `wisent-errors:`, and the product goes on.
+//! The user's answer and its level are kept in `consent/`.
 
 // Every refusal here is the crate's own envelope, the value a product prints
 // and reports; boxing it would give telemetry a second failure type.
 #![allow(clippy::result_large_err)]
 
+mod consent;
 #[path = "delivery/deliver.rs"]
 mod deliver;
 pub mod events;
@@ -32,6 +34,7 @@ pub use crate::failures::{
     SUPPORT_REPORT as REPORT, SUPPORT_STATUS as STATUS, TELEMETRY_CONSENT as CONSENT,
     TELEMETRY_DELIVER as DELIVER, TELEMETRY_RECORD as RECORD,
 };
+pub use consent::{Level, QUEUE_DROPPED};
 pub use deliver::Delivered;
 pub use events::{Event, EVENTS};
 pub use support::{Report, PUBLIC_SUPPORT};
@@ -41,15 +44,16 @@ use crate::{Failure, Operation};
 use store::Cleaner;
 
 /// Every telemetry and support functionality, for a product's `errors list`:
-/// the five its commands use, then the store and the support exchange they
-/// share.
-pub fn operations() -> [&'static Operation; 7] {
+/// the five its commands use, the export of the queue, then the store and
+/// the support exchange they share.
+pub fn operations() -> [&'static Operation; 8] {
     [
         &own::TELEMETRY_RECORD,
         &own::TELEMETRY_CONSENT,
         &own::TELEMETRY_DELIVER,
         &own::SUPPORT_REPORT,
         &own::SUPPORT_STATUS,
+        &own::TELEMETRY_EXPORT,
         &own::TELEMETRY_STORE,
         &own::SUPPORT_EXCHANGE,
     ]
@@ -63,38 +67,6 @@ pub struct Product {
     /// `ster-cli`, `ster-desktop`.
     pub app_id: &'static str,
     pub version: &'static str,
-}
-
-/// What the user agreed to send.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Level {
-    Off,
-    Errors,
-    Usage,
-}
-
-impl Level {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Off => "off",
-            Self::Errors => "errors",
-            Self::Usage => "usage",
-        }
-    }
-
-    /// `off`, `errors` or `usage`, or the refusal naming them.
-    pub fn parse(text: &str, product: &str) -> Result<Self, Failure> {
-        match text.trim() {
-            "off" => Ok(Self::Off),
-            "errors" => Ok(Self::Errors),
-            "usage" => Ok(Self::Usage),
-            other => Err(own::TELEMETRY_CONSENT_LEVEL_UNKNOWN.failure(
-                CONSENT_POINT,
-                product,
-                &[("level", other)],
-            )),
-        }
-    }
 }
 
 /// Where events are sent, and what named the address.
@@ -157,71 +129,6 @@ impl Telemetry {
             .unwrap_or(false)
     }
 
-    /// The level the user chose, `None` while unanswered.
-    pub fn level(&self) -> Result<Option<Level>, Failure> {
-        let Some(path) = self.file("consent.json") else {
-            return Ok(None);
-        };
-        let Some((consent, size)) = store::read_json_sized(
-            &path,
-            "the telemetry consent",
-            self.product.id,
-            self.product.id,
-        )?
-        else {
-            return Ok(None);
-        };
-        let level = consent.get("level").and_then(Value::as_str).unwrap_or("");
-        Level::parse(level, self.product.id).map(Some).map_err(|_| {
-            own::TELEMETRY_STORE_FILE_UNREADABLE.failure(
-                CONSENT_POINT,
-                self.product.id,
-                &[
-                    ("what", "the telemetry consent"),
-                    ("path", &path.display().to_string()),
-                    (
-                        "why",
-                        &format!("level {level:?} is not off, errors or usage"),
-                    ),
-                    ("bytes", &size.to_string()),
-                    ("product", self.product.id),
-                ],
-            )
-        })
-    }
-
-    /// Keep the user's answer. Turning telemetry off also drops every event
-    /// still waiting, since the user no longer agrees to send them.
-    pub fn set_level(&self, level: Level) -> Result<(), Failure> {
-        let path = self
-            .file("consent.json")
-            .ok_or_else(|| self.no_home("the telemetry consent"))?;
-        store::write_json(
-            &path,
-            "the telemetry consent",
-            &json!({ "level": level.as_str(), "answered_at": store::now() }),
-            self.product.id,
-        )?;
-        if level == Level::Off {
-            if let Some(queue) = self.queue_directory() {
-                if let Err(error) = std::fs::remove_dir_all(&queue) {
-                    if error.kind() != std::io::ErrorKind::NotFound {
-                        return Err(self.unwritable("the event queue", &queue, &error));
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// What is actually sent: nothing while unanswered or under `DO_NOT_TRACK`.
-    fn effective(&self) -> Result<Level, Failure> {
-        if Self::do_not_track() {
-            return Ok(Level::Off);
-        }
-        Ok(self.level()?.unwrap_or(Level::Off))
-    }
-
     /// The collector address and what named it, or the refusal of one that
     /// is not https:// (or http:// on a loopback host).
     pub fn collector(&self) -> Result<Collector, Failure> {
@@ -276,6 +183,7 @@ impl Telemetry {
 }
 
 const DELIVER_POINT: &str = "wisent-errors.telemetry.deliver";
+const EXPORT_POINT: &str = "wisent-errors.telemetry.export";
 
 /// `https://` with a host, or `http://` whose host is this machine's loopback.
 fn acceptable_collector(address: &str) -> bool {

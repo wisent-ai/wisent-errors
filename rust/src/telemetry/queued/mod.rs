@@ -117,9 +117,7 @@ impl Telemetry {
             if path.extension().and_then(|extension| extension.to_str()) != Some("json") {
                 continue;
             }
-            if let Some(event) =
-                store::read_json(&path, "a queued event", self.product.id, self.product.id)?
-            {
+            if let Some(event) = store::read_queued(&path, self.product.id)? {
                 events.push((path, event));
             }
         }
@@ -151,16 +149,26 @@ impl Telemetry {
     }
 
     /// Write every queued event to `path` as one JSON array, for a machine
-    /// with no network; answers how many.
+    /// with no network; answers how many. The events stay queued. A file
+    /// that cannot be written is refused naming it, what is where it would
+    /// go and what the system answered
+    /// (`wisent-errors.telemetry.export.export-unwritable`).
     pub fn export(&self, path: &Path) -> Result<usize, Failure> {
         let events = self.queued()?;
         let count = events.len();
-        store::write_json(
-            path,
-            "the exported events",
-            &Value::Array(events),
-            self.product.id,
-        )?;
+        store::write_whole(path, &Value::Array(events)).map_err(|error| {
+            own::TELEMETRY_EXPORT_EXPORT_UNWRITABLE.failure(
+                EXPORT_POINT,
+                self.product.id,
+                &[
+                    ("count", &count.to_string()),
+                    ("path", &path.display().to_string()),
+                    ("why", &error.to_string()),
+                    ("state", &store::directory_state(store::directory_of(path))),
+                    ("product", self.product.id),
+                ],
+            )
+        })?;
         Ok(count)
     }
 

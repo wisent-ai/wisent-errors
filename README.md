@@ -242,7 +242,8 @@ count the frustration signals only a client sees; every event they can send is
 declared once in `telemetry::EVENTS`. The contracts are
 [docs/telemetry.md](docs/telemetry.md), [docs/support.md](docs/support.md) and
 [docs/guides/swift-reporter.md](docs/guides/swift-reporter.md); `tests/telemetry/` runs both
-clients against the real collector and a real `wisent-customer-support`.
+clients against the real collector and a real `wisent-customer-support`, the
+Rust one through the `wisent-errors` command line below.
 
 The `diagnosis` feature is a product's `doctor`: one `diagnosis::Check` per
 functionality of its failure catalogue, tried now or skipped with why, and
@@ -276,6 +277,26 @@ JSON cannot hold and a closed standard output are declared causes too, never a
 panic) and `text_lines`, the flattening behind it: keys joined with `.`, array
 items as `[index]`, `-` for null and for an empty array or object.
 
+### The command line: `wisent-errors`
+
+The crate's own program carries the telemetry and support commands every
+product CLI carries from it, for the product a JSON file names (its `id`,
+`app_id`, `version` and, optionally, the `flush` command that sends its
+queue), so a product written in any language reports through it; a `doctor`
+over those functionalities; and its declared warnings:
+
+```sh
+cargo install --git https://github.com/wisent-ai/wisent-errors wisent-errors \
+  --features cli-output,telemetry,diagnosis
+wisent-errors --product product.json telemetry level errors
+wisent-errors --product product.json telemetry failure example-product.pairs.import not_found --detail "…"
+wisent-errors --product product.json telemetry flush
+wisent-errors --product product.json doctor
+```
+
+Every command, what it prints, each refusal and its exit status:
+[docs/command-line.md](docs/command-line.md).
+
 ### The installed CLI, from a Mac app: `WisentProgram`
 
 The Swift package's `WisentProgram` library is how a macOS app that drives its
@@ -302,14 +323,33 @@ process group of its own: cancelling the caller sends the group SIGTERM, and a
 further `InstalledProgram.Stop.request()` sends it SIGKILL. The run ends on the
 program's exit; `Outcome.heldOpen` names a stream a process it left running
 still held. A product says the four failures (`missing`, `unverified`,
-`failedToStart`, `unfollowed`) in its own words
-(`tests/program/FleetSignatureTests.swift`, `InstalledProgramTests.swift`). An
+`failedToStart`, `unfollowed`) in its own words; `wisent-errors-swift program
+run` (below) says them as declared causes. An
 app that keeps a server running with Foundation's `Process` checks the file
 with `FleetSignature.verify(file:)` before it starts it, and the process with
 `FleetSignature.verify(process:)` before it reads its answer or sends it a
 request: `Process` cannot start a program suspended, so the program has
 already run with its arguments by then, and such an app hands it nothing in
 them.
+
+### The Swift package's command line: `wisent-errors-swift`
+
+The package's executable drives its three libraries the way an app drives
+them: `envelope build|read`, `declaration cause|check`, `telemetry
+status|set|failure|show|flush|settings`, `support report|status` and
+`program run <name> [-- <arguments>]`. Each refusal is a declared cause
+(`catalogue/failures/swift-cli.json`), printed in the same three lines as the
+package's other commands and exiting with the cause's status. The Swift tests
+run it as a process from the products directory `swift test` builds it into:
+
+```sh
+swift build --product wisent-errors-swift
+.build/debug/wisent-errors-swift envelope build --point stado.fleet.enroll --code refused --service stado
+.build/debug/wisent-errors-swift program run stado -- --version
+```
+
+Every command, what it prints and its refusals:
+[docs/guides/swift-reporter.md](docs/guides/swift-reporter.md#the-command-line-wisent-errors-swift).
 
 ## Layout, and how it stays one thing
 

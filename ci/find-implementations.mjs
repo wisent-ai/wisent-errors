@@ -15,7 +15,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Words } from './support/arguments.mjs';
-import { describe, listDirectory, openDirectory, packageSource, readJsonInput, stateOf } from './support/input.mjs';
+import { describe, listDirectory, openDirectory, packageSource, pathVariable, readJsonInput, stateOf } from './support/input.mjs';
 import { exitOf, guarded, refuse, refusalText } from './support/refuse.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -47,7 +47,7 @@ function git(repository, words) {
   try {
     return execFileSync('git', ['-C', repository, ...words], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: Infinity });
   } catch (error) {
-    if (error.code === 'ENOENT') refuse(CENSUS, 'git-absent', { repository, path_variable: process.env.PATH ?? '(unset)', error: error.message });
+    if (error.code === 'ENOENT') refuse(CENSUS, 'git-absent', { repository, path_variable: pathVariable(), error: error.message });
     return null;
   }
 }

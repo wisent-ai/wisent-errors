@@ -173,7 +173,7 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
                     sent += 1;
                     continue;
                 }
-                let values = values(&[("status", status.to_string()), ("answer", body)]);
+                let values = values(&[("status", status.to_string()), ("answer", store::one_line(&body))]);
                 own::TELEMETRY_DELIVER_COLLECTOR_ANSWER_UNREADABLE.failure(
                     DELIVER_POINT,
                     product,
@@ -190,7 +190,7 @@ pub(super) fn flush(telemetry: &Telemetry) -> Result<Delivered, Failure> {
                 // and anything else came from an address that is not it.
                 let collector_said =
                     serde_json::from_str::<Value>(&body).is_ok_and(|answer| answer.is_object());
-                let values = values(&[("status", status.to_string()), ("answer", body)]);
+                let values = values(&[("status", status.to_string()), ("answer", store::one_line(&body))]);
                 // The 5xx server error class: https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6
                 let cause = if status >= 500 {
                     &own::TELEMETRY_DELIVER_COLLECTOR_FAILED

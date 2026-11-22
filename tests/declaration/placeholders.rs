@@ -39,28 +39,39 @@ fn every_placeholder_the_renderer_will_not_fill_is_refused() {
         remedy: "quote {name before passing it",
         ..CAUSE
     };
-    let problems = broken.problems();
-    let [path, title, unclosed] = problems.as_slice() else {
-        panic!("{problems:#?}");
+    let malformed = |placeholder: &str, suggestion: &str| {
+        format!("cause value-unsafe: `failed` holds the placeholder {placeholder}, which the renderer never fills: a placeholder is a lowercase letter, then lowercase letters, digits and '_', between braces, with no format spec; write {suggestion} and have the raising site pass the value already formatted")
     };
-    assert!(path.contains("`failed` holds the placeholder {Path},") && path.contains("write {path}"));
-    assert!(title.contains("`failed` holds the placeholder {deal.title},") && title.contains("write {deal_title}"));
-    assert!(unclosed.contains("`remedy` opens a placeholder at \"{name before passing it\" that no '}' closes; close it as {name} or drop the '{'"));
+    assert_eq!(
+        broken.problems(),
+        vec![
+            malformed("{Path}", "{path}"),
+            malformed("{deal.title}", "{deal_title}"),
+            "cause value-unsafe: `remedy` opens a placeholder at \"{name before passing it\" that no '}' closes; close it as {name} or drop the '{'".to_owned(),
+        ]
+    );
     let unopened = Cause { failed: "checking a} value", ..CAUSE };
-    assert!(unopened
-        .problems()
-        .first()
-        .is_some_and(|problem| problem.contains("`failed` holds a '}' at \"checking a} value\" that no '{' opened")));
+    assert_eq!(
+        unopened.problems(),
+        vec!["cause value-unsafe: `failed` holds a '}' at \"checking a} value\" that no '{' opened; drop it, or open the placeholder it ends".to_owned()]
+    );
 }
 
 #[test]
 fn a_cause_whose_why_is_only_the_raw_message_is_refused() {
+    let wraps = |quoted: &str| {
+        format!("cause value-unsafe: `cause` is only {quoted}, the text it wraps, so it says nothing of why; state the reason in words (the file is not JSON, the server refused the token) and move the wrapped text into `observed`")
+    };
     let wrapped = Cause { cause: "{error}", ..CAUSE };
-    let problems = wrapped.problems();
-    assert!(problems.contains(&"cause value-unsafe: `cause` names {error}, the raw text of the layer below; `cause` is the declaration's own words, so say it in words and move {error} into `observed`".to_owned()), "{problems:#?}");
-    assert!(problems.iter().any(|problem| problem.starts_with("cause value-unsafe: `cause` is only \"{error}\", the text it wraps, so it says nothing of why")));
+    assert_eq!(
+        wrapped.problems(),
+        vec![
+            "cause value-unsafe: `cause` names {error}, the raw text of the layer below; `cause` is the declaration's own words, so say it in words and move {error} into `observed`".to_owned(),
+            wraps("\"{error}\""),
+        ]
+    );
     let pair = Cause { cause: "{code}: {reason}", ..CAUSE };
-    assert!(pair.problems().iter().any(|problem| problem.contains("`cause` is only \"{code}: {reason}\"")));
+    assert_eq!(pair.problems(), vec![wraps("\"{code}: {reason}\"")]);
     let observed = Cause { observed: "the parser said {problem}", ..CAUSE };
     assert_eq!(observed.problems(), Vec::<String>::new());
 }
@@ -84,14 +95,26 @@ fn the_renderer_reads_a_template_as_every_runtime_does() {
     for name in rules::PLACEHOLDER_INVALID {
         assert!(!matches!(parts(&format!("{{{name}}}"))[..], [Part::Placeholder(_)]), "{name}");
     }
-    for id in rules::CAUSE_ID_VALID.iter().chain(rules::CAUSE_ID_INVALID) {
-        let valid = rules::CAUSE_ID_VALID.contains(id);
-        let problems = Cause { id: *id, ..CAUSE }.problems();
-        assert_eq!(problems.iter().any(|problem| problem.contains("the id is not lowercase words")), !valid, "{id}");
+    for id in rules::CAUSE_ID_VALID {
+        assert_eq!(Cause { id: *id, ..CAUSE }.problems(), Vec::<String>::new(), "{id}");
     }
-    for test in rules::TEST_PATH_VALID.iter().chain(rules::TEST_PATH_INVALID) {
-        let valid = rules::TEST_PATH_VALID.contains(test);
-        let problems = Cause { test: *test, ..CAUSE }.problems();
-        assert_eq!(problems.iter().any(|problem| problem.contains("is not tests/<area>/<file>::<test name>")), !valid, "{test}");
+    for id in rules::CAUSE_ID_INVALID {
+        let quoted = serde_json::to_string(id).expect("an id is a JSON string");
+        assert_eq!(
+            Cause { id: *id, ..CAUSE }.problems(),
+            vec![format!("cause {quoted}: the id is not lowercase words joined by '-' (pattern ^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$); rename it, as in 'fleet-undeclared'")],
+            "{id}"
+        );
+    }
+    for test in rules::TEST_PATH_VALID {
+        assert_eq!(Cause { test: *test, ..CAUSE }.problems(), Vec::<String>::new(), "{test}");
+    }
+    for test in rules::TEST_PATH_INVALID {
+        let quoted = serde_json::to_string(test).expect("a test path is a JSON string");
+        assert_eq!(
+            Cause { test: *test, ..CAUSE }.problems(),
+            vec![format!("cause value-unsafe: test {quoted} is not tests/<area>/<file>::<test name> (pattern ^tests/[^/:]+(?:/[^/:]+)+::[a-z0-9_]+$); name the real test that provokes it")],
+            "{test}"
+        );
     }
 }

@@ -20,7 +20,7 @@ extension WisentTelemetry {
         while runtime.hasSuffix("/") { runtime.removeLast() }
         guard !runtime.isEmpty else { return (Self.publicSupport, "wisent-errors") }
         guard let url = URL(string: runtime), Self.supportAcceptable(url) else {
-            throw SupportError.addressInvalid(OwnFailures.supportExchangeSupportAddressInvalid.refusal(["address": runtime]))
+            throw SupportError.addressInvalid(OwnFailures.supportExchange.refusal(OwnFailures.supportExchangeSupportAddressInvalid, ["address": runtime]))
         }
         return (url, "WISENT_SUPPORT_URL")
     }
@@ -39,7 +39,7 @@ extension WisentTelemetry {
     public func fileReport(subject: String?, description: String, email: String?, withFailure: Bool) async throws -> [String: Any] {
         let description = description.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !description.isEmpty else {
-            throw SupportError.descriptionEmpty(OwnFailures.supportReportSupportDescriptionEmpty.refusal(["product": product.id]))
+            throw SupportError.descriptionEmpty(OwnFailures.supportReport.refusal(OwnFailures.supportReportSupportDescriptionEmpty, ["product": product.id]))
         }
         let address = try supportAddress().url
         guard let folder = file("support") else { throw TelemetryError.noHome }
@@ -64,10 +64,10 @@ extension WisentTelemetry {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let answer = try await exchange(request, doing: "filing a support report", observed: "nothing was filed")
+        let (answer, status) = try await exchange(request, doing: "filing a support report", observed: "nothing was filed")
         guard let id = answer["id"] as? String, let key = answer["access_key"] as? String else {
-            throw SupportError.answerUnreadable(OwnFailures.supportExchangeSupportAnswerUnreadable.refusal([
-                "address": address.absoluteString, "answer": "\(answer)", "status": "201",
+            throw SupportError.answerUnreadable(OwnFailures.supportExchange.refusal(OwnFailures.supportExchangeSupportAnswerUnreadable, [
+                "address": address.absoluteString, "answer": Self.oneLine(answer), "status": String(status),
             ]))
         }
         let kept = folder.appendingPathComponent("\(id).json")
@@ -98,7 +98,10 @@ extension WisentTelemetry {
         }
         var kept: [[String: Any]] = []
         for name in names where name.hasSuffix(".json") {
-            if let report = try readObject(folder.appendingPathComponent(name), what: "a support report's key") {
+            if let report = try readObject(
+                folder.appendingPathComponent(name), what: "a support report's key",
+                damaged: OwnFailures.telemetryStoreSupportKeyUnreadable, refused: OwnFailures.telemetryStoreSupportKeyReadRefused)
+            {
                 kept.append(report)
             }
         }
@@ -111,7 +114,7 @@ extension WisentTelemetry {
             var request = URLRequest(url: url)
             request.setValue("Bearer \(report["access_key"] as? String ?? "")", forHTTPHeaderField: "Authorization")
             do {
-                read.append(try await exchange(request, doing: "reading report \(id)", observed: "its state is unknown until support answers"))
+                read.append(try await exchange(request, doing: "reading report \(id)", observed: "its state is unknown until support answers").answer)
             } catch {
                 read.append(["id": id, "subject": report["subject"] as Any? ?? NSNull(), "unread": "\(error)"])
             }
@@ -126,9 +129,10 @@ extension WisentTelemetry {
             .max { ($0["occurredAt"] as? String ?? "") < ($1["occurredAt"] as? String ?? "") }?["properties"] as? [String: Any]
     }
 
-    /// One request to support and its JSON answer, or the sentence naming
-    /// what was being done, where, and why it stopped.
-    private func exchange(_ request: URLRequest, doing: String, observed: String) async throws -> [String: Any] {
+    /// One request to support, its JSON answer and the HTTP status it came
+    /// with, or the sentence naming what was being done, where, and why it
+    /// stopped.
+    private func exchange(_ request: URLRequest, doing: String, observed: String) async throws -> (answer: [String: Any], status: Int) {
         let address = request.url?.absoluteString ?? ""
         let session = self.session
         let (data, status, failure): (Data?, Int, String?) = await withCheckedContinuation { answered in
@@ -137,41 +141,45 @@ extension WisentTelemetry {
             }.resume()
         }
         if let failure {
-            throw SupportError.unreachable(OwnFailures.supportExchangeSupportUnreachable.refusal([
+            throw SupportError.unreachable(OwnFailures.supportExchange.refusal(OwnFailures.supportExchangeSupportUnreachable, [
                 "doing": doing, "address": address, "why": failure, "observed": observed, "product": product.id,
             ]))
         }
         let text = data.map { String(decoding: $0, as: UTF8.self) } ?? ""
         let object = data.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any]
-        if (200..<300).contains(status), let object { return object }
+        if (200..<300).contains(status), let object { return (object, status) }
         let error = object?["error"] as? [String: Any]
         if !(200..<300).contains(status), let reason = (error?["message"] ?? error?["code"]) as? String {
-            throw SupportError.refused(OwnFailures.supportExchangeSupportRefused.refusal([
+            throw SupportError.refused(OwnFailures.supportExchange.refusal(OwnFailures.supportExchangeSupportRefused, [
                 "doing": doing, "address": address, "status": String(status), "answer": reason, "observed": observed,
                 "product": product.id,
             ]))
         }
-        throw SupportError.answerUnreadable(OwnFailures.supportExchangeSupportAnswerUnreadable.refusal([
-            "address": address, "answer": text, "status": String(status),
+        throw SupportError.answerUnreadable(OwnFailures.supportExchange.refusal(OwnFailures.supportExchangeSupportAnswerUnreadable, [
+            "address": address, "answer": Self.oneLine(text), "status": String(status),
         ]))
     }
 }
 
-/// Why a support report could not be filed or read, as the sentence it says:
-/// the refusal of a declared cause of catalogue/failures/telemetry.json
-/// (`OwnFailures.supportReport…`, `OwnFailures.supportExchange…`).
+/// Why a support report could not be filed or read: the refusal of a
+/// declared cause of catalogue/failures/telemetry.json
+/// (`OwnFailures.supportReport…`, `OwnFailures.supportExchange…`), said as
+/// its sentence.
 public enum SupportError: Error, CustomStringConvertible, Sendable {
-    case descriptionEmpty(String)
-    case addressInvalid(String)
-    case refused(String)
-    case unreachable(String)
-    case answerUnreadable(String)
+    case descriptionEmpty(DeclaredRefusal)
+    case addressInvalid(DeclaredRefusal)
+    case refused(DeclaredRefusal)
+    case unreachable(DeclaredRefusal)
+    case answerUnreadable(DeclaredRefusal)
 
-    public var description: String {
+    public var description: String { refusal.description }
+
+    /// The declared refusal it carries.
+    public var refusal: DeclaredRefusal {
         switch self {
-        case .descriptionEmpty(let sentence), .addressInvalid(let sentence), .refused(let sentence),
-             .unreachable(let sentence), .answerUnreadable(let sentence):
-            return sentence
+        case .descriptionEmpty(let refusal), .addressInvalid(let refusal), .refused(let refusal),
+             .unreachable(let refusal), .answerUnreadable(let refusal):
+            return refusal
         }
     }
 }

@@ -79,18 +79,30 @@ with the sentence and the fix; the others still read.
 | `support-address-invalid` | `WISENT_SUPPORT_URL` is not https | `reading the support address from WISENT_SUPPORT_URL: a support address must be https://, or http:// on a loopback host; observed: WISENT_SUPPORT_URL holds <address>` |
 | `support-refused` | support answered 4xx or 5xx with its reason | `<doing> at <address>: support refused HTTP <status>: <its reason>; observed: nothing was filed` — a 503 with reason `config` means the support deployment lacks a setting its operator must add |
 | `support-unreachable` | no connection | `<doing> at <address>: support could not be reached: <error>; observed: nothing was filed` |
-| `support-answer-unreadable` | the address answered something that is not support's JSON | `reading support's answer at <address>: the answer is not a support service's: <answer>; observed: HTTP <status>` |
+| `support-answer-unreadable` | the address answered something that is not support's JSON | `reading support's answer at <address>: the answer is not a support service's: <answer>; observed: HTTP <status>`, the answer on one line: JSON written again compactly, any other text quoted as a JSON string with its line ends escaped |
 
 Keeping the key can fail as telemetry's store does (`store-unwritable`,
-`file-unreadable`, [telemetry.md](telemetry.md)). Nothing is kept for a report
-support did not take.
+[telemetry.md](telemetry.md)). A key file `support status` cannot read as
+the key filing kept is refused as `support-key-unreadable`, whose fix is to
+remove that file and file the report again: filing keeps the new report's
+key, and nothing else writes a key. Nothing is kept for a report support did
+not take.
 
 ## Tests
 
-`tests/telemetry/support.rs` and `tests/telemetry/swift/SupportTests.swift`
-run every case against a real `wisent-customer-support` named by
-`WISENT_SUPPORT_TEST_URL`. The agent lists tickets and replies through its
-API with `WISENT_SUPPORT_TEST_AGENT_TOKEN`, the support-agent token the service
-holds under its own grant (`SUPPORT_AGENT_TOKEN`), whose role carries the
-`reply` capability; the service token is refused a reply with 403
-`Missing capability: reply`, and a refused reply fails the case.
+`tests/telemetry/support.rs`, which runs `wisent-errors --product <file>
+support report|status` ([command-line.md](command-line.md)) as a process, and
+`tests/telemetry/swift/SupportReportTests.swift`, which runs `wisent-errors-swift
+support report|status` ([swift-reporter.md](guides/swift-reporter.md#the-command-line-wisent-errors-swift))
+the same way, run the cases against a real
+`wisent-customer-support` named by `WISENT_SUPPORT_TEST_URL`; a case without
+it fails naming the variable. The
+agent lists tickets and replies through its API with
+`WISENT_SUPPORT_TEST_AGENT_TOKEN`, the support-agent token the service holds
+under its own grant (`SUPPORT_AGENT_TOKEN`), whose role carries the `reply`
+capability; the service token is refused a reply with 403
+`Missing capability: reply`, and a refused reply fails the case. What is
+refused before anything is sent (`SupportRefusalTests`, and in Rust
+`support_report_refuses_what_it_cannot_file_before_anything_is_kept`: no
+description, a plain-http address, nothing listening on 127.0.0.1:9) needs
+no service.

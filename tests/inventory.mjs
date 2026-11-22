@@ -13,6 +13,7 @@
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { Words } from '../ci/support/arguments.mjs';
+import { pathVariable } from '../ci/support/input.mjs';
 import { guarded, refuse } from '../ci/support/refuse.mjs';
 
 const root = resolve(import.meta.dirname, '..');
@@ -30,7 +31,7 @@ guarded(() => {
     stdio: ['ignore', 'inherit', 'pipe'],
   });
   const values = { revision, quoted_pattern: JSON.stringify(pattern), repository: root, status: String(found.status), stderr: (found.stderr ?? '').trim() };
-  if (found.error) refuse(LIST, 'git-absent', { ...values, path_variable: process.env.PATH ?? '(unset)', error: found.error.message });
+  if (found.error) refuse(LIST, 'git-absent', { ...values, path_variable: pathVariable(), error: found.error.message });
   // git grep exits 1 with nothing on standard error when nothing matched
   // (https://git-scm.com/docs/git-grep#_exit_status); a complaint is git
   // refusing the revision or the pattern.
