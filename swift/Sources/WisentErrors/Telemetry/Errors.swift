@@ -3,20 +3,30 @@
 
 import Foundation
 
-/// Why telemetry could not keep or send something, as the sentence it says:
-/// each case but `noHome` carries the refusal of a declared cause of
-/// catalogue/failures/telemetry.json (`OwnFailures.telemetryStore…`,
-/// `OwnFailures.telemetryDeliver…`), the same sentence the Rust client says.
+/// Why telemetry could not keep or send something: each case but `noHome`
+/// carries the refusal of a declared cause of catalogue/failures/telemetry.json
+/// (`OwnFailures.telemetryStore…`, `OwnFailures.telemetryDeliver…`), said as
+/// the same sentence the Rust client says.
 public enum TelemetryError: Error, CustomStringConvertible, Sendable {
     case noHome
-    case unwritable(String)
-    case unreadable(String)
-    case collectorInvalid(String)
+    case unwritable(DeclaredRefusal)
+    case unreadable(DeclaredRefusal)
+    case collectorInvalid(DeclaredRefusal)
 
     public var description: String {
         switch self {
         case .noHome: return "neither WISENT_TELEMETRY_HOME, XDG_STATE_HOME nor a home directory is known, so nothing can be kept"
-        case .unwritable(let sentence), .unreadable(let sentence), .collectorInvalid(let sentence): return sentence
+        case .unwritable(let refusal), .unreadable(let refusal), .collectorInvalid(let refusal): return refusal.description
+        }
+    }
+
+    /// The declared refusal it carries; nil for `noHome`, which only a
+    /// `WisentTelemetry` that knows no directory throws, and
+    /// `WisentTelemetry(product:environment:)` always knows one.
+    public var refusal: DeclaredRefusal? {
+        switch self {
+        case .noHome: return nil
+        case .unwritable(let refusal), .unreadable(let refusal), .collectorInvalid(let refusal): return refusal
         }
     }
 }

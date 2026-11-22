@@ -27,15 +27,17 @@ mod catalogue;
 /// A declared cause, and the error a product raises when it meets one.
 mod causes {
     pub(super) mod cause;
+    pub(super) mod class;
     pub(super) mod declared;
 }
 mod source;
 pub mod template;
 
-use causes::{cause, declared};
+use causes::{cause, class, declared};
 
 pub use catalogue::catalogue_problems;
 pub use cause::Cause;
+pub use class::{Class, USAGE_SUMMARY};
 pub use declared::Declared;
 pub(crate) use cause::{is_cause_id, is_test_path, text_problems};
 pub use source::generic_sentences_in;

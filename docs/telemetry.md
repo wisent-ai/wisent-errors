@@ -122,6 +122,21 @@ flush`, `Telemetry::spawn_flush`) and exits at once. A failure to queue or to
 start the flush is said on stderr once, starting with `wisent-errors:`, and
 never changes the product's own result or exit status.
 
+A collector's or a support service's answer a refusal quotes is put on one
+line: JSON as its compact form, anything else (a page of text, an HTML error
+page) as a quoted string, so the refusal stays one sentence.
+
+## Export
+
+`Telemetry::export(path)` (`<product> telemetry export <file>`) writes every
+queued event to `path` as one JSON array, exactly as it would be sent, for a
+machine with no network; the events stay queued. A file it cannot write is
+`wisent-errors.telemetry.export.export-unwritable`: it names the file, how
+many events, what the system answered and what is where the file would go
+(`a-file is a file, not a directory`), and its fix is a file in a directory
+the user can write, never the telemetry directory, which the export does not
+touch.
+
 ## Status
 
 `Telemetry::status` answers, as JSON a product prints for `<product> telemetry
@@ -145,7 +160,7 @@ status`:
 `collector` is `null` with `collector_source` saying why (`none`: neither the
 build nor `WISENT_TELEMETRY_COLLECTOR_URL` names one). `last_delivery.stopped`
 is the collector's own sentence for a refusal (`the collector refused HTTP 403:
-{"error":"Unknown mobile analytics app"}`), the transport error, or, for an
+{"operation":"echo.analytics.collect","cause":"app-undeclared",…}`), the transport error, or, for an
 answer of HTTP 500 and above, the collector's own failure (`the collector failed
 on its own side, HTTP 500: …`): such an event is not refused, nothing on the
 sending machine is to fix, and it goes out again on the next flush.
@@ -163,12 +178,17 @@ no file.
 
 ## Test
 
-`kompilator test --manifest-path rust/Cargo.toml --features telemetry --test telemetry` runs
-consent, cleaning, queueing and refusal against the real Echo collector named
-by `WISENT_TELEMETRY_TEST_COLLECTOR`; with `WISENT_TELEMETRY_TEST_APP_ID` set
-to an app the collector declares, it also checks the event is accepted, and
-`WISENT_TELEMETRY_TEST_FAILING_COLLECTOR` names a collector deployment that
-answers with a server error (an Echo that cannot reach its database) for the
-case that keeps events through the collector's own failure.
-Every run writes its source revision, the collector, each attempt and the
-final state of the store under `.build/telemetry/<run>/report.json`.
+`kompilator test --manifest-path rust/Cargo.toml --features cli-output,telemetry,diagnosis --test telemetry`
+runs the `wisent-errors` command line ([command-line.md](command-line.md)) as
+a process, one case per command and its refusals, each in a home of its own
+under `CARGO_TARGET_TMPDIR` with the command's environment cleared, and reads
+the store back from disk after every step. The flushes run against the real
+Echo collector named by `WISENT_TELEMETRY_TEST_COLLECTOR`; with
+`WISENT_TELEMETRY_TEST_APP_ID` set to an app the collector declares, a case
+checks the event is accepted, and `WISENT_TELEMETRY_TEST_FAILING_COLLECTOR`
+names a collector deployment that answers with a server error (an Echo that
+cannot reach its database) for the case that keeps events through the
+collector's own failure. A case missing its variable fails with `blocked:`
+naming it. Every run writes its source revision, each command it ran with
+its exit status and output, under
+`CARGO_TARGET_TMPDIR/telemetry/report-<pid>.json`.

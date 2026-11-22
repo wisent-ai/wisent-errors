@@ -72,7 +72,7 @@ const shown = (value) => {
 
 /** Refuse a field that is not text, naming what it is. */
 function requireText(value, field, point) {
-  if (typeof value !== 'string') raiseDeclared(ENVELOPE_BUILD, 'field-not-text', { point, field, kind: kindOf(value), shown: shown(value) });
+  if (typeof value !== 'string') raiseDeclared(ENVELOPE_BUILD, 'field-not-text', { point, field, kind: kindOf(value), shown: shown(value), conversion: 'String(error.message)' });
   return value.trim();
 }
 

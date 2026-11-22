@@ -194,35 +194,38 @@ impl Warning {
     }
 }
 
-/// Everything wrong with the warnings one functionality declares: each
-/// warning's own problems and a warning declared twice.
-pub(crate) fn declaration_problems(operation: &Operation) -> Vec<String> {
-    let id = operation.id;
-    let mut problems = Vec::new();
-    for (index, warning) in operation.warnings.iter().enumerate() {
-        if operation.warnings[..index]
-            .iter()
-            .any(|earlier| earlier.id == warning.id)
-        {
-            problems.push(fill(
-                rules::DECLARED_TWICE,
-                &[("operation", id), ("kind", "warning"), ("id", warning.id)],
-            ));
-        }
-        problems.extend(
-            warning
-                .problems()
-                .into_iter()
-                .map(|problem| format!("operation {id}: {problem}")),
-        );
-    }
-    problems
-}
-
 impl Operation {
     /// The declared warning with this id.
     pub fn warning(&self, id: &str) -> Option<&'static Warning> {
         self.warnings.iter().copied().find(|warning| warning.id == id)
+    }
+
+    /// Everything wrong with the warnings this functionality declares, each
+    /// as one sentence: each warning's own problems and a warning declared
+    /// twice. [`Operation::problems`] says these with the rest; a product's
+    /// CI holds a warnings listing to them alone (`wisent-errors warnings
+    /// check`).
+    pub fn warning_problems(&self) -> Vec<String> {
+        let id = self.id;
+        let mut problems = Vec::new();
+        for (index, warning) in self.warnings.iter().enumerate() {
+            if self.warnings[..index]
+                .iter()
+                .any(|earlier| earlier.id == warning.id)
+            {
+                problems.push(fill(
+                    rules::DECLARED_TWICE,
+                    &[("operation", id), ("kind", "warning"), ("id", warning.id)],
+                ));
+            }
+            problems.extend(
+                warning
+                    .problems()
+                    .into_iter()
+                    .map(|problem| format!("operation {id}: {problem}")),
+            );
+        }
+        problems
     }
 
     /// The functionality's warnings as one JSON document, each linked to its
