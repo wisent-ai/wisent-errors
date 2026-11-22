@@ -25,7 +25,7 @@ pub static TELEMETRY_CONSENT_LEVEL_UNKNOWN: Cause = Cause {
     cause: "telemetry knows the levels off, errors and usage",
     observed: "got {level}",
     remedy: "name one of off, errors or usage",
-    test: "tests/telemetry/consent.rs::an_unknown_level_is_refused",
+    test: "tests/telemetry/consent.rs::telemetry_level_keeps_the_answer_and_asks_before_dropping_waiting_events",
 };
 
 pub static TELEMETRY_CONSENT: Operation = Operation {
@@ -38,6 +38,28 @@ pub static TELEMETRY_CONSENT: Operation = Operation {
     warnings: &[],
 };
 
+pub static TELEMETRY_EXPORT_EXPORT_UNWRITABLE: Cause = Cause {
+    id: "export-unwritable",
+    code: Code::Config,
+    usage: false,
+    exit: None,
+    failed: "writing the {count} queued event(s) to {path}",
+    cause: "the file could not be written: {why}",
+    observed: "{state}; the events stay queued",
+    remedy: "name a file in a directory this user can write, as in `{product} telemetry export ./events.json`",
+    test: "tests/telemetry/store.rs::telemetry_export_writes_the_queue_as_it_will_be_sent",
+};
+
+pub static TELEMETRY_EXPORT: Operation = Operation {
+    id: "wisent-errors.telemetry.export",
+    entries: &["<product> telemetry export", "Telemetry::export"],
+    uses: &[&super::TELEMETRY_STORE],
+    summary: "write every queued event to a file the user names, as it would be sent, for a machine with no network",
+    docs: "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/telemetry.md",
+    causes: &[&TELEMETRY_EXPORT_EXPORT_UNWRITABLE],
+    warnings: &[],
+};
+
 pub static TELEMETRY_DELIVER_COLLECTOR_INVALID: Cause = Cause {
     id: "collector-invalid",
     code: Code::Config,
@@ -47,7 +69,7 @@ pub static TELEMETRY_DELIVER_COLLECTOR_INVALID: Cause = Cause {
     cause: "a collector address must be https://, or http:// on a loopback host",
     observed: "{source} holds {address}",
     remedy: "set WISENT_TELEMETRY_COLLECTOR_URL to the https:// address of the Echo app collector, or unset it",
-    test: "tests/telemetry/delivery.rs::a_plain_http_collector_is_refused_by_name",
+    test: "tests/telemetry/delivery/unreached.rs::a_plain_http_collector_is_refused_by_name",
 };
 
 pub static TELEMETRY_DELIVER_COLLECTOR_REFUSED: Cause = Cause {
@@ -58,8 +80,8 @@ pub static TELEMETRY_DELIVER_COLLECTOR_REFUSED: Cause = Cause {
     failed: "sending event {event} to {collector}",
     cause: "the collector refused HTTP {status}: {answer}",
     observed: "{queued} event(s) stay queued",
-    remedy: "the answer names what the collector refuses; when it is Unknown mobile analytics app, declare app {app} in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON; the events are sent again on the next flush",
-    test: "tests/telemetry/delivery.rs::an_app_the_collector_does_not_declare_stays_queued_with_its_refusal",
+    remedy: "the answer names what the collector refuses and how to fix it; when its cause is app-undeclared, declare app {app} in the Echo deployment's MOBILE_ANALYTICS_APPS_JSON with its collector URL and an analytics backend; the events are sent again on the next flush",
+    test: "tests/telemetry/delivery/reached.rs::an_app_the_collector_does_not_declare_stays_queued_with_its_refusal",
 };
 
 pub static TELEMETRY_DELIVER_COLLECTOR_FAILED: Cause = Cause {
@@ -71,7 +93,7 @@ pub static TELEMETRY_DELIVER_COLLECTOR_FAILED: Cause = Cause {
     cause: "the collector failed on its own side, HTTP {status}: {answer}",
     observed: "{queued} event(s) stay queued",
     remedy: "nothing on this machine is to fix: the events are sent again on the next flush; a collector that keeps failing is reported with `{product} support report`, or from an app's Help → Report a Problem",
-    test: "tests/telemetry/delivery.rs::a_collector_failing_on_its_side_keeps_the_events_with_its_own_failure",
+    test: "tests/telemetry/delivery/reached.rs::a_collector_failing_on_its_side_keeps_the_events_with_its_own_failure",
 };
 
 pub static TELEMETRY_DELIVER_COLLECTOR_UNREACHABLE: Cause = Cause {
@@ -83,7 +105,7 @@ pub static TELEMETRY_DELIVER_COLLECTOR_UNREACHABLE: Cause = Cause {
     cause: "the collector could not be reached: {why}",
     observed: "{queued} event(s) stay queued",
     remedy: "nothing to do: the events are sent on the next flush once the network or the collector is back",
-    test: "tests/telemetry/delivery.rs::an_unreachable_collector_keeps_the_events",
+    test: "tests/telemetry/delivery/unreached.rs::an_unreachable_collector_keeps_the_events",
 };
 
 pub static TELEMETRY_DELIVER_COLLECTOR_ANSWER_UNREADABLE: Cause = Cause {
@@ -95,7 +117,7 @@ pub static TELEMETRY_DELIVER_COLLECTOR_ANSWER_UNREADABLE: Cause = Cause {
     cause: "the answer is not the collector's {accepted}: {answer}",
     observed: "HTTP {status} from {collector}",
     remedy: "check that {collector} is the Echo app collector, /api/analytics/mobile/collect",
-    test: "tests/telemetry/delivery.rs::an_address_that_is_not_a_collector_is_named",
+    test: "tests/telemetry/delivery/reached.rs::an_address_that_is_not_a_collector_is_named",
 };
 
 pub static TELEMETRY_DELIVER_FLUSH_UNSTARTED: Cause = Cause {
@@ -107,7 +129,7 @@ pub static TELEMETRY_DELIVER_FLUSH_UNSTARTED: Cause = Cause {
     cause: "the process could not be started: {why}",
     observed: "{queued} event(s) stay queued",
     remedy: "run `{product} telemetry flush` yourself; the events wait until it runs",
-    test: "tests/telemetry/delivery.rs::a_flush_that_cannot_start_is_named",
+    test: "tests/telemetry/delivery/unreached.rs::a_flush_that_cannot_start_is_named",
 };
 
 pub static TELEMETRY_DELIVER: Operation = Operation {
@@ -129,7 +151,7 @@ pub static SUPPORT_REPORT_SUPPORT_DESCRIPTION_EMPTY: Cause = Cause {
     cause: "the report has no description",
     observed: "the description is empty",
     remedy: "say what you were doing and what happened: in an app's Report a Problem window, or with `{product} support report --description \"…\"`",
-    test: "tests/telemetry/support.rs::a_report_without_a_description_is_refused_before_sending",
+    test: "tests/telemetry/support.rs::support_report_refuses_what_it_cannot_file_before_anything_is_kept",
 };
 
 pub static SUPPORT_REPORT: Operation = Operation {
@@ -161,7 +183,31 @@ pub static TELEMETRY_STORE_STORE_UNWRITABLE: Cause = Cause {
     cause: "the telemetry directory could not be written: {why}",
     observed: "directory {directory}",
     remedy: "make {directory} writable by this user, or name a writable one with WISENT_TELEMETRY_HOME",
-    test: "tests/telemetry/store.rs::an_unwritable_directory_is_named_and_nothing_is_lost_silently",
+    test: "tests/telemetry/consent.rs::telemetry_level_keeps_the_answer_and_asks_before_dropping_waiting_events",
+};
+
+pub static TELEMETRY_STORE_HOME_UNSET: Cause = Cause {
+    id: "home-unset",
+    code: Code::Config,
+    usage: false,
+    exit: None,
+    failed: "finding where to keep {what}",
+    cause: "telemetry keeps its files in WISENT_TELEMETRY_HOME, else under XDG_STATE_HOME, else under HOME, and none of the three is set",
+    observed: "WISENT_TELEMETRY_HOME, XDG_STATE_HOME and HOME are all unset in the environment {product} ran with",
+    remedy: "run {product} with HOME set to the user's home directory, or name the directory telemetry keeps its files in with WISENT_TELEMETRY_HOME",
+    test: "tests/telemetry/consent.rs::telemetry_level_keeps_the_answer_and_asks_before_dropping_waiting_events",
+};
+
+pub static TELEMETRY_STORE_FILE_IS_DIRECTORY: Cause = Cause {
+    id: "file-is-directory",
+    code: Code::Config,
+    usage: false,
+    exit: None,
+    failed: "keeping {what} in {path}",
+    cause: "a directory stands where telemetry keeps that file, so the file cannot be written there",
+    observed: "{path} is a directory",
+    remedy: "move the directory {path} out of the way, and telemetry writes the file there again; or name another telemetry directory with WISENT_TELEMETRY_HOME",
+    test: "tests/telemetry/consent.rs::telemetry_level_keeps_the_answer_and_asks_before_dropping_waiting_events",
 };
 
 pub static TELEMETRY_STORE_FILE_UNREADABLE: Cause = Cause {
@@ -173,7 +219,67 @@ pub static TELEMETRY_STORE_FILE_UNREADABLE: Cause = Cause {
     cause: "the file is not what telemetry wrote: {why}",
     observed: "the file holds {bytes} bytes",
     remedy: "answer again, in an app's settings or with `{product} telemetry on|off`, which rewrites it, or remove {path}",
-    test: "tests/telemetry/consent.rs::a_damaged_consent_file_is_refused_and_nothing_is_sent",
+    test: "tests/telemetry/store.rs::telemetry_status_says_every_file_as_it_finds_it",
+};
+
+pub static TELEMETRY_STORE_SUPPORT_KEY_UNREADABLE: Cause = Cause {
+    id: "support-key-unreadable",
+    code: Code::Config,
+    usage: false,
+    exit: None,
+    failed: "reading {what} from {path}",
+    cause: "the file is not the key filing a report kept: {why}",
+    observed: "the file holds {bytes} bytes",
+    remedy: "remove {path} and file the report again, with `{product} support report` or from an app's Report a Problem window, which keeps the new report's key; the replies to the report that file held the key of cannot be read without that key",
+    test: "tests/telemetry/support.rs::support_status_names_a_key_file_it_did_not_write",
+};
+
+pub static TELEMETRY_STORE_SUPPORT_KEY_READ_REFUSED: Cause = Cause {
+    id: "support-key-read-refused",
+    code: Code::Config,
+    usage: false,
+    exit: None,
+    failed: "reading {what} from {path}",
+    cause: "the operating system refused the read, so the key it keeps for the report was never looked at",
+    observed: "{state}; the operating system answered {error}",
+    remedy: "let the user running {product} read it (chmod u+r {path}): it holds the only copy of the report's key, which reads its replies; nothing in {product} writes it again, so if it cannot be read, remove {path} and file the report again with `{product} support report` or from an app's Report a Problem window",
+    test: "tests/telemetry/support.rs::support_status_names_a_key_file_it_did_not_write",
+};
+
+pub static TELEMETRY_STORE_QUEUED_EVENT_UNREADABLE: Cause = Cause {
+    id: "queued-event-unreadable",
+    code: Code::Config,
+    usage: false,
+    exit: None,
+    failed: "reading {what} from {path}",
+    cause: "the file is not an event telemetry queued: {why}",
+    observed: "the file holds {bytes} bytes",
+    remedy: "remove {path}: the event it held is lost, as nothing in {product} queues it again, and the events beside it are sent as they were",
+    test: "tests/telemetry/queued/events.rs::telemetry_show_prints_the_queue_each_event_as_declared",
+};
+
+pub static TELEMETRY_STORE_QUEUED_EVENT_READ_REFUSED: Cause = Cause {
+    id: "queued-event-read-refused",
+    code: Code::Config,
+    usage: false,
+    exit: None,
+    failed: "reading {what} from {path}",
+    cause: "the operating system refused the read, so the event it holds was never looked at",
+    observed: "{state}; the operating system answered {error}",
+    remedy: "let the user running {product} read it (chmod u+r {path}) so the event is sent; or remove {path}, and the event it held is lost, as nothing in {product} queues it again",
+    test: "tests/telemetry/queued/events.rs::telemetry_show_prints_the_queue_each_event_as_declared",
+};
+
+pub static TELEMETRY_STORE_FILE_READ_REFUSED: Cause = Cause {
+    id: "file-read-refused",
+    code: Code::Config,
+    usage: false,
+    exit: None,
+    failed: "reading {what} from {path}",
+    cause: "the operating system refused the read, so what the file holds was never looked at",
+    observed: "{state}; the operating system answered {error}",
+    remedy: "let the user running {product} read it (chmod u+r {path}), or remove {path} so telemetry writes it again",
+    test: "tests/telemetry/store.rs::telemetry_status_says_every_file_as_it_finds_it",
 };
 
 pub static TELEMETRY_STORE: Operation = Operation {
@@ -182,7 +288,7 @@ pub static TELEMETRY_STORE: Operation = Operation {
     uses: &[],
     summary: "keep the files telemetry writes (the consent, the installation id, the queue, the last delivery, the keys of support reports) and read them back",
     docs: "https://github.com/wisent-ai/wisent-errors/blob/main/docs/errors/telemetry.md",
-    causes: &[&TELEMETRY_STORE_STORE_UNWRITABLE, &TELEMETRY_STORE_FILE_UNREADABLE],
+    causes: &[&TELEMETRY_STORE_STORE_UNWRITABLE, &TELEMETRY_STORE_HOME_UNSET, &TELEMETRY_STORE_FILE_IS_DIRECTORY, &TELEMETRY_STORE_FILE_UNREADABLE, &TELEMETRY_STORE_SUPPORT_KEY_UNREADABLE, &TELEMETRY_STORE_SUPPORT_KEY_READ_REFUSED, &TELEMETRY_STORE_QUEUED_EVENT_UNREADABLE, &TELEMETRY_STORE_QUEUED_EVENT_READ_REFUSED, &TELEMETRY_STORE_FILE_READ_REFUSED],
     warnings: &[],
 };
 
@@ -195,7 +301,7 @@ pub static SUPPORT_EXCHANGE_SUPPORT_ADDRESS_INVALID: Cause = Cause {
     cause: "a support address must be https://, or http:// on a loopback host",
     observed: "WISENT_SUPPORT_URL holds {address}",
     remedy: "set WISENT_SUPPORT_URL to the https:// address of a support service's /v1/public/reports, or unset it",
-    test: "tests/telemetry/support.rs::a_plain_http_support_address_is_refused_by_name",
+    test: "tests/telemetry/support.rs::support_report_refuses_what_it_cannot_file_before_anything_is_kept",
 };
 
 pub static SUPPORT_EXCHANGE_SUPPORT_REFUSED: Cause = Cause {
@@ -207,7 +313,7 @@ pub static SUPPORT_EXCHANGE_SUPPORT_REFUSED: Cause = Cause {
     cause: "support refused HTTP {status}: {answer}",
     observed: "{observed}",
     remedy: "the answer is support's own reason: correct what it names and send the report again, from an app's Report a Problem window or with `{product} support report`",
-    test: "tests/telemetry/support.rs::a_report_support_refuses_says_why",
+    test: "tests/telemetry/support.rs::support_report_files_with_the_real_support_and_keeps_its_key",
 };
 
 pub static SUPPORT_EXCHANGE_SUPPORT_UNREACHABLE: Cause = Cause {
@@ -219,7 +325,7 @@ pub static SUPPORT_EXCHANGE_SUPPORT_UNREACHABLE: Cause = Cause {
     cause: "support could not be reached: {why}",
     observed: "{observed}",
     remedy: "send the report again once the network or support is back, from an app's Report a Problem window or with `{product} support report`",
-    test: "tests/telemetry/support.rs::an_unreachable_support_files_nothing",
+    test: "tests/telemetry/support.rs::support_report_refuses_what_it_cannot_file_before_anything_is_kept",
 };
 
 pub static SUPPORT_EXCHANGE_SUPPORT_ANSWER_UNREADABLE: Cause = Cause {
@@ -231,7 +337,7 @@ pub static SUPPORT_EXCHANGE_SUPPORT_ANSWER_UNREADABLE: Cause = Cause {
     cause: "the answer is not a support service's: {answer}",
     observed: "HTTP {status}",
     remedy: "check that {address} is a support service's /v1/public/reports",
-    test: "tests/telemetry/support.rs::an_address_that_is_not_support_is_named",
+    test: "tests/telemetry/support.rs::support_report_names_an_address_that_is_not_support",
 };
 
 pub static SUPPORT_EXCHANGE: Operation = Operation {

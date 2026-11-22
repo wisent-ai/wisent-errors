@@ -88,7 +88,7 @@ export const ENVELOPE_BUILD = Object.freeze({
       "failed": "building the failure envelope at {point}",
       "cause": "{field} is {kind}, not text, so the envelope could not carry it as written",
       "observed": "{field} {shown}",
-      "remedy": "pass {field} as a string; an error from the layer below goes in as its message, as in String(error.message)",
+      "remedy": "pass {field} as a string; an error from the layer below goes in as its message, as in {conversion}",
       "exit": null,
       "test": "tests/envelope/build.mjs::a_field_that_is_not_text_is_refused"
     },

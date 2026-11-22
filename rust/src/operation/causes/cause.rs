@@ -203,7 +203,7 @@ impl Cause {
         format!("{}-{}", operation.id.replace('.', "-"), self.id)
     }
 
-    pub(super) fn to_json(self, operation: &Operation, failure_exit: i32) -> String {
+    pub(in crate::operation) fn to_json(self, operation: &Operation, failure_exit: i32) -> String {
         format!(
             "{{\"id\":{},\"code\":{},\"exit\":{},\"retryable\":{},\"usage\":{},\"failed\":{},\"cause\":{},\"observed\":{},\"remedy\":{},\"test\":{},\"doc\":{}}}",
             escape(self.id),
